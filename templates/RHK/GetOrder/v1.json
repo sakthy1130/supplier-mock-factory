@@ -1,0 +1,231 @@
+{
+  "httpRequest": {
+    "path": "/api/b2b/v3/hotel/order/info/",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "data": {
+        "current_page_number": 1,
+        "total_orders": 10719,
+        "total_pages": 10719,
+        "found_orders": 1,
+        "found_pages": 1,
+        "orders": [
+          {
+            "agreement_number": "B2B-157542",
+            "amount_payable": {
+              "amount": "0.00",
+              "currency_code": "USD"
+            },
+            "amount_payable_vat": {
+              "amount": "0.00",
+              "currency_code": "USD"
+            },
+            "amount_refunded": {
+              "amount": "63.00",
+              "currency_code": "USD"
+            },
+            "amount_sell": {
+              "amount": "63.00",
+              "currency_code": "USD"
+            },
+            "amount_sell_b2b2c": {
+              "amount": "0.00",
+              "currency_code": "USD"
+            },
+            "api_auth_key_id": 6712,
+            "cancelled_at": "2026-02-18T19:49:23",
+            "checkin_at": "2026-10-17",
+            "checkout_at": "2026-10-18",
+            "contract_slug": "15394.b2b.7237",
+            "created_at": "2026-02-18T19:49:02",
+            "hotel_data": {
+              "id": "ramada_sharjah",
+              "hid": 7830881,
+              "order_id": null
+            },
+            "is_cancellable": false,
+            "modified_at": "2026-02-18T19:49:24",
+            "nights": 1,
+            "order_id": 876124393,
+            "order_type": "hotel",
+            "roomnights": 1,
+            "rooms_data": [
+              {
+                "bedding_name": [
+                  "twin"
+                ],
+                "guest_data": {
+                  "adults_number": 1,
+                  "children_number": 0,
+                  "guests": [
+                    {
+                      "first_name": "SeeraMajdi",
+                      "first_name_original": "SeeraMajdi",
+                      "last_name": "AlmosaferTial",
+                      "last_name_original": "AlmosaferTial",
+                      "is_child": false,
+                      "age": null
+                    }
+                  ]
+                },
+                "meal_name": "nomeal",
+                "has_breakfast": false,
+                "no_child_meal": true,
+                "room_idx": 0,
+                "room_name": "Deluxe Double room (twin beds)"
+              }
+            ],
+            "source": "b2b-api",
+            "status": "cancelled",
+            "supplier_data": {
+              "confirmation_id": "96160323",
+              "name": null,
+              "order_id": "96160323"
+            },
+            "taxes": [
+              {
+                "amount_tax": {
+                  "amount": "15.00",
+                  "currency_code": "AED"
+                },
+                "is_included": false,
+                "name": "resort_fee"
+              },
+              {
+                "amount_tax": {
+                  "amount": "21.09",
+                  "currency_code": "AED"
+                },
+                "is_included": true,
+                "name": "service_fee"
+              },
+              {
+                "amount_tax": {
+                  "amount": "10.04",
+                  "currency_code": "AED"
+                },
+                "is_included": true,
+                "name": "vat"
+              }
+            ],
+            "total_vat": {
+              "amount": "0.00",
+              "currency_code": "USD",
+              "included": false
+            },
+            "is_package": false,
+            "partner_data": {
+              "order_comment": "I'll override the wireless HTTP transmitter, that should interface the USB monitor!",
+              "order_id": "a7HtT29geBZsrj_-7018cc0d-4736-4488-acdb-67505fab9ca9"
+            },
+            "amount_payable_with_upsells": {
+              "amount": "0.00",
+              "currency_code": "USD"
+            },
+            "cancellation_info": {
+              "free_cancellation_before": "2026-10-16T10:00:00",
+              "policies": [
+                {
+                  "end_at": "2026-10-16T10:00:00",
+                  "penalty": {
+                    "amount": "0.00",
+                    "currency_code": "USD",
+                    "amount_info": null
+                  },
+                  "start_at": null
+                },
+                {
+                  "end_at": null,
+                  "penalty": {
+                    "amount": "63.00",
+                    "currency_code": "USD",
+                    "amount_info": null
+                  },
+                  "start_at": "2026-10-16T10:00:00"
+                }
+              ]
+            },
+            "invoice_id": null,
+            "is_checked": false,
+            "meta_data": {
+              "voucher_order_comment": null
+            },
+            "payment_data": {
+              "payment_type": "deposit",
+              "invoice_id": null,
+              "invoice_id_v2": null,
+              "paid_at": null,
+              "payment_by": null,
+              "payment_due": "2026-11-05",
+              "payment_pending": "2026-11-02"
+            },
+            "upsells": [],
+            "has_tickets": false,
+            "user_data": {
+              "email": "accommodation.fft@almosafer.com",
+              "arrival_datetime": null,
+              "user_comment": null
+            },
+            "amount_sell_b2b2c_commission": null
+          }
+        ]
+      },
+      "debug": {
+        "api_endpoint": {
+          "endpoint": "api/b2b/v3/hotel/order/info",
+          "is_active": true,
+          "is_limited": true,
+          "remaining": 29,
+          "requests_number": 30,
+          "reset": "2026-02-18T19:51:00",
+          "seconds_number": 60
+        },
+        "request": {
+          "ordering": {
+            "ordering_type": "desc",
+            "ordering_by": "checkin_at"
+          },
+          "pagination": {
+            "page_size": 1,
+            "page_number": 1
+          },
+          "search": {
+            "source": null,
+            "status": null,
+            "cancelled_at": null,
+            "checkin_at": null,
+            "checkout_at": null,
+            "created_at": null,
+            "free_cancellation_before": null,
+            "modified_at": null,
+            "order_ids": [
+              876124393
+            ],
+            "paid_at": null,
+            "partner_order_ids": null,
+            "payment_due": null,
+            "payment_pending": null
+          },
+          "language": "en"
+        },
+        "method": "POST",
+        "real_ip": "63.33.82.220",
+        "request_id": "018eee1d308376cd5ae48d5528d75929",
+        "key_id": 6712,
+        "api_key_id": 6712,
+        "utcnow": "2026-02-18T19:50:12.853853"
+      },
+      "status": "ok",
+      "error": null
+    }
+  },
+  "priority": 1000
+}

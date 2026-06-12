@@ -1,0 +1,209 @@
+{
+  "httpRequest": {
+    "path": "/v3/itineraries/7556800480832",
+    "method": "GET"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "itinerary_id": "7556800480832",
+      "creation_date_time": "2026-06-05T18:28:58.549Z",
+      "property_id": "1723385",
+      "affiliate_reference_id": "37565552795689",
+      "billing_contact": {
+        "given_name": "John",
+        "family_name": "Smith",
+        "address": {
+          "line_1": "555 1st St",
+          "city": "Seattle",
+          "state_province_code": "none",
+          "postal_code": "none",
+          "country_code": "SA"
+        }
+      },
+      "rooms": [
+        {
+          "id": "201836237",
+          "confirmation_id": {
+            "expedia": "864190928244763"
+          },
+          "status": "canceled",
+          "checkin": "2026-08-13",
+          "checkout": "2026-08-18",
+          "number_of_adults": 1,
+          "given_name": "BookingOne",
+          "family_name": "Doeww",
+          "bed_group_id": "37316",
+          "smoking": false,
+          "special_request": "Please keep prayer mats in room",
+          "rate": {
+            "id": "209336313",
+            "merchant_of_record": "expedia",
+            "refundable": false,
+            "cancel_refund": {
+              "amount": "-526.75",
+              "currency": "AED"
+            },
+            "cancel_penalties": [
+              {
+                "currency": "AED",
+                "percent": "100%",
+                "start": "2026-06-04T10:30:00.302-08:00",
+                "end": "2026-08-13T23:59:00.000-08:00"
+              }
+            ],
+            "pricing": {
+              "nightly": [
+                [
+                  {
+                    "type": "base_rate",
+                    "value": "86.00",
+                    "currency": "AED"
+                  },
+                  {
+                    "type": "tax_and_service_fee",
+                    "value": "10.75",
+                    "currency": "AED"
+                  }
+                ],
+                [
+                  {
+                    "type": "base_rate",
+                    "value": "86.00",
+                    "currency": "AED"
+                  },
+                  {
+                    "type": "tax_and_service_fee",
+                    "value": "10.75",
+                    "currency": "AED"
+                  }
+                ],
+                [
+                  {
+                    "type": "base_rate",
+                    "value": "86.00",
+                    "currency": "AED"
+                  },
+                  {
+                    "type": "tax_and_service_fee",
+                    "value": "10.75",
+                    "currency": "AED"
+                  }
+                ],
+                [
+                  {
+                    "type": "base_rate",
+                    "value": "86.00",
+                    "currency": "AED"
+                  },
+                  {
+                    "type": "tax_and_service_fee",
+                    "value": "10.75",
+                    "currency": "AED"
+                  }
+                ],
+                [
+                  {
+                    "type": "base_rate",
+                    "value": "86.00",
+                    "currency": "AED"
+                  },
+                  {
+                    "type": "tax_and_service_fee",
+                    "value": "10.75",
+                    "currency": "AED"
+                  }
+                ]
+              ],
+              "stay": [
+                {
+                  "type": "property_fee",
+                  "value": "43.00",
+                  "currency": "AED"
+                }
+              ],
+              "totals": {
+                "inclusive": {
+                  "billable_currency": {
+                    "value": "526.75",
+                    "currency": "AED"
+                  }
+                },
+                "exclusive": {
+                  "billable_currency": {
+                    "value": "430.00",
+                    "currency": "AED"
+                  }
+                },
+                "property_fees": {
+                  "billable_currency": {
+                    "value": "50.00",
+                    "currency": "AED"
+                  }
+                },
+                "property_inclusive": {
+                  "billable_currency": {
+                    "value": "576.75",
+                    "currency": "AED"
+                  }
+                },
+                "marketing_fee": {
+                  "billable_currency": {
+                    "value": "4.00",
+                    "currency": "USD"
+                  }
+                }
+              },
+              "fees": {
+                "mandatory_tax": {
+                  "billable_currency": {
+                    "value": "50.00",
+                    "currency": "AED"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "email": "Email@address.com",
+      "phone": {
+        "country_code": "1",
+        "number": "7865814146"
+      },
+      "trader_information": {
+        "traders": [
+          {
+            "address": {
+              "line_1": "41c \u0634\u0627\u0631\u0639",
+              "city": "Dubai",
+              "state_province_code": "Dubai",
+              "postal_code": "14914",
+              "country_code": "AE"
+            },
+            "name": "Nihal Hotel",
+            "phone": "+44 20 3788 0445",
+            "email": "support@chat.expedia.co.uk",
+            "self_certification": true
+          }
+        ],
+        "terms_and_conditions": "https://forever.travel-assets.com/flex/flexmanager/mediaasset/618796-0_2-UnitedKingdom_en.pdf"
+      },
+      "conversations": {
+        "links": {
+          "property": {
+            "method": "GET",
+            "href": "https://www.example.com?key=123abd456"
+          }
+        }
+      },
+      "travel_purpose": "business"
+    }
+  },
+  "priority": 1000
+}

@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Secrets & local inputs
+reference-sids.json
+backend/.env
+
+# SQLite
+*.db
+backend/smf.db
+
+# Logs
+*.log

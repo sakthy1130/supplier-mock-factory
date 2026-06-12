@@ -1,0 +1,92 @@
+{
+  "httpRequest": {
+    "path": "/hotel-api/1.2/checkrates",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "auditData": {
+        "processTime": "81",
+        "timestamp": "2026-06-05 18:15:41.699",
+        "requestHost": "",
+        "serverId": "",
+        "environment": "",
+        "release": "",
+        "token": "FD933E4DE6CF408B855CCD7A6FFD7112",
+        "internal": "0|07~~21959~-15287454~N~~~NRF~~35180BFE2F53496178068329223905AWAE0001000000000521959|AE|05|1|1|||||||AT_WEB||||R|1|5|~1~1~0|0|0|FIT NRF RO|0|f3833ab2d24cc35ac181aab793592b86||||"
+      },
+      "hotel": {
+        "checkOut": "2026-08-18",
+        "checkIn": "2026-08-13",
+        "code": 156652,
+        "name": "Sun And Sands Downtown",
+        "categoryCode": "3EST",
+        "categoryName": "3 STARS",
+        "destinationCode": "DXB",
+        "destinationName": "Dubai",
+        "zoneCode": 1,
+        "zoneName": "Dubai",
+        "latitude": "25.26448518425460000000",
+        "longitude": "55.31902084127070000000",
+        "giata": "245074",
+        "rooms": [
+          {
+            "code": "DBL.ST",
+            "name": "Standard Room King Size Bed",
+            "rates": [
+              {
+                "rateKey": "20260813|20260818|W|148|156652|DBL.ST|FIT NRF RO|RO||1~1~0||N@07~~21959~-15287454~N~~~NRF~~35180BFE2F53496178068329223905AWAE0001000000000521959",
+                "rateClass": "NRF",
+                "rateType": "BOOKABLE",
+                "net": "89.25",
+                "allotment": 5,
+                "rateComments": "Estimated total amount of taxes & fees for this booking:50.00 Utd. Arab Emir. Dirham payable on arrival. Please note that the city tax for accommodations with more than 1 bedroom shall be charged per bedroom per night. Key Collection -.Check-in hour 14:00-23:00.Car park NO.Check-out hour 12:00-13:00.",
+                "paymentType": "AT_WEB",
+                "packaging": false,
+                "boardCode": "RO",
+                "boardName": "ROOM ONLY",
+                "cancellationPolicies": [
+                  {
+                    "amount": "89.25",
+                    "from": "2026-06-04T23:59:00+04:00"
+                  }
+                ],
+                "taxes": {
+                  "taxes": [
+                    {
+                      "included": false,
+                      "amount": "50.00",
+                      "currency": "AED",
+                      "type": "TAX",
+                      "clientAmount": "11.69",
+                      "clientCurrency": "EUR",
+                      "subType": "City Tax"
+                    }
+                  ],
+                  "allIncluded": false
+                },
+                "rooms": 1,
+                "adults": 1,
+                "children": 0
+              }
+            ]
+          }
+        ],
+        "totalNet": "89.25",
+        "currency": "EUR",
+        "paymentDataRequired": false,
+        "modificationPolicies": {
+          "cancellation": true,
+          "modification": true
+        }
+      }
+    }
+  },
+  "priority": 1000
+}

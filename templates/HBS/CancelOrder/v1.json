@@ -1,0 +1,112 @@
+{
+  "httpRequest": {
+    "path": "/hotel-api/1.2/bookings/148-6069492",
+    "method": "DELETE"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "auditData": {
+        "processTime": "1597",
+        "timestamp": "2026-06-05 18:15:57.566",
+        "requestHost": "",
+        "serverId": "",
+        "environment": "",
+        "release": "",
+        "token": "3A42769D8D7A400AAD638D590B8E4EF9",
+        "internal": "null||||0|1||||||||||||1|||0|0||0|null||||"
+      },
+      "booking": {
+        "reference": "148-6069492",
+        "cancellationReference": "fbee3c30df0f317a1dd7",
+        "clientReference": "HOTELNU",
+        "creationDate": "2026-06-05",
+        "status": "CANCELLED",
+        "modificationPolicies": {
+          "cancellation": false,
+          "modification": false
+        },
+        "creationUser": "f3833ab2d24cc35ac181aab793592b86",
+        "holder": {
+          "name": "BOOKINGONE",
+          "surname": "DOEWW"
+        },
+        "hotel": {
+          "checkOut": "2026-08-18",
+          "checkIn": "2026-08-13",
+          "code": 156652,
+          "name": "Sun And Sands Downtown",
+          "categoryCode": "3EST",
+          "categoryName": "3 STARS",
+          "destinationCode": "DXB",
+          "destinationName": "Dubai",
+          "zoneCode": 1,
+          "zoneName": "Dubai",
+          "latitude": "25.26448518425460000000",
+          "longitude": "55.31902084127070000000",
+          "rooms": [
+            {
+              "status": "CANCELLED",
+              "id": 1,
+              "code": "DBL.ST",
+              "name": "Standard Room King Size Bed",
+              "paxes": [
+                {
+                  "roomId": 1,
+                  "type": "AD",
+                  "name": "BookingOne",
+                  "surname": "Doeww"
+                }
+              ],
+              "rates": [
+                {
+                  "rateClass": "NRF",
+                  "net": "0.00",
+                  "rateComments": "Car park NO. Key Collection  - . Check-in hour 14:00 - 23:00. Check-out hour 12:00 - 13:00.",
+                  "paymentType": "AT_WEB",
+                  "packaging": false,
+                  "boardCode": "RO",
+                  "boardName": "ROOM ONLY",
+                  "cancellationPolicies": [
+                    {
+                      "amount": "91.03",
+                      "from": "2026-06-04T23:59:00+04:00"
+                    }
+                  ],
+                  "rooms": 1,
+                  "adults": 1,
+                  "children": 0,
+                  "onlineCheckIn": {}
+                }
+              ]
+            }
+          ],
+          "totalSellingRate": "0",
+          "totalNet": "0.00",
+          "currency": "EUR",
+          "supplier": {
+            "name": "HOTELBEDS SPAIN S.L.U.",
+            "vatNumber": "ESB28916765"
+          },
+          "cancellationAmount": 0
+        },
+        "remark": "Please keep prayer mats in room",
+        "invoiceCompany": {
+          "code": "E14",
+          "company": "HOTELBEDS S.L.U.",
+          "registrationNumber": "ESB57218372"
+        },
+        "totalSellingRate": 0,
+        "totalNet": 0,
+        "pendingAmount": 0,
+        "currency": "EUR"
+      }
+    }
+  },
+  "priority": 1000
+}

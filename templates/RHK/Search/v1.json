@@ -1,0 +1,1903 @@
+{
+  "httpRequest": {
+    "path": "/api/b2b/v3/search/serp/hotels/",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "data": {
+        "hotels": [
+          {
+            "id": "ramada_sharjah",
+            "hid": 7830881,
+            "rates": [
+              {
+                "match_hash": "m-0a77691d-6ae5-556e-87bc-e200580e4041",
+                "search_hash": "sr-019c724b-d921-764f-b18c-4222ec80933a",
+                "daily_prices": [
+                  "232.00"
+                ],
+                "meal": "nomeal",
+                "meal_data": {
+                  "value": "nomeal",
+                  "has_breakfast": false,
+                  "no_child_meal": true
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "63.00",
+                      "show_amount": "232.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "21.09",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "10.04",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "232.00",
+                          "amount_net": "232.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "63.00",
+                          "amount_net": "63.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "63.00",
+                            "amount_show": "232.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "232.00",
+                                "amount_net": "232.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "63.00",
+                                "amount_net": "63.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 3,
+                  "quality": 6,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 4,
+                  "family": 0,
+                  "capacity": 2,
+                  "club": 0,
+                  "bedrooms": 0,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "Deluxe Double room (twin beds)",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom"
+                ],
+                "sell_price_limits": null,
+                "allotment": 70,
+                "amenities_data": [
+                  "non-smoking"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "216.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "Deluxe Double room",
+                  "main_name": "Deluxe Double room",
+                  "bathroom": null,
+                  "bedding_type": "twin beds",
+                  "misc_room_type": null
+                },
+                "legal_info": null,
+                "is_package": false
+              },
+              {
+                "match_hash": "m-04d31fbd-4786-5365-8df8-97d55ec6f5e0",
+                "search_hash": "sr-019c724b-d921-7650-9b1b-efe5a6797812",
+                "daily_prices": [
+                  "232.00"
+                ],
+                "meal": "nomeal",
+                "meal_data": {
+                  "value": "nomeal",
+                  "has_breakfast": false,
+                  "no_child_meal": true
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "63.00",
+                      "show_amount": "232.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "21.09",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "10.04",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "232.00",
+                          "amount_net": "232.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "63.00",
+                          "amount_net": "63.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "63.00",
+                            "amount_show": "232.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "232.00",
+                                "amount_net": "232.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "63.00",
+                                "amount_net": "63.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 3,
+                  "quality": 6,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 3,
+                  "family": 0,
+                  "capacity": 2,
+                  "club": 0,
+                  "bedrooms": 0,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "Deluxe Double room (full double bed) (king size bed)",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom"
+                ],
+                "sell_price_limits": null,
+                "allotment": 70,
+                "amenities_data": [
+                  "king-bed",
+                  "non-smoking"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "216.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "Deluxe Double room",
+                  "main_name": "Deluxe Double room",
+                  "bathroom": null,
+                  "bedding_type": "full double bed",
+                  "misc_room_type": "king size bed"
+                },
+                "legal_info": null,
+                "is_package": false
+              },
+              {
+                "match_hash": "m-eca0b6ed-405e-5550-ae5a-fc2a3695f6e6",
+                "search_hash": "sr-019c724b-d921-7651-b753-794d047e48fb",
+                "daily_prices": [
+                  "250.00"
+                ],
+                "meal": "nomeal",
+                "meal_data": {
+                  "value": "nomeal",
+                  "has_breakfast": false,
+                  "no_child_meal": true
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "68.00",
+                      "show_amount": "250.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "22.73",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "10.82",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "250.00",
+                          "amount_net": "250.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "68.00",
+                          "amount_net": "68.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "68.00",
+                            "amount_show": "250.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "250.00",
+                                "amount_net": "250.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "68.00",
+                                "amount_net": "68.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 3,
+                  "quality": 7,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 4,
+                  "family": 0,
+                  "capacity": 2,
+                  "club": 0,
+                  "bedrooms": 0,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "Premier Double room (twin beds)",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom"
+                ],
+                "sell_price_limits": null,
+                "allotment": 16,
+                "amenities_data": [
+                  "non-smoking"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "234.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "Premier Double room",
+                  "main_name": "Premier Double room",
+                  "bathroom": null,
+                  "bedding_type": "twin beds",
+                  "misc_room_type": null
+                },
+                "legal_info": null,
+                "is_package": false
+              },
+              {
+                "match_hash": "m-2dc64311-6378-5d28-8d4d-ff47ef451d38",
+                "search_hash": "sr-019c724b-d921-7652-a9f9-14f8ee2579a4",
+                "daily_prices": [
+                  "250.00"
+                ],
+                "meal": "nomeal",
+                "meal_data": {
+                  "value": "nomeal",
+                  "has_breakfast": false,
+                  "no_child_meal": true
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "68.00",
+                      "show_amount": "250.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "22.73",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "10.82",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "250.00",
+                          "amount_net": "250.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "68.00",
+                          "amount_net": "68.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "68.00",
+                            "amount_show": "250.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "250.00",
+                                "amount_net": "250.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "68.00",
+                                "amount_net": "68.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 3,
+                  "quality": 7,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 3,
+                  "family": 0,
+                  "capacity": 2,
+                  "club": 0,
+                  "bedrooms": 0,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "Premier Double room (full double bed)",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom"
+                ],
+                "sell_price_limits": null,
+                "allotment": 16,
+                "amenities_data": [
+                  "non-smoking"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "234.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "Premier Double room",
+                  "main_name": "Premier Double room",
+                  "bathroom": null,
+                  "bedding_type": "full double bed",
+                  "misc_room_type": null
+                },
+                "legal_info": null,
+                "is_package": false
+              },
+              {
+                "match_hash": "m-5a1995b0-831b-5830-9d7c-1ee5c4e56f71",
+                "search_hash": "sr-019c724b-d921-7653-aa25-481ff934e88a",
+                "daily_prices": [
+                  "254.00"
+                ],
+                "meal": "breakfast",
+                "meal_data": {
+                  "value": "breakfast",
+                  "has_breakfast": true,
+                  "no_child_meal": false
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "69.00",
+                      "show_amount": "254.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "23.09",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "11.00",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "254.00",
+                          "amount_net": "254.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "69.00",
+                          "amount_net": "69.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "69.00",
+                            "amount_show": "254.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "254.00",
+                                "amount_net": "254.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "69.00",
+                                "amount_net": "69.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 3,
+                  "quality": 6,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 4,
+                  "family": 0,
+                  "capacity": 2,
+                  "club": 0,
+                  "bedrooms": 0,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "Deluxe Double room (twin beds)",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom",
+                  "has_breakfast"
+                ],
+                "sell_price_limits": null,
+                "allotment": 70,
+                "amenities_data": [
+                  "non-smoking"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "238.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "Deluxe Double room",
+                  "main_name": "Deluxe Double room",
+                  "bathroom": null,
+                  "bedding_type": "twin beds",
+                  "misc_room_type": null
+                },
+                "legal_info": null,
+                "is_package": false
+              },
+              {
+                "match_hash": "m-ccafd833-25e4-50b6-b9a6-3e71a5546f04",
+                "search_hash": "sr-019c724b-d921-7654-a633-7b1c95acc50c",
+                "daily_prices": [
+                  "254.00"
+                ],
+                "meal": "breakfast",
+                "meal_data": {
+                  "value": "breakfast",
+                  "has_breakfast": true,
+                  "no_child_meal": false
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "69.00",
+                      "show_amount": "254.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "23.09",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "11.00",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "254.00",
+                          "amount_net": "254.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "69.00",
+                          "amount_net": "69.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "69.00",
+                            "amount_show": "254.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "254.00",
+                                "amount_net": "254.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "69.00",
+                                "amount_net": "69.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 3,
+                  "quality": 6,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 3,
+                  "family": 0,
+                  "capacity": 2,
+                  "club": 0,
+                  "bedrooms": 0,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "Deluxe Double room (full double bed) (king size bed)",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom",
+                  "has_breakfast"
+                ],
+                "sell_price_limits": null,
+                "allotment": 70,
+                "amenities_data": [
+                  "non-smoking",
+                  "king-bed"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "238.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "Deluxe Double room",
+                  "main_name": "Deluxe Double room",
+                  "bathroom": null,
+                  "bedding_type": "full double bed",
+                  "misc_room_type": "king size bed"
+                },
+                "legal_info": null,
+                "is_package": false
+              },
+              {
+                "match_hash": "m-0525953a-ddcd-57fb-8b04-b229c7db33b1",
+                "search_hash": "sr-019c724b-d921-7657-98b3-5b55dff3af59",
+                "daily_prices": [
+                  "272.00"
+                ],
+                "meal": "breakfast",
+                "meal_data": {
+                  "value": "breakfast",
+                  "has_breakfast": true,
+                  "no_child_meal": false
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "74.00",
+                      "show_amount": "272.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "24.73",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "11.77",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "272.00",
+                          "amount_net": "272.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "74.00",
+                          "amount_net": "74.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "74.00",
+                            "amount_show": "272.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "272.00",
+                                "amount_net": "272.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "74.00",
+                                "amount_net": "74.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 3,
+                  "quality": 7,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 4,
+                  "family": 0,
+                  "capacity": 2,
+                  "club": 0,
+                  "bedrooms": 0,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "Premier Double room (twin beds)",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom",
+                  "has_breakfast"
+                ],
+                "sell_price_limits": null,
+                "allotment": 16,
+                "amenities_data": [
+                  "non-smoking"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "256.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "Premier Double room",
+                  "main_name": "Premier Double room",
+                  "bathroom": null,
+                  "bedding_type": "twin beds",
+                  "misc_room_type": null
+                },
+                "legal_info": null,
+                "is_package": false
+              },
+              {
+                "match_hash": "m-3e26ddfa-8b82-5406-aeff-6854507ec22f",
+                "search_hash": "sr-019c724b-d921-7658-b779-734c0deac586",
+                "daily_prices": [
+                  "272.00"
+                ],
+                "meal": "breakfast",
+                "meal_data": {
+                  "value": "breakfast",
+                  "has_breakfast": true,
+                  "no_child_meal": false
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "74.00",
+                      "show_amount": "272.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "24.73",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "11.77",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "272.00",
+                          "amount_net": "272.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "74.00",
+                          "amount_net": "74.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "74.00",
+                            "amount_show": "272.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "272.00",
+                                "amount_net": "272.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "74.00",
+                                "amount_net": "74.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 3,
+                  "quality": 7,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 3,
+                  "family": 0,
+                  "capacity": 2,
+                  "club": 0,
+                  "bedrooms": 0,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "Premier Double room (full double bed)",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom",
+                  "has_breakfast"
+                ],
+                "sell_price_limits": null,
+                "allotment": 16,
+                "amenities_data": [
+                  "non-smoking"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "256.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "Premier Double room",
+                  "main_name": "Premier Double room",
+                  "bathroom": null,
+                  "bedding_type": "full double bed",
+                  "misc_room_type": null
+                },
+                "legal_info": null,
+                "is_package": false
+              },
+              {
+                "match_hash": "m-e2bc142b-2bab-532a-889f-258ef20ca68d",
+                "search_hash": "sr-019c724b-d921-7659-8938-c42804ade130",
+                "daily_prices": [
+                  "283.00"
+                ],
+                "meal": "nomeal",
+                "meal_data": {
+                  "value": "nomeal",
+                  "has_breakfast": false,
+                  "no_child_meal": true
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "77.00",
+                      "show_amount": "283.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "25.73",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "12.25",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "283.00",
+                          "amount_net": "283.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "77.00",
+                          "amount_net": "77.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "77.00",
+                            "amount_show": "283.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "283.00",
+                                "amount_net": "283.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "77.00",
+                                "amount_net": "77.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 6,
+                  "quality": 0,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 3,
+                  "family": 0,
+                  "capacity": 2,
+                  "club": 0,
+                  "bedrooms": 1,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "1 Bedroom Double Apartment (full double bed)",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom"
+                ],
+                "sell_price_limits": null,
+                "allotment": 39,
+                "amenities_data": [
+                  "non-smoking",
+                  "1-bedroom"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "265.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "1 Bedroom Double Apartment",
+                  "main_name": "1 Bedroom Double Apartment",
+                  "bathroom": null,
+                  "bedding_type": "full double bed",
+                  "misc_room_type": null
+                },
+                "legal_info": null,
+                "is_package": false
+              },
+              {
+                "match_hash": "m-a65c358a-cc2e-5383-98fd-6c4fa5652100",
+                "search_hash": "sr-019c724b-d921-7656-8f9f-7dd19c3f9963",
+                "daily_prices": [
+                  "305.00"
+                ],
+                "meal": "breakfast",
+                "meal_data": {
+                  "value": "breakfast",
+                  "has_breakfast": true,
+                  "no_child_meal": false
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "83.00",
+                      "show_amount": "305.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "27.73",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "13.20",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "305.00",
+                          "amount_net": "305.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "83.00",
+                          "amount_net": "83.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "83.00",
+                            "amount_show": "305.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "305.00",
+                                "amount_net": "305.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "83.00",
+                                "amount_net": "83.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 6,
+                  "quality": 0,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 3,
+                  "family": 0,
+                  "capacity": 2,
+                  "club": 0,
+                  "bedrooms": 1,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "1 Bedroom Double Apartment (full double bed)",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom",
+                  "has_breakfast"
+                ],
+                "sell_price_limits": null,
+                "allotment": 39,
+                "amenities_data": [
+                  "non-smoking",
+                  "1-bedroom"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "288.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "1 Bedroom Double Apartment",
+                  "main_name": "1 Bedroom Double Apartment",
+                  "bathroom": null,
+                  "bedding_type": "full double bed",
+                  "misc_room_type": null
+                },
+                "legal_info": null,
+                "is_package": false
+              },
+              {
+                "match_hash": "m-0dc89953-f3e1-5336-8817-1b7e7ff16cd2",
+                "search_hash": "sr-019c724b-d921-765a-9221-2b4db66e16ab",
+                "daily_prices": [
+                  "382.00"
+                ],
+                "meal": "nomeal",
+                "meal_data": {
+                  "value": "nomeal",
+                  "has_breakfast": false,
+                  "no_child_meal": true
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "104.00",
+                      "show_amount": "382.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "34.73",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "16.54",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "382.00",
+                          "amount_net": "382.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "104.00",
+                          "amount_net": "104.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "104.00",
+                            "amount_show": "382.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "382.00",
+                                "amount_net": "382.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "104.00",
+                                "amount_net": "104.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 5,
+                  "quality": 0,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 0,
+                  "family": 0,
+                  "capacity": 4,
+                  "club": 0,
+                  "bedrooms": 2,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "2 Bedrooms Quadruple Suite",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom"
+                ],
+                "sell_price_limits": null,
+                "allotment": 46,
+                "amenities_data": [
+                  "2-bedrooms",
+                  "non-smoking"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "360.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "2 Bedrooms Quadruple Suite",
+                  "main_name": "2 Bedrooms Quadruple Suite",
+                  "bathroom": null,
+                  "bedding_type": null,
+                  "misc_room_type": null
+                },
+                "legal_info": null,
+                "is_package": false
+              },
+              {
+                "match_hash": "m-f6691f0d-ebef-52b9-a237-2d55f811104f",
+                "search_hash": "sr-019c724b-d921-7655-8063-6bce1f6eddae",
+                "daily_prices": [
+                  "412.00"
+                ],
+                "meal": "breakfast",
+                "meal_data": {
+                  "value": "breakfast",
+                  "has_breakfast": true,
+                  "no_child_meal": false
+                },
+                "payment_options": {
+                  "payment_types": [
+                    {
+                      "amount": "112.00",
+                      "show_amount": "412.00",
+                      "currency_code": "USD",
+                      "show_currency_code": "AED",
+                      "by": null,
+                      "is_need_credit_card_data": false,
+                      "is_need_cvc": false,
+                      "type": "deposit",
+                      "vat_data": {
+                        "included": false,
+                        "applied": false,
+                        "amount": "0.00",
+                        "currency_code": "AED",
+                        "value": "0.00"
+                      },
+                      "tax_data": {
+                        "taxes": [
+                          {
+                            "name": "resort_fee",
+                            "included_by_supplier": false,
+                            "amount": "15.00",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "service_fee",
+                            "included_by_supplier": true,
+                            "amount": "37.45",
+                            "currency_code": "AED"
+                          },
+                          {
+                            "name": "vat",
+                            "included_by_supplier": true,
+                            "amount": "17.84",
+                            "currency_code": "AED"
+                          }
+                        ]
+                      },
+                      "perks": {},
+                      "commission_info": {
+                        "show": {
+                          "amount_gross": "412.00",
+                          "amount_net": "412.00",
+                          "amount_commission": "0.00"
+                        },
+                        "charge": {
+                          "amount_gross": "112.00",
+                          "amount_net": "112.00",
+                          "amount_commission": "0.00"
+                        }
+                      },
+                      "cancellation_penalties": {
+                        "policies": [
+                          {
+                            "start_at": null,
+                            "end_at": "2026-10-16T10:00:00",
+                            "amount_charge": "0.00",
+                            "amount_show": "0.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "0.00",
+                                "amount_net": "0.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          },
+                          {
+                            "start_at": "2026-10-16T10:00:00",
+                            "end_at": null,
+                            "amount_charge": "112.00",
+                            "amount_show": "412.00",
+                            "commission_info": {
+                              "show": {
+                                "amount_gross": "412.00",
+                                "amount_net": "412.00",
+                                "amount_commission": "0.00"
+                              },
+                              "charge": {
+                                "amount_gross": "112.00",
+                                "amount_net": "112.00",
+                                "amount_commission": "0.00"
+                              }
+                            }
+                          }
+                        ],
+                        "free_cancellation_before": "2026-10-16T10:00:00"
+                      },
+                      "recommended_price": null
+                    }
+                  ]
+                },
+                "bar_rate_price_data": null,
+                "rg_ext": {
+                  "class": 5,
+                  "quality": 0,
+                  "sex": 0,
+                  "bathroom": 2,
+                  "bedding": 0,
+                  "family": 0,
+                  "capacity": 4,
+                  "club": 0,
+                  "bedrooms": 2,
+                  "balcony": 0,
+                  "view": 0,
+                  "floor": 0
+                },
+                "room_name": "2 Bedrooms Quadruple Suite",
+                "room_name_info": null,
+                "serp_filters": [
+                  "has_bathroom",
+                  "has_breakfast"
+                ],
+                "sell_price_limits": null,
+                "allotment": 46,
+                "amenities_data": [
+                  "non-smoking",
+                  "2-bedrooms"
+                ],
+                "any_residency": true,
+                "deposit": null,
+                "no_show": {
+                  "amount": "387.00",
+                  "currency_code": "AED",
+                  "from_time": "12:00:00"
+                },
+                "room_data_trans": {
+                  "main_room_type": "2 Bedrooms Quadruple Suite",
+                  "main_name": "2 Bedrooms Quadruple Suite",
+                  "bathroom": null,
+                  "bedding_type": null,
+                  "misc_room_type": null
+                },
+                "legal_info": null,
+                "is_package": false
+              }
+            ],
+            "bar_price_data": null
+          }
+        ],
+        "total_hotels": 1
+      },
+      "debug": {
+        "api_endpoint": {
+          "endpoint": "api/b2b/v3/search/serp/hotels",
+          "is_active": true,
+          "is_limited": true,
+          "remaining": 1900,
+          "requests_number": 2000,
+          "reset": "2026-02-18T19:49:00",
+          "seconds_number": 60
+        },
+        "request": {
+          "checkin": "2026-10-17",
+          "checkout": "2026-10-18",
+          "residency": "ae",
+          "language": "en",
+          "guests": [
+            {
+              "adults": 1,
+              "children": []
+            }
+          ],
+          "currency": "AED",
+          "longitude": null,
+          "latitude": null,
+          "radius": null,
+          "ids": [
+            "ramada_sharjah"
+          ]
+        },
+        "method": "POST",
+        "real_ip": "63.33.82.220",
+        "request_id": "2ca71dd29c3bf1e3f5599d77ff1ec36c",
+        "key_id": 6712,
+        "api_key_id": 6712,
+        "utcnow": "2026-02-18T19:48:19.230372"
+      },
+      "status": "ok",
+      "error": null
+    }
+  },
+  "priority": 1000
+}

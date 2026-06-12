@@ -1,0 +1,78 @@
+{
+  "httpRequest": {
+    "path": "/api/b2b/v3/hotel/order/booking/finish/",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "data": null,
+      "debug": {
+        "api_endpoint": {
+          "endpoint": "api/b2b/v3/hotel/order/booking/finish",
+          "is_active": true,
+          "is_limited": true,
+          "remaining": 29,
+          "requests_number": 30,
+          "reset": "2026-02-18T19:50:00",
+          "seconds_number": 60
+        },
+        "request": {
+          "user": {
+            "email": "accommodation.fft@almosafer.com",
+            "comment": null,
+            "phone": "+201111149296"
+          },
+          "partner": {
+            "comment": "I'll override the wireless HTTP transmitter, that should interface the USB monitor!",
+            "partner_order_id": "a7HtT29geBZsrj_-7018cc0d-4736-4488-acdb-67505fab9ca9",
+            "amount_sell_b2b2c": null
+          },
+          "language": "en",
+          "rooms": [
+            {
+              "guests": [
+                {
+                  "age": null,
+                  "first_name": "SeeraMajdi",
+                  "last_name": "AlmosaferTial",
+                  "is_child": null
+                }
+              ]
+            }
+          ],
+          "arrival_datetime": null,
+          "supplier_data": {
+            "phone": "+1529581 4190",
+            "email": "Michele_Kuhn@yahoo.com",
+            "first_name_original": "SeeraMajdi",
+            "last_name_original": "AlmosaferTial"
+          },
+          "upsell_data": null,
+          "payment_type": {
+            "type": "deposit",
+            "amount": 63,
+            "currency_code": "USD",
+            "init_uuid": null,
+            "pay_uuid": null
+          },
+          "return_path": null
+        },
+        "method": "POST",
+        "real_ip": "63.33.82.220",
+        "request_id": "ad28ea91db057a332cf27872dd53191d",
+        "key_id": 6712,
+        "api_key_id": 6712,
+        "utcnow": "2026-02-18T19:49:04.142700"
+      },
+      "status": "ok",
+      "error": null
+    }
+  },
+  "priority": 1000
+}

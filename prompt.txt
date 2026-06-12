@@ -1,0 +1,10 @@
+USe : staging Hotels BR: likely http://hotel-connectivity-br.tajawal-stg.internal
+After creating the APIKEY I want you to creat BusinessRule for the created APIKEY
+-First Add and Assign creaetd apiKEy to the RuleId 3(Room Static Markup In Percentage) 
+-Then Assign creaetd apiKEy to the RuleId 4(Room Dynamic Markup In percentage) 
+-Inside ruleId 3 want to creat condition with parent id as 178 with name APIKey Included and add the creted apiKEy
+-Inside ruleId 4 want to creat condition with parent id as 176 with name APIKey Included and add the creted apiKEy
+-Clear the cachey
+-Stricy tell your understning for this and how you will implement this
+-No code
+-Ask as many as question u need

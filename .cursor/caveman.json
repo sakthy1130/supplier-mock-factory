@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "defaultLevel": "full",
+  "alwaysApplyRule": ".cursor/rules/caveman.mdc",
+  "skill": ".agents/skills/caveman/SKILL.md",
+  "stopPhrases": ["stop caveman", "normal mode"],
+  "levelSwitch": "/caveman lite|full|ultra|wenyan"
+}

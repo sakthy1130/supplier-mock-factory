@@ -1,0 +1,21 @@
+# Supplier Mock Factory — project Codex config (commit-friendly, shareable)
+#
+# Loads when this repo is trusted. Add once to ~/.codex/config.toml:
+#
+#   [projects."/absolute/path/to/supplier-mock-factory"]
+#   trust_level = "trusted"
+#
+# Or trust parent git root (qaBackend_Enigma) — nested .codex/ layers still apply.
+
+# AGENTS.md chain — SMF needs PROGRESS + nested docs/AGENTS.md
+project_doc_max_bytes = 65536
+
+# If a directory has no AGENTS.md, try PROGRESS.md (docs/ only when cwd there)
+project_doc_fallback_filenames = ["PROGRESS.md"]
+
+# Open file citations in Cursor
+file_opener = "cursor"
+
+# Default sandbox for SMF work (override per task if needed)
+[sandbox]
+mode = "workspace-write"

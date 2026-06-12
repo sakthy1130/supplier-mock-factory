@@ -1,0 +1,910 @@
+{
+  "httpRequest": {
+    "path": "/v3/properties/1723385/availability",
+    "method": "GET"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "body": [
+        {
+          "property_id": "1723385",
+          "status": "available",
+          "rooms": [
+            {
+              "id": "201836237",
+              "room_name": "Deluxe Room",
+              "rates": [
+                {
+                  "id": "209336313",
+                  "status": "available",
+                  "available_rooms": 15,
+                  "refundable": false,
+                  "member_deal_available": true,
+                  "sale_scenario": {
+                    "package": false,
+                    "member": false,
+                    "corporate": false,
+                    "distribution": false
+                  },
+                  "merchant_of_record": "expedia",
+                  "links": {
+                    "payment_options": {
+                      "method": "GET",
+                      "href": "/v3/properties/1723385/payment-options?token=REhZAQsABwMHQhMHUlNCF1ELUj1DVhdLBQMES1REClxLQg5cRR8WBlIBSxZdCFRpTQxRWQUEAFIFDgMNHwcFA1cbAwRSAh0MA1QESA1RBFReCFdUAAVTCh8IVURWUAdWRDtZVWgTVgBXRgBccWBiJH0vdENSQkoRXA5WRGsVVhdKX19db1xXWQYNAlYNVgQDFFMPBAEVVQkABExQDF5UH1AFA1BUDQNQAwQFXhJQQUEVX1wHEGkLEwwFVVwfBAEXAxlTERdTSksIW1dsXQIIWgtTUQUAVwJOBFZVUx8ABFFUT1AGBwAdBwEKUlADBAdWClAIQkRcQRFXAwgXB0cPXEgXXFsTFEYWRxZdD1FLOloRVBNZEV5YX2hfCgcHWwUldyB5IG0UVwdbBEpYQABXbxVYXlJZVwMKUBtWDxwJUGAHXB0HI1EIFVBxVggaVQVRUwpVVVEGaBVbC0xWFhZJPlteBgcFeSZAUlVDD1BZAhcBCQMGWgsIXldWUAEaUlofAQsWFVdHQF1SFj4SRllWDFQAagtUBFQJXlAADxNXFkoUVAhQTAQlJnBCWgxRBVhZTBEIVlQHVUwBAU8FCkBFR0RGW1pTQW9cU18GURJ3CVNbWkZAWVlUBAxUBAACClUI"
+                    }
+                  },
+                  "bed_groups": {
+                    "37316": {
+                      "id": "37316",
+                      "description": "1 Double Bed",
+                      "links": {
+                        "price_check": {
+                          "method": "GET",
+                          "href": "/v3/properties/1723385/rooms/201836237/rates/209336313?token=F~OjogZCQ0NhkyAQ9PYWUCZ3kgD2gCCVAPS1YBFAQHITJUAVQFGAlcTgVcc2d1I3dkHVQAAFAMVFUBFFACBwUbBgVXBh5UCwgCGgcEVAEGWVdcB1ABDD5BUQsGAwYNXlcVAAZTBBpVUgEJGQYDVl0fB1tUBAQGVg9QAQcDVDJQA1wPDwZBNAAAVAdCZ1K2YDNyaySzMGELUQnzNGQBA1VSBK80PlRGcQ1BVw1URnZWUJBgH2oZQEIbE1QWWEd3QF9VcVIGFUgUSlEbURsJFiBAVVUSThdJRFINQF1EHRAOVE440DNmV1H6YGUNUQcaUgSDOTXQZTPDNWK8ZDT1ZDb-OmTENjXJMBECBgUCUgNYXBgAAlBbSAMBXAYfXFdUBxVdVQBVBQ1QUVZUVwCLNnsBAFMHHgdSSAMNMgdeAwMBXwcGSgwFVlIJA1cEUGKOYzYTUetkYyCJB7o="
+                        }
+                      },
+                      "configuration": [
+                        {
+                          "type": "FullBed",
+                          "size": "Full",
+                          "quantity": 1
+                        }
+                      ],
+                      "asDefault": false
+                    },
+                    "37341": {
+                      "id": "37341",
+                      "description": "2 Twin Beds",
+                      "links": {
+                        "price_check": {
+                          "method": "GET",
+                          "href": "/v3/properties/1723385/rooms/201836237/rates/209336313?token=F~OjogZCQ0NhkyAQ9PYWUCZ3kgD2gCCVAPS1YBFAQHITJUAVQFGAlcTgVcc2d1I3dkHVQAAFAMVFUBFFACBwUbBgVXBh5UCwgCGgcEVAEGWVdcB1ABDD5BUQsGAwYNXlcVAAZTBBpVUgEJGQYDVl0fB1tUBAQGVg9QAQcDVDJQA1wPDwZBNAAAVAdCZ1K2YDNyaySzMGELUQnzNGQBA1VXA680OVdGYRVdW0FzA1BAljNOa0pAFk8SBhMOQDFGXF17VlNAG0ZFUEIEFgMRYBFcVxscQERNUF0XXUBJRggGGG7XYzBWUa8xZ1YKVR8DUNFiOdw5YMcyNes2Z6VnZ69kOcVmNZ5hFlRSVFUFUVUASFRSAAIVUQBSCRoLUVVSGgEBVQdRWlZTBAMDWYo7KlcDAlccAwFJVQZsVw5cCwkDVgQYUAkAU1oDBFcFP4I2Y0JWujFk0dzCGQ=="
+                        }
+                      },
+                      "configuration": [
+                        {
+                          "type": "TwinBed",
+                          "size": "Twin",
+                          "quantity": 2
+                        }
+                      ],
+                      "asDefault": false
+                    }
+                  },
+                  "cancel_penalties": [
+                    {
+                      "start": "2026-06-04T22:28:30.410+04:00",
+                      "end": "2026-08-13T23:59:00.000+04:00",
+                      "percent": "100%",
+                      "currency": "AED"
+                    }
+                  ],
+                  "occupancy_pricing": {
+                    "1": {
+                      "nightly": [
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "10.75",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "86.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "10.75",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "86.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "10.75",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "86.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "10.75",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "86.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "10.75",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "86.00",
+                            "currency": "AED"
+                          }
+                        ]
+                      ],
+                      "stay": [
+                        {
+                          "type": "property_fee",
+                          "value": "43.00",
+                          "currency": "AED"
+                        }
+                      ],
+                      "fees": {
+                        "mandatory_tax": {
+                          "billable_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          }
+                        }
+                      },
+                      "totals": {
+                        "inclusive": {
+                          "billable_currency": {
+                            "value": "526.75",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "526.75",
+                            "currency": "AED"
+                          }
+                        },
+                        "exclusive": {
+                          "billable_currency": {
+                            "value": "430.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "430.00",
+                            "currency": "AED"
+                          }
+                        },
+                        "property_fees": {
+                          "billable_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          }
+                        },
+                        "gross_profit": {
+                          "billable_currency": {
+                            "value": "81.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "81.00",
+                            "currency": "AED"
+                          }
+                        },
+                        "property_inclusive": {
+                          "billable_currency": {
+                            "value": "576.75",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "576.75",
+                            "currency": "AED"
+                          }
+                        },
+                        "marketing_fee": {
+                          "billable_currency": {
+                            "value": "55.08",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "55.08",
+                            "currency": "AED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "209336316",
+                  "status": "available",
+                  "available_rooms": 15,
+                  "refundable": false,
+                  "member_deal_available": true,
+                  "sale_scenario": {
+                    "package": false,
+                    "member": false,
+                    "corporate": false,
+                    "distribution": false
+                  },
+                  "merchant_of_record": "expedia",
+                  "amenities": {
+                    "1073742786": {
+                      "id": "1073742786",
+                      "name": "Free breakfast"
+                    }
+                  },
+                  "links": {
+                    "payment_options": {
+                      "method": "GET",
+                      "href": "/v3/properties/1723385/payment-options?token=REhZAQsABwMHQhMHUlNCF1ELUj1DVhdLBQMES1REClxLQg5cRR8WBlIBSxZdCFRpTQxRWQUEAFIFDgMNHwcFA1cbAwRSAh0MA1QESA1RBFReCFdUAAVTCh8IVURWUAdWRDtZVWgTVgBXRgBccWBiJH0vdENSQkoRXA5WRGsVVhdKX19db1xXWQYNAlYNVgQDFFMPBAEVVQkABExQDF5UH1AFA1BUDQNQAwQFXhJQQUEVX1wHEGkLEwwFVVwfBAEXAxlTERdTSksIW1dsXQIIWgtTUQUAVwJOBFZVUx8ABFFUT1AGBwAdBwEKUlADBAdWClAIQkRcQRFXAwgXB0cPXEgXXFsTFEYWRxZdD1FLOloRVBNZEV5YX2hfCgcHWwUldyB5IG0UVwdbBEpYQABXbxVYXlJZVwMKUBtWDxwJUGAHXB0HI1EIFVBxVggaVQVRUwpVVVEGaBVbC0xWFhZJPlteBgcFeSZAUlVDD1BZAhcBCQMGWgsIXldWUAEaUlofAQsWFVdHQF1SFj4SRllWDFQAagtUBFQJXlAADxNXFkoUVAhQTAQlJnBCWgxRBVhZTBEIVlQHVUwBAU8FCkBFR0RGW1pTQW9cU18GURJ3CVNbWkZAWVlUBAxUBAACClUI"
+                    }
+                  },
+                  "bed_groups": {
+                    "37316": {
+                      "id": "37316",
+                      "description": "1 Double Bed",
+                      "links": {
+                        "price_check": {
+                          "method": "GET",
+                          "href": "/v3/properties/1723385/rooms/201836237/rates/209336316?token=F~OjogZCQ0NhkyAQ9PYWUCZ3kgD2gCCVAPS1YBFAQHITJUAVQFGAlcTgVcc2d1I3dkHVQAAFAMVFUBFFACBwUbBgVXBh5UCwgCGgcEVAEGWVdcB1ABDD5BUQsGAwYNXlcVAAZTBBpVUgEJGQYDVl0fB1tUBAQGVg9QAQcDVDJQA1wPDwZBNAAAVAdCZ1K2YDNyaySzMGELUQnzNGQBA1VSBK80PlRGcQ1BVw1URnZWUJBgH2oZQEIbE1QWWEd3QF9VcVIGFUgUSlEbURsJFiBAVVUSThdJRFINQF1EHRAOVE440DNmV1H6YGUPUgEaUAGDOTXQZTPDNWK8ZDT1ZDb-OmTENjXJMBECBgUCUgNYXBgAAlBbSAMBXAYfXFdUBxVdVQBVBQ1QUVZUVwCLNnsBAFMHHgdSSAMNMgdeAwMBXwcGSgwFVlIJA1cEUGKOYzYTUetkY4Ypw84="
+                        }
+                      },
+                      "configuration": [
+                        {
+                          "type": "FullBed",
+                          "size": "Full",
+                          "quantity": 1
+                        }
+                      ],
+                      "asDefault": false
+                    },
+                    "37341": {
+                      "id": "37341",
+                      "description": "2 Twin Beds",
+                      "links": {
+                        "price_check": {
+                          "method": "GET",
+                          "href": "/v3/properties/1723385/rooms/201836237/rates/209336316?token=F~OjogZCQ0NhkyAQ9PYWUCZ3kgD2gCCVAPS1YBFAQHITJUAVQFGAlcTgVcc2d1I3dkHVQAAFAMVFUBFFACBwUbBgVXBh5UCwgCGgcEVAEGWVdcB1ABDD5BUQsGAwYNXlcVAAZTBBpVUgEJGQYDVl0fB1tUBAQGVg9QAQcDVDJQA1wPDwZBNAAAVAdCZ1K2YDNyaySzMGELUQnzNGQBA1VXA680OVdGYRVdW0FzA1BAljNOa0pAFk8SBhMOQDFGXF17VlNAG0ZFUEIEFgMRYBFcVxscQERNUF0XXUBJRggGGG7XYzBWUa8xZ1QJUx8BVdFiOdw5YMcyNes2Z6VnZ69kOcVmNZ5hFlRSVFUFUVUASFRSAAIVUQBSCRoLUVVSGgEBVQdRWlZTBAMDWYo7KlcDAlccAwFJVQZsVw5cCwkDVgQYUAkAU1oDBFcFP4I2Y0JWujFkd3wGbQ=="
+                        }
+                      },
+                      "configuration": [
+                        {
+                          "type": "TwinBed",
+                          "size": "Twin",
+                          "quantity": 2
+                        }
+                      ],
+                      "asDefault": false
+                    }
+                  },
+                  "cancel_penalties": [
+                    {
+                      "start": "2026-06-04T22:28:30.410+04:00",
+                      "end": "2026-08-13T23:59:00.000+04:00",
+                      "percent": "100%",
+                      "currency": "AED"
+                    }
+                  ],
+                  "occupancy_pricing": {
+                    "1": {
+                      "nightly": [
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "14.50",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "116.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "14.50",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "116.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "14.50",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "116.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "14.50",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "116.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "14.50",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "116.00",
+                            "currency": "AED"
+                          }
+                        ]
+                      ],
+                      "stay": [
+                        {
+                          "type": "property_fee",
+                          "value": "58.00",
+                          "currency": "AED"
+                        }
+                      ],
+                      "fees": {
+                        "mandatory_tax": {
+                          "billable_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          }
+                        }
+                      },
+                      "totals": {
+                        "inclusive": {
+                          "billable_currency": {
+                            "value": "710.50",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "710.50",
+                            "currency": "AED"
+                          }
+                        },
+                        "exclusive": {
+                          "billable_currency": {
+                            "value": "580.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "580.00",
+                            "currency": "AED"
+                          }
+                        },
+                        "property_fees": {
+                          "billable_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          }
+                        },
+                        "gross_profit": {
+                          "billable_currency": {
+                            "value": "109.25",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "109.25",
+                            "currency": "AED"
+                          }
+                        },
+                        "property_inclusive": {
+                          "billable_currency": {
+                            "value": "760.50",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "760.50",
+                            "currency": "AED"
+                          }
+                        },
+                        "marketing_fee": {
+                          "billable_currency": {
+                            "value": "74.29",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "74.29",
+                            "currency": "AED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "id": "201841057",
+              "room_name": "Suite",
+              "rates": [
+                {
+                  "id": "209336317",
+                  "status": "available",
+                  "available_rooms": 2,
+                  "refundable": false,
+                  "member_deal_available": true,
+                  "sale_scenario": {
+                    "package": false,
+                    "member": false,
+                    "corporate": false,
+                    "distribution": false
+                  },
+                  "merchant_of_record": "expedia",
+                  "amenities": {
+                    "2192": {
+                      "id": "2192",
+                      "name": "Free WiFi"
+                    },
+                    "1073742786": {
+                      "id": "1073742786",
+                      "name": "Free breakfast"
+                    }
+                  },
+                  "links": {
+                    "payment_options": {
+                      "method": "GET",
+                      "href": "/v3/properties/1723385/payment-options?token=REhZAQsABwMHQhMHUlNCF1ELUj1DVhdLBQMES1REClxLQg5cRR8WBlIBSxZdCFRpTQxRWQUEAFIFDgMNHwcFA1cbAwRSAh0MA1QESA1RBFReCFdUAAVTCh8IVURWUAdWRDtZVWgTVgBXRgBccWBiJH0vdENSQkoRXA5WRGsVVhdKX19db1xXWQYNAlYNVgQDFFMPBAEVVQkABExQDF5UH1AFA1BUDQNQAwQFXhJQQUEVX1wHEGkLEwwFVVwfBAEXAxlTERdTSksIW1dsXQIIWgtTUQUAVwJOBFZVUx8ABFFUT1AGBwAdBwEKUlADBAdWClAIQkRcQRFXAwgXB0cPXEgXXFsTFEYWRxZdD1FLOloRVBNZEV5YX2hfCgcHWwUldyB5IG0UVwdbBEpYQABXbxVYXlJZVwMKUBtWDxwJUGAHXB0HI1EIFVBxVggaVQVRUwpVVVEGaBVbC0xWFhZJPlteBgcFeSZAUlVDD1BZAhcBCQMGWgsIXldWUAEaUlofAQsWFVdHQF1SFj4SRllWDFQAagtUBFQJXlAADxNXFkoUVAhQTAQlJnBCWgxRBVhZTBEIVlQHVUwBAU8FCkBFR0RGW1pTQW9cU18GURJ3CVNbWkZAWVlUBAxUBAACClUI"
+                    }
+                  },
+                  "bed_groups": {
+                    "37316": {
+                      "id": "37316",
+                      "description": "1 Double Bed",
+                      "links": {
+                        "price_check": {
+                          "method": "GET",
+                          "href": "/v3/properties/1723385/rooms/201841057/rates/209336317?token=F~OjogZCQ0NhkyAQ9PYWUCZ3kgD2gCCVAPS1YBFAQHITJUAVQFGAlcTgVcc2d1I3dkHVQAAFAMVFUBFFACBwUbBgVXBh5UCwgCGgcEVAEGWVdcB1ABDD5BUQsGAwYNXlcVAAZTBBpVUgEJGQYDVl0fB1tUBAQGVg9QAQcDVDJQA1wPDwZBNAAAVAdCZ1K2YDNyaySzMGELUQnzNGQBA1VSBK80PlRGcQ1BVw1URnZWUJBgH2oZQEIbE1QWWEd3QF9VcVIGFUgUSlEbURsJFiBAVVUSThdJRFINQF1EHRAOVE440DNmV1H6YGQKVQcASwVT2DU5jDY3xGI17jdk9jVnoGdllDZimDdHVldSVQAOBAxMUFIJBhoCD1MDSFpWAQhJCQBSAVILUgMBAA4BhmctAlEDBRpUUx4IU2JXAQsLXQ4FVBYAU1cBCVAEUQ1u2zZnFAC-Y2etX-r2"
+                        }
+                      },
+                      "configuration": [
+                        {
+                          "type": "FullBed",
+                          "size": "Full",
+                          "quantity": 1
+                        }
+                      ],
+                      "asDefault": false
+                    }
+                  },
+                  "cancel_penalties": [
+                    {
+                      "start": "2026-06-04T22:28:30.410+04:00",
+                      "end": "2026-08-13T23:59:00.000+04:00",
+                      "percent": "100%",
+                      "currency": "AED"
+                    }
+                  ],
+                  "occupancy_pricing": {
+                    "1": {
+                      "nightly": [
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "54.38",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "435.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "54.38",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "435.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "54.38",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "435.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "54.38",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "435.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "54.38",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "435.00",
+                            "currency": "AED"
+                          }
+                        ]
+                      ],
+                      "stay": [
+                        {
+                          "type": "property_fee",
+                          "value": "217.50",
+                          "currency": "AED"
+                        }
+                      ],
+                      "fees": {
+                        "mandatory_tax": {
+                          "billable_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          }
+                        }
+                      },
+                      "totals": {
+                        "inclusive": {
+                          "billable_currency": {
+                            "value": "2664.40",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "2664.40",
+                            "currency": "AED"
+                          }
+                        },
+                        "exclusive": {
+                          "billable_currency": {
+                            "value": "2175.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "2175.00",
+                            "currency": "AED"
+                          }
+                        },
+                        "property_fees": {
+                          "billable_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          }
+                        },
+                        "gross_profit": {
+                          "billable_currency": {
+                            "value": "409.69",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "409.69",
+                            "currency": "AED"
+                          }
+                        },
+                        "property_inclusive": {
+                          "billable_currency": {
+                            "value": "2714.40",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "2714.40",
+                            "currency": "AED"
+                          }
+                        },
+                        "marketing_fee": {
+                          "billable_currency": {
+                            "value": "278.59",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "278.59",
+                            "currency": "AED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "209336314",
+                  "status": "available",
+                  "available_rooms": 2,
+                  "refundable": false,
+                  "member_deal_available": true,
+                  "sale_scenario": {
+                    "package": false,
+                    "member": false,
+                    "corporate": false,
+                    "distribution": false
+                  },
+                  "merchant_of_record": "expedia",
+                  "amenities": {
+                    "2192": {
+                      "id": "2192",
+                      "name": "Free WiFi"
+                    }
+                  },
+                  "links": {
+                    "payment_options": {
+                      "method": "GET",
+                      "href": "/v3/properties/1723385/payment-options?token=REhZAQsABwMHQhMHUlNCF1ELUj1DVhdLBQMES1REClxLQg5cRR8WBlIBSxZdCFRpTQxRWQUEAFIFDgMNHwcFA1cbAwRSAh0MA1QESA1RBFReCFdUAAVTCh8IVURWUAdWRDtZVWgTVgBXRgBccWBiJH0vdENSQkoRXA5WRGsVVhdKX19db1xXWQYNAlYNVgQDFFMPBAEVVQkABExQDF5UH1AFA1BUDQNQAwQFXhJQQUEVX1wHEGkLEwwFVVwfBAEXAxlTERdTSksIW1dsXQIIWgtTUQUAVwJOBFZVUx8ABFFUT1AGBwAdBwEKUlADBAdWClAIQkRcQRFXAwgXB0cPXEgXXFsTFEYWRxZdD1FLOloRVBNZEV5YX2hfCgcHWwUldyB5IG0UVwdbBEpYQABXbxVYXlJZVwMKUBtWDxwJUGAHXB0HI1EIFVBxVggaVQVRUwpVVVEGaBVbC0xWFhZJPlteBgcFeSZAUlVDD1BZAhcBCQMGWgsIXldWUAEaUlofAQsWFVdHQF1SFj4SRllWDFQAagtUBFQJXlAADxNXFkoUVAhQTAQlJnBCWgxRBVhZTBEIVlQHVUwBAU8FCkBFR0RGW1pTQW9cU18GURJ3CVNbWkZAWVlUBAxUBAACClUI"
+                    }
+                  },
+                  "bed_groups": {
+                    "37316": {
+                      "id": "37316",
+                      "description": "1 Double Bed",
+                      "links": {
+                        "price_check": {
+                          "method": "GET",
+                          "href": "/v3/properties/1723385/rooms/201841057/rates/209336314?token=F~OjogZCQ0NhkyAQ9PYWUCZ3kgD2gCCVAPS1YBFAQHITJUAVQFGAlcTgVcc2d1I3dkHVQAAFAMVFUBFFACBwUbBgVXBh5UCwgCGgcEVAEGWVdcB1ABDD5BUQsGAwYNXlcVAAZTBBpVUgEJGQYDVl0fB1tUBAQGVg9QAQcDVDJQA1wPDwZBNAAAVAdCZ1K2YDNyaySzMGELUQnzNGQBA1VSBK80PlRGcQ1BVw1URnZWUJBgH2oZQEIbE1QWWEd3QF9VcVIGFUgUSlEbURsJFiBAVVUSThdJRFINQF1EHRAOVE440DNmV1H6YGQKVwkESwdW2DU5jDY3xGI17jdk9jVnoGdllDZimDdHVldSVQAOBAxMUFIJBhoCD1MDSFpWAQhJCQBSAVILUgMBAA4BhmctAlEDBRpUUx4IU2JXAQsLXQ4FVBYAU1cBCVAEUQ1u2zZnFAC-Y2c3tDJh"
+                        }
+                      },
+                      "configuration": [
+                        {
+                          "type": "FullBed",
+                          "size": "Full",
+                          "quantity": 1
+                        }
+                      ],
+                      "asDefault": false
+                    }
+                  },
+                  "cancel_penalties": [
+                    {
+                      "start": "2026-06-04T22:28:30.410+04:00",
+                      "end": "2026-08-13T23:59:00.000+04:00",
+                      "percent": "100%",
+                      "currency": "AED"
+                    }
+                  ],
+                  "occupancy_pricing": {
+                    "1": {
+                      "nightly": [
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "50.63",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "405.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "50.63",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "405.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "50.63",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "405.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "50.63",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "405.00",
+                            "currency": "AED"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "tax_and_service_fee",
+                            "value": "50.63",
+                            "currency": "AED"
+                          },
+                          {
+                            "type": "base_rate",
+                            "value": "405.00",
+                            "currency": "AED"
+                          }
+                        ]
+                      ],
+                      "stay": [
+                        {
+                          "type": "property_fee",
+                          "value": "202.50",
+                          "currency": "AED"
+                        }
+                      ],
+                      "fees": {
+                        "mandatory_tax": {
+                          "billable_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          }
+                        }
+                      },
+                      "totals": {
+                        "inclusive": {
+                          "billable_currency": {
+                            "value": "2480.65",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "2480.65",
+                            "currency": "AED"
+                          }
+                        },
+                        "exclusive": {
+                          "billable_currency": {
+                            "value": "2025.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "2025.00",
+                            "currency": "AED"
+                          }
+                        },
+                        "property_fees": {
+                          "billable_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "50.00",
+                            "currency": "AED"
+                          }
+                        },
+                        "gross_profit": {
+                          "billable_currency": {
+                            "value": "381.43",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "381.43",
+                            "currency": "AED"
+                          }
+                        },
+                        "property_inclusive": {
+                          "billable_currency": {
+                            "value": "2530.65",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "2530.65",
+                            "currency": "AED"
+                          }
+                        },
+                        "marketing_fee": {
+                          "billable_currency": {
+                            "value": "259.38",
+                            "currency": "AED"
+                          },
+                          "request_currency": {
+                            "value": "259.38",
+                            "currency": "AED"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "links": {
+            "recommendations": {
+              "method": "GET",
+              "href": "/v3/properties/availability?token=REhZAQsABwMHQhIKW0ZADFYCahJRTQoENTJ4d3F1L3codEBBUF8BEUYNVwNrFVxDSwZQWRZUEwhVFBFcXRYQQFFQUkFEWl5SaBZdAQlVUFULBQJUDUkEAQgGHQICXFcVCVAAAxpYVgZaUl0DVQxTVwFARgxFUmYRShNWC0AUUgBQQllcXlRfO1VKCRVHBEIVVgJaRBJZD1sYCFAUVxMQRlpYVxc5RgdHRgheCGtaUA9QBVVWWwFWUxwGVFBSGAcIUgZPVVwODhUEBAgGBl5UXQ9VVg0eQlIPUUdvB1pVC10ADg8TAAdDCBddRUJRFkIKV1pnDVMOV1FXVQVdAAZLCAcBAxlXU1dSGgRTBFEUA1dTAAAPBAEDClMCQw8DWV8RUQJSXlFcHTdmR0pYQABsXxFFWlgKWBVLCUMUWlQEF1VGDVwZEQtfQEVCBExRPkQJA105AgpGXEcFVgwIRBdRDV1CPQdWTgoUWFpeA1oQD1kNFQMJbg0IDxxABVJZBxBTRF1UOkJcWVYKVlFQAhsAUxVVADYBAUcKJ1QBHAZ1UAhIBVcHBABXVwBRY0JSD19CXBcIARxFBgVYWD1XXQpaV1dCEVBZRl5BRRtrBltQBAt5dBNQVRQMVgRVFlVdXQVTWQoLAQdTBU4IDElQBx5CAEsSWwBDaEkXXAVaWlE5WgAEAAALBgwFQlRNFBBRD1NKBCB8dURVAEoKUBVbWgE8UV1UXAsDWV8HBVAXBVxWV1kORUVfUAZQVRwEWkgADRVLVlEHRQFYWl0-REtcRANHTUBvC1EFAARRBwcIURR3DVYGCUERCFgBUFINUAQFUQZX"
+            }
+          },
+          "score": 231
+        }
+      ],
+      "headers": {
+        "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+        "connection": "keep-alive",
+        "content-encoding": "gzip",
+        "content-length": "3030",
+        "content-type": "application/json",
+        "date": "Fri, 05 Jun 2026 18:28:30 GMT",
+        "expires": "0",
+        "hotdays-requested": "5",
+        "hotdays-responded": "5",
+        "pragma": "no-cache",
+        "rate-limit-day-remaining": "100",
+        "rate-limit-day-reset": "1780617600000",
+        "rate-limit-reduction-status": "inactive",
+        "referrer-policy": "no-referrer",
+        "region": "us-west-2",
+        "room-nights-requested": "5",
+        "room-nights-responded": "5",
+        "server": "EAN",
+        "strict-transport-security": "max-age=31536000 ; includeSubDomains",
+        "transaction-id": "a1c347a9-a31c-47d1-9460-9eebf9ba4a68",
+        "vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, accept-encoding",
+        "x-akamai-reference-id": "0.6462645f.1780684110.54ff5914",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-xss-protection": "0"
+      },
+      "httpStatusCode": 200
+    }
+  },
+  "priority": 1000
+}

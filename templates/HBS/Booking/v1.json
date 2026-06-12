@@ -1,0 +1,121 @@
+{
+  "httpRequest": {
+    "path": "/hotel-api/1.2/bookings",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "auditData": {
+        "processTime": "1488",
+        "timestamp": "2026-06-05 18:15:43.234",
+        "requestHost": "",
+        "serverId": "",
+        "environment": "",
+        "release": "",
+        "token": "60A84BD1C9584738965A98A22BE6CB2D",
+        "internal": "0|07~~21959~-15287454~N~~~NRF~~35180BFE2F53496178068329223905AWAE0001000000000521959|AE|05|1|1|||||||AT_WEB||||R|1|5|~1~1~0|0|0|FIT NRF RO|0|f3833ab2d24cc35ac181aab793592b86||||"
+      },
+      "booking": {
+        "reference": "148-6069492",
+        "clientReference": "HOTELNU",
+        "creationDate": "2026-06-05",
+        "status": "CONFIRMED",
+        "modificationPolicies": {
+          "cancellation": true,
+          "modification": true
+        },
+        "creationUser": "f3833ab2d24cc35ac181aab793592b86",
+        "holder": {
+          "name": "BOOKINGONE",
+          "surname": "DOEWW"
+        },
+        "hotel": {
+          "checkOut": "2026-08-18",
+          "checkIn": "2026-08-13",
+          "code": 156652,
+          "name": "Sun And Sands Downtown",
+          "categoryCode": "3EST",
+          "categoryName": "3 STARS",
+          "destinationCode": "DXB",
+          "destinationName": "Dubai",
+          "zoneCode": 1,
+          "zoneName": "Dubai",
+          "latitude": "25.26448518425460000000",
+          "longitude": "55.31902084127070000000",
+          "rooms": [
+            {
+              "status": "CONFIRMED",
+              "id": 1,
+              "code": "DBL.ST",
+              "name": "Standard Room King Size Bed",
+              "paxes": [
+                {
+                  "roomId": 1,
+                  "type": "AD",
+                  "name": "BookingOne",
+                  "surname": "Doeww"
+                }
+              ],
+              "rates": [
+                {
+                  "rateClass": "NRF",
+                  "net": "91.03",
+                  "rateComments": "Estimated total amount of taxes & fees for this booking: 50.00 Utd. Arab Emir. Dirham payable on arrival  . Please note that the city tax for accommodations with more than 1 bedroom shall be charged per bedroom per night. Car park NO. Key Collection  - . Check-in hour 14:00 - 23:00. Check-out hour 12:00 - 13:00.",
+                  "paymentType": "AT_WEB",
+                  "packaging": false,
+                  "boardCode": "RO",
+                  "boardName": "ROOM ONLY",
+                  "cancellationPolicies": [
+                    {
+                      "amount": "91.03",
+                      "from": "2026-06-04T23:59:00+04:00"
+                    }
+                  ],
+                  "taxes": {
+                    "taxes": [
+                      {
+                        "included": false,
+                        "amount": "50.00",
+                        "currency": "AED",
+                        "clientAmount": "11.69",
+                        "clientCurrency": "EUR",
+                        "subType": "City Tax"
+                      }
+                    ],
+                    "allIncluded": false
+                  },
+                  "rooms": 1,
+                  "adults": 1,
+                  "children": 0,
+                  "onlineCheckIn": {}
+                }
+              ]
+            }
+          ],
+          "totalNet": "91.03",
+          "currency": "EUR",
+          "supplier": {
+            "name": "HOTELBEDS DMCC",
+            "vatNumber": "100035906500003"
+          }
+        },
+        "remark": "Please keep prayer mats in room",
+        "invoiceCompany": {
+          "code": "E14",
+          "company": "HOTELBEDS S.L.U.",
+          "registrationNumber": "ESB57218372"
+        },
+        "totalNet": 91.03,
+        "pendingAmount": 91.03,
+        "currency": "EUR"
+      }
+    }
+  },
+  "priority": 1000
+}

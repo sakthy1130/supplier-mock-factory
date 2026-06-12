@@ -1,0 +1,2946 @@
+{
+  "httpRequest": {
+    "path": "/hotel-api/1.2/hotels",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "auditData": {
+        "processTime": "123",
+        "timestamp": "2026-06-05 18:14:45.990",
+        "requestHost": "",
+        "serverId": "",
+        "environment": "",
+        "release": "",
+        "token": "EF8B64C291BB496993561919FB8C8E7D",
+        "internal": "0|5D822A2EE24A45A178068328586805|AE|08|44|44|||||||AT_WEB|||||44||1~1~1~0|0|0||0|f3833ab2d24cc35ac181aab793592b86||||"
+      },
+      "hotels": {
+        "hotels": [
+          {
+            "code": 162651,
+            "name": "Golden Sands Hotel & Residences",
+            "exclusiveDeal": 1,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "SHJ",
+            "destinationName": "Sharjah",
+            "zoneCode": 1,
+            "zoneName": "Sharjah",
+            "latitude": "25.29848400000000000000",
+            "longitude": "55.37209700000000000000",
+            "rooms": [
+              {
+                "code": "TWN.PI-2",
+                "name": "Premier Twin",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|162651|TWN.PI-2|OTARO|RO||1~1~0||P@07~~20f11d~1194361053~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE00440000000008205d8",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "216.05",
+                    "allotment": 16,
+                    "rateCommentsId": "148|72420|0",
+                    "paymentType": "AT_WEB",
+                    "packaging": true,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "216.05",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "offers": [
+                      {
+                        "code": "9009",
+                        "name": "Special discount",
+                        "amount": "-60.00"
+                      },
+                      {
+                        "code": "9005",
+                        "name": "Exclusive discount",
+                        "amount": "-24.00"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "216.05",
+            "maxRate": "216.05",
+            "currency": "EUR"
+          },
+          {
+            "code": 731321,
+            "name": "Marhaba Residence Hotel Apartments",
+            "exclusiveDeal": 3,
+            "categoryCode": "APTH3",
+            "categoryName": "APARTHOTEL 3*",
+            "destinationCode": "AE1",
+            "destinationName": "Ajman",
+            "zoneCode": 1,
+            "zoneName": "Ajman",
+            "latitude": "25.39008305018742000000",
+            "longitude": "55.46063535952453000000",
+            "rooms": [
+              {
+                "code": "STU.DX",
+                "name": "Deluxe Studio Room",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|731321|STU.DX|BAR NRF|RO||1~1~0||P@07~~25f16e9e~1559137239~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE0044000000000824612041",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "73793.70",
+                    "allotment": 20,
+                    "paymentType": "AT_WEB",
+                    "packaging": true,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "73793.70",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "offers": [
+                      {
+                        "code": "9005",
+                        "name": "Exclusive discount",
+                        "amount": "-9224.20"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "73793.70",
+            "maxRate": "73793.70",
+            "currency": "EUR"
+          },
+          {
+            "code": 372446,
+            "name": "Damac Maison Dubai Mall Street",
+            "exclusiveDeal": 1,
+            "categoryCode": "5EST",
+            "categoryName": "5 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.19525200000000000000",
+            "longitude": "55.28377500000000000000",
+            "rooms": [
+              {
+                "code": "APT.B1-CV",
+                "name": "One Bedroom Suite City View",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|372446|APT.B1-CV|BAR SPE DEAL RO|RO||1~1~0||N@07~~20f23e~-1139006821~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000825f1dd",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "477.95",
+                    "allotment": 58,
+                    "rateCommentsId": "148|51158|0",
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "95.59",
+                        "from": "2026-08-10T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "477.95",
+            "maxRate": "477.95",
+            "currency": "EUR"
+          },
+          {
+            "code": 644228,
+            "name": "Ewan Ajman Suites Hotel",
+            "exclusiveDeal": 3,
+            "categoryCode": "APTH4",
+            "categoryName": "APARTHOTEL 4*",
+            "destinationCode": "AE1",
+            "destinationName": "Ajman",
+            "zoneCode": 1,
+            "zoneName": "Ajman",
+            "latitude": "25.39456660000000000000",
+            "longitude": "55.48607290000000000000",
+            "rooms": [
+              {
+                "code": "APT.B1-1",
+                "name": "Apartment one bedroom",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|644228|APT.B1-1|BAR RO NRF|RO||1~1~0||N@07~~232144~-1624067024~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE00440000000008232104",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "260.50",
+                    "allotment": 20,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "260.50",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "260.50",
+            "maxRate": "260.50",
+            "currency": "EUR"
+          },
+          {
+            "code": 62859,
+            "name": "Coral Beach Resort Sharjah",
+            "exclusiveDeal": 1,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "SHJ",
+            "destinationName": "Sharjah",
+            "zoneCode": 1,
+            "zoneName": "Sharjah",
+            "latitude": "25.39658800000000000000",
+            "longitude": "55.42398300000000000000",
+            "rooms": [
+              {
+                "code": "DBT.CV-DX",
+                "name": "Standard King",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|62859|DBT.CV-DX|IHXO3|RO||1~1~0||N@07~~21418b~-472074198~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE00440000000008214114",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "276.20",
+                    "allotment": 42,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "276.20",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "Non-refundable rate. No amendments permitted"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "276.20",
+            "maxRate": "276.20",
+            "currency": "EUR"
+          },
+          {
+            "code": 438060,
+            "name": "Al Habtoor Palace",
+            "exclusiveDeal": 1,
+            "categoryCode": "5EST",
+            "categoryName": "5 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 2,
+            "zoneName": "Jumeirah",
+            "latitude": "25.18265600000000000000",
+            "longitude": "55.25387400000000000000",
+            "rooms": [
+              {
+                "code": "DBL.DX",
+                "name": "King Bed Deluxe Room",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|438060|DBL.DX|FIT RO|RO||1~1~0||N@07~~23225b~1835468804~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000823225b",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "603.50",
+                    "allotment": 20,
+                    "rateCommentsId": "148|32785|3",
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "120.70",
+                        "from": "2026-08-10T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "offers": [
+                      {
+                        "code": "9009",
+                        "name": "Special discount",
+                        "amount": "-455.35"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "603.50",
+            "maxRate": "603.50",
+            "currency": "EUR"
+          },
+          {
+            "code": 59247,
+            "name": "La Quinta by Wyndham Dubai Jumeirah",
+            "exclusiveDeal": 3,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.24914000000000000000",
+            "longitude": "55.28312400000000000000",
+            "rooms": [
+              {
+                "code": "DBL.DX",
+                "name": "DOUBLE DELUXE",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|59247|DBL.DX|GAR RO|RO||1~1~0||N@07~~24a91~49466961~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000824a91",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "145.74",
+                    "allotment": 10,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "145.74",
+                        "from": "2026-08-10T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "145.74",
+            "maxRate": "145.74",
+            "currency": "EUR"
+          },
+          {
+            "code": 505062,
+            "name": "Al Khoory Executive Hotel",
+            "exclusiveDeal": 3,
+            "categoryCode": "3EST",
+            "categoryName": "3 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.23178420081962500000",
+            "longitude": "55.27021281360589500000",
+            "rooms": [
+              {
+                "code": "DBL.SU",
+                "name": "Double superior",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|505062|DBL.SU|BAR NRF RO|RO||1~1~0||P@07~~25ab3~444205142~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE004400000000082529a",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "154.82",
+                    "allotment": 77,
+                    "paymentType": "AT_WEB",
+                    "packaging": true,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "154.82",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "Non-refundable rate. No amendments permitted"
+                      }
+                    ],
+                    "offers": [
+                      {
+                        "code": "9005",
+                        "name": "Exclusive discount",
+                        "amount": "-19.32"
+                      },
+                      {
+                        "code": "9002",
+                        "name": "Early Booking discount",
+                        "amount": "-19.32"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "154.82",
+            "maxRate": "154.82",
+            "currency": "EUR"
+          },
+          {
+            "code": 127884,
+            "name": "SUHA Jumeirah",
+            "exclusiveDeal": 1,
+            "categoryCode": "APTH4",
+            "categoryName": "APARTHOTEL 4*",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 2,
+            "zoneName": "Jumeirah",
+            "latitude": "25.07977730000000000000",
+            "longitude": "55.13747320000000000000",
+            "rooms": [
+              {
+                "code": "APT.B1-DX",
+                "name": "Deluxe 1 Bedroom Apartment",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|127884|APT.B1-DX|LDBBNRF|BB||1~1~0||P@07~~21b22d~-279290565~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE004400000000082131a6",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "422.19",
+                    "allotment": 11,
+                    "rateCommentsId": "148|72622|0",
+                    "paymentType": "AT_WEB",
+                    "packaging": true,
+                    "boardCode": "BB",
+                    "boardName": "BED AND BREAKFAST",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "422.19",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "Non-refundable rate. No amendments permitted"
+                      }
+                    ],
+                    "offers": [
+                      {
+                        "code": "9005",
+                        "name": "Exclusive discount",
+                        "amount": "-56.30"
+                      },
+                      {
+                        "code": "9002",
+                        "name": "Early Booking discount",
+                        "amount": "-84.43"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "422.19",
+            "maxRate": "422.19",
+            "currency": "EUR"
+          },
+          {
+            "code": 86526,
+            "name": "Avenue Hotel",
+            "exclusiveDeal": 3,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.26271100000000000000",
+            "longitude": "55.32607500000000000000",
+            "rooms": [
+              {
+                "code": "DBL.PI",
+                "name": "Double premium",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|86526|DBL.PI|FIT NRF RO |RO||1~1~0||N@07~~249a3~-1865382236~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE00440000000008249a3",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "163.73",
+                    "allotment": 5,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "163.73",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "163.73",
+            "maxRate": "163.73",
+            "currency": "EUR"
+          },
+          {
+            "code": 59248,
+            "name": "Coral Deira Dubai",
+            "exclusiveDeal": 1,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.26615600000000000000",
+            "longitude": "55.32562600000000000000",
+            "rooms": [
+              {
+                "code": "TWN.ST",
+                "name": "Standard Twin",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|59248|TWN.ST|IHXO1|RO||1~1~0||P@07~~205c2~-535970890~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE004400000000082059f",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "159.05",
+                    "allotment": 24,
+                    "paymentType": "AT_WEB",
+                    "packaging": true,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "31.81",
+                        "from": "2026-08-11T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "offers": [
+                      {
+                        "code": "9005",
+                        "name": "Exclusive discount",
+                        "amount": "-17.65"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "159.05",
+            "maxRate": "159.05",
+            "currency": "EUR"
+          },
+          {
+            "code": 128627,
+            "name": "Landmark Plaza Hotel",
+            "exclusiveDeal": 1,
+            "categoryCode": "3EST",
+            "categoryName": "3 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.26921200000000000000",
+            "longitude": "55.30690700000000000000",
+            "rooms": [
+              {
+                "code": "DBT.ST",
+                "name": "Classic Double or twin Room",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|128627|DBT.ST|NRF RO|RO||1~1~0||N@07~~22d80~-1546996136~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE0044000000000822d80",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "128.45",
+                    "allotment": 10,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "128.45",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "128.45",
+            "maxRate": "128.45",
+            "currency": "EUR"
+          },
+          {
+            "code": 153967,
+            "name": "The Canvas Hotel Dubai - Mgallery Hotel Collection",
+            "exclusiveDeal": 3,
+            "categoryCode": "5EST",
+            "categoryName": "5 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.25521200000000000000",
+            "longitude": "55.28540500000000000000",
+            "rooms": [
+              {
+                "code": "DBT.SU",
+                "name": "Superior room King",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|153967|DBT.SU|FIT RO|RO||1~1~0||N@07~~24192~1374514442~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000824192",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "146.65",
+                    "allotment": 164,
+                    "rateCommentsId": "148|31612|31",
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "146.65",
+                        "from": "2026-08-10T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "146.65",
+            "maxRate": "146.65",
+            "currency": "EUR"
+          },
+          {
+            "code": 143962,
+            "name": "Al Manar Grand Hotel Apartment",
+            "exclusiveDeal": 3,
+            "categoryCode": "APTH4",
+            "categoryName": "APARTHOTEL 4*",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.24860200000000000000",
+            "longitude": "55.29688800000000000000",
+            "rooms": [
+              {
+                "code": "DBL.ST-1",
+                "name": "Double standard",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|143962|DBL.ST-1|BAR NRF RO 1|RO||1~1~0||N@07~~22dc7~-690544132~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE00440000000008237ab",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "171.55",
+                    "allotment": 20,
+                    "rateCommentsId": "148|46673|0",
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "171.55",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "171.55",
+            "maxRate": "171.55",
+            "currency": "EUR"
+          },
+          {
+            "code": 95136,
+            "name": "Al Manar Hotel Apartment",
+            "exclusiveDeal": 3,
+            "categoryCode": "APTH4",
+            "categoryName": "APARTHOTEL 4*",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.28045300000000000000",
+            "longitude": "55.35116800000000000000",
+            "rooms": [
+              {
+                "code": "DBL.ST-1",
+                "name": "STUDIO",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|95136|DBL.ST-1|FIT RO|RO||1~1~0||N@07~~25ec3~-2073001046~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000825ec3",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "195.94",
+                    "allotment": 5,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "195.94",
+                        "from": "2026-08-09T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "195.94",
+            "maxRate": "195.94",
+            "currency": "EUR"
+          },
+          {
+            "code": 140159,
+            "name": "Park Regis Kris Kin Hotel Dubai",
+            "exclusiveDeal": 1,
+            "categoryCode": "5EST",
+            "categoryName": "5 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.24782100000000000000",
+            "longitude": "55.30086200000000000000",
+            "rooms": [
+              {
+                "code": "DBT.DX",
+                "name": "Deluxe Room - Twin Beds/double",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|140159|DBT.DX|FIT BB OFFER|RO||1~1~0||N@07~~20597~-1581533638~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000820597",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "151.05",
+                    "allotment": 9,
+                    "rateCommentsId": "148|74451|9",
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "151.05",
+                        "from": "2026-08-10T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "Non-refundable rate. No amendments permitted"
+                      },
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "151.05",
+            "maxRate": "151.05",
+            "currency": "EUR"
+          },
+          {
+            "code": 6810,
+            "name": "Sunday Suites Excelsior Hotel Deira",
+            "exclusiveDeal": 3,
+            "categoryCode": "3EST",
+            "categoryName": "3 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.27463605429247000000",
+            "longitude": "55.32529247832641000000",
+            "rooms": [
+              {
+                "code": "DBL.DX-1",
+                "name": "Deluxe King Room",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|6810|DBL.DX-1|BAR-25_RO-NOR|RO||1~1~0||P@07~~221b4~1001295332~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000820794",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "148.07",
+                    "allotment": 97,
+                    "paymentType": "AT_WEB",
+                    "packaging": true,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "148.07",
+                        "from": "2026-08-11T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "offers": [
+                      {
+                        "code": "9005",
+                        "name": "Exclusive discount",
+                        "amount": "-155.89"
+                      },
+                      {
+                        "code": "9002",
+                        "name": "Early Booking discount",
+                        "amount": "-7.81"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "148.07",
+            "maxRate": "148.07",
+            "currency": "EUR"
+          },
+          {
+            "code": 555941,
+            "name": "Tulip Creek Hotel Apartment",
+            "exclusiveDeal": 3,
+            "categoryCode": "APTH3",
+            "categoryName": "APARTHOTEL 3*",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 5,
+            "zoneName": "Deira",
+            "latitude": "25.25606309673375800000",
+            "longitude": "55.32609324627992500000",
+            "rooms": [
+              {
+                "code": "STU.ST",
+                "name": "STUDIO",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|555941|STU.ST|BAR-RO-NRF|RO||1~1~0||P@07~~237d9~954427219~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE0044000000000823cb2",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "178.60",
+                    "allotment": 25,
+                    "paymentType": "AT_WEB",
+                    "packaging": true,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "178.60",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "offers": [
+                      {
+                        "code": "9005",
+                        "name": "Exclusive discount",
+                        "amount": "-19.85"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "178.60",
+            "maxRate": "178.60",
+            "currency": "EUR"
+          },
+          {
+            "code": 124962,
+            "name": "Abjad Crown Hotel (EX Dubai Palm)",
+            "exclusiveDeal": 3,
+            "categoryCode": "3EST",
+            "categoryName": "3 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.27324000000000000000",
+            "longitude": "55.31971600000000000000",
+            "rooms": [
+              {
+                "code": "DBL.ST",
+                "name": "Double standard",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|124962|DBL.ST|FIT RO NRF|RO||1~1~0||N@07~~255d2~-2092733705~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE00440000000008255d2",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "210.85",
+                    "allotment": 5,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "210.85",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "210.85",
+            "maxRate": "210.85",
+            "currency": "EUR"
+          },
+          {
+            "code": 7654,
+            "name": "The Apartments Dubai World Trade Centre",
+            "exclusiveDeal": 3,
+            "categoryCode": "APTH3",
+            "categoryName": "APARTHOTEL 3*",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.22369500000000000000",
+            "longitude": "55.28535200000000000000",
+            "rooms": [
+              {
+                "code": "DBL.SU",
+                "name": "Superior ( Double)",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|7654|DBL.SU|BAR RO|RO||1~1~0||N@07~~2121bf~556440884~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE00440000000008219180",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "384.25",
+                    "allotment": 33,
+                    "rateCommentsId": "148|23732|0",
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "384.25",
+                        "from": "2026-08-10T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "384.25",
+            "maxRate": "384.25",
+            "currency": "EUR"
+          },
+          {
+            "code": 103296,
+            "name": "The H Dubai",
+            "exclusiveDeal": 3,
+            "categoryCode": "5LUX",
+            "categoryName": "5 STARS LUXURY",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.23040900000000000000",
+            "longitude": "55.28715100000000000000",
+            "rooms": [
+              {
+                "code": "DUS.DX",
+                "name": "Double single use deluxe",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|103296|DUS.DX|BAR NRF BB|BB||1~1~0||N@07~~2483e3~1700522977~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE0044000000000825732d",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "813.87",
+                    "allotment": 236,
+                    "rateCommentsId": "148|20667|0",
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "BB",
+                    "boardName": "BED AND BREAKFAST",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "813.87",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "Non-refundable rate. No amendments permitted"
+                      },
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "813.87",
+            "maxRate": "813.87",
+            "currency": "EUR"
+          },
+          {
+            "code": 132590,
+            "name": "La Suite Dubai Hotel & Apartments",
+            "exclusiveDeal": 3,
+            "categoryCode": "APTH4",
+            "categoryName": "APARTHOTEL 4*",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.10762700000000000000",
+            "longitude": "55.17865900000000000000",
+            "rooms": [
+              {
+                "code": "DBL.DX",
+                "name": "Double deluxe",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|132590|DBL.DX|OTA DEALS RO|RO||1~1~0||N@07~~21ed7~192424442~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE00440000000008214b9",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "185.20",
+                    "allotment": 83,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "37.04",
+                        "from": "2026-08-12T16:00:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "offers": [
+                      {
+                        "code": "9009",
+                        "name": "Special discount",
+                        "amount": "-79.35"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "185.20",
+            "maxRate": "185.20",
+            "currency": "EUR"
+          },
+          {
+            "code": 136069,
+            "name": "Pearl Executive Hotel Apartments",
+            "exclusiveDeal": 3,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.25857600000000000000",
+            "longitude": "55.32274200000000000000",
+            "rooms": [
+              {
+                "code": "TWN.DX",
+                "name": "Twin deluxe",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|136069|TWN.DX|BAR-NRF-RO|RO||1~1~0||N@07~~20a11d~1909243023~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE00440000000008214f5",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "245.20",
+                    "allotment": 5,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "245.20",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "245.20",
+            "maxRate": "245.20",
+            "currency": "EUR"
+          },
+          {
+            "code": 162731,
+            "name": "The Tower Plaza Hotel",
+            "exclusiveDeal": 2,
+            "categoryCode": "5EST",
+            "categoryName": "5 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.21743770000000000000",
+            "longitude": "55.28276320000000000000",
+            "rooms": [
+              {
+                "code": "DBL.SU",
+                "name": "Double Room",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|162731|DBL.SU|BAR HB FLEX|HB||1~1~0||N@07~~20e204~418585601~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE004400000000082611bb",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "443.97",
+                    "allotment": 6,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "HB",
+                    "boardName": "HALF BOARD",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "80.88",
+                        "from": "2026-08-05T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "offers": [
+                      {
+                        "code": "9009",
+                        "name": "Special discount",
+                        "amount": "-111.03"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "443.97",
+            "maxRate": "443.97",
+            "currency": "EUR"
+          },
+          {
+            "code": 216744,
+            "name": "Anantara The Palm Dubai Resort",
+            "exclusiveDeal": 3,
+            "categoryCode": "5EST",
+            "categoryName": "5 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.12946986116600000000",
+            "longitude": "55.15347808599470000000",
+            "rooms": [
+              {
+                "code": "ROO.ST",
+                "name": "Standard Room Residence",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|216744|ROO.ST|PROMO-RO|RO||1~1~0||N@07~~244312~1695895372~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE004400000000082492a4",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "676.73",
+                    "allotment": 70,
+                    "rateCommentsId": "148|51684|0",
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "676.73",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "Non-refundable rate. No amendments permitted"
+                      },
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "offers": [
+                      {
+                        "code": "9009",
+                        "name": "Special discount",
+                        "amount": "-119.44"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "676.73",
+            "maxRate": "676.73",
+            "currency": "EUR"
+          },
+          {
+            "code": 115398,
+            "name": "Address Downtown",
+            "exclusiveDeal": 2,
+            "categoryCode": "5EST",
+            "categoryName": "5 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.19418627280000000000",
+            "longitude": "55.27859695730000000000",
+            "rooms": [
+              {
+                "code": "STU.ST",
+                "name": "STUDIO RESIDENCE",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|115398|STU.ST|ADV NRF RO|RO||1~1~0||N@07~~2146ac~-1087114500~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE0044000000000820558e",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "1422.05",
+                    "allotment": 17,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "1422.05",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "offers": [
+                      {
+                        "code": "9002",
+                        "name": "Early Booking discount",
+                        "amount": "-609.45"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "1422.05",
+            "maxRate": "1422.05",
+            "currency": "EUR"
+          },
+          {
+            "code": 162334,
+            "name": "Landmark Grand Hotel",
+            "exclusiveDeal": 1,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.26434650000000000000",
+            "longitude": "55.32217230000000000000",
+            "rooms": [
+              {
+                "code": "DBT.ST",
+                "name": "Double or twin standard",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|162334|DBT.ST|NRF RO|RO||1~1~0||N@07~~20588~-1895963317~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE0044000000000820588",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "136.05",
+                    "allotment": 10,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "136.05",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "Non-refundable rate. No amendments permitted"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "136.05",
+            "maxRate": "136.05",
+            "currency": "EUR"
+          },
+          {
+            "code": 135647,
+            "name": "Landmark Riqqa Dubai",
+            "exclusiveDeal": 1,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.26712400000000000000",
+            "longitude": "55.32004400000000000000",
+            "rooms": [
+              {
+                "code": "DBT.ST",
+                "name": "Double or twin standard",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|135647|DBT.ST|NRF RO|RO||1~1~0||N@07~~22888~908541614~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE0044000000000822888",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "136.40",
+                    "allotment": 10,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "136.40",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "Non-refundable rate. No amendments permitted"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "136.40",
+            "maxRate": "136.40",
+            "currency": "EUR"
+          },
+          {
+            "code": 127440,
+            "name": "Number One Tower Suites",
+            "exclusiveDeal": 3,
+            "categoryCode": "APTH4",
+            "categoryName": "APARTHOTEL 4*",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.21042100000000000000",
+            "longitude": "55.27358900000000000000",
+            "rooms": [
+              {
+                "code": "DBT.DX-1",
+                "name": "DELUXE STUDIO",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|127440|DBT.DX-1|BAR-NRF-RO|RO||1~1~0||P@07~~246293d~-280308535~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE0044000000000825a2379",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "9081.90",
+                    "allotment": 10,
+                    "paymentType": "AT_WEB",
+                    "packaging": true,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "9081.90",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "Non-refundable rate. No amendments permitted"
+                      }
+                    ],
+                    "offers": [
+                      {
+                        "code": "9005",
+                        "name": "Exclusive discount",
+                        "amount": "-1009.10"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "9081.90",
+            "maxRate": "9081.90",
+            "currency": "EUR"
+          },
+          {
+            "code": 142287,
+            "name": "Oaks Ibn Battuta Gate Dubai",
+            "exclusiveDeal": 3,
+            "categoryCode": "5EST",
+            "categoryName": "5 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 4,
+            "zoneName": "Jebel Ali",
+            "latitude": "25.04180000000000000000",
+            "longitude": "55.11550000000000000000",
+            "rooms": [
+              {
+                "code": "APT.B1-1",
+                "name": "One Bedroom Apartment",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|142287|APT.B1-1|BAR RO LES5|RO||1~1~0||N@07~~25329a~-1937596765~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000821a24a",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "586.26",
+                    "allotment": 7,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "586.26",
+                        "from": "2026-07-29T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "percent": "10.00",
+                          "amount": "250.79",
+                          "currency": "AED",
+                          "type": "FEE",
+                          "clientAmount": "58.63",
+                          "clientCurrency": "EUR",
+                          "subType": "Service Charge"
+                        },
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "586.26",
+            "maxRate": "586.26",
+            "currency": "EUR"
+          },
+          {
+            "code": 872493,
+            "name": "Staybridge Suites Dubai Financial Centre",
+            "exclusiveDeal": 3,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.21145058000000000000",
+            "longitude": "55.27476120000000000000",
+            "rooms": [
+              {
+                "code": "STU.ST",
+                "name": "Studio Suite",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|872493|STU.ST|FIT RO|RO||1~1~0||N@07~~237319~242142081~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE00440000000008237319",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "793.55",
+                    "allotment": 10,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "158.71",
+                        "from": "2026-08-09T23:59:00+04:00"
+                      },
+                      {
+                        "amount": "793.55",
+                        "from": "2026-08-12T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "793.55",
+            "maxRate": "793.55",
+            "currency": "EUR"
+          },
+          {
+            "code": 591298,
+            "name": "Rove Trade Centre",
+            "exclusiveDeal": 3,
+            "categoryCode": "3EST",
+            "categoryName": "3 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.23161200000000000000",
+            "longitude": "55.28586500000000000000",
+            "rooms": [
+              {
+                "code": "DBT.ST",
+                "name": "double or twin standard",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|591298|DBT.ST|1 CC LOS|RO||1~1~0||N@07~~213ba~1266627770~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE004400000000082619f",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "159.97",
+                    "allotment": 205,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "29.71",
+                        "from": "2026-08-05T23:59:00+04:00"
+                      },
+                      {
+                        "amount": "59.42",
+                        "from": "2026-08-11T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "159.97",
+            "maxRate": "159.97",
+            "currency": "EUR"
+          },
+          {
+            "code": 56327,
+            "name": "Millennium Plaza Downtown Hotel Dubai",
+            "exclusiveDeal": 2,
+            "categoryCode": "5EST",
+            "categoryName": "5 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.22061265646013700000",
+            "longitude": "55.28040214441717000000",
+            "rooms": [
+              {
+                "code": "DBT.DX",
+                "name": "Deluxe Room with Two Queen Beds - Double",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|56327|DBT.DX|WH08029R|RO||1~1~0||N@07~~21c10f~1834558780~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000821c10f",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "271.28",
+                    "allotment": 97,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "39.13",
+                        "from": "2026-08-12T14:00:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "271.28",
+            "maxRate": "271.28",
+            "currency": "EUR"
+          },
+          {
+            "code": 171246,
+            "name": "TIME Oak Hotel & Suites",
+            "exclusiveDeal": 3,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.09660500000000000000",
+            "longitude": "55.17273900000000000000",
+            "rooms": [
+              {
+                "code": "DBL.DX",
+                "name": "Deluxe King Double",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|171246|DBL.DX|DYNAPRO|RO||1~1~0||P@07~~201f3~1930093862~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE00440000000008201f3",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "243.01",
+                    "allotment": 41,
+                    "paymentType": "AT_WEB",
+                    "packaging": true,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "243.01",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "Non-refundable rate. No amendments permitted"
+                      }
+                    ],
+                    "offers": [
+                      {
+                        "code": "9005",
+                        "name": "Exclusive discount",
+                        "amount": "-27.00"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "243.01",
+            "maxRate": "243.01",
+            "currency": "EUR"
+          },
+          {
+            "code": 129800,
+            "name": "Sunday Hotel Holiday international Dubai",
+            "exclusiveDeal": 3,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.25808990000000000000",
+            "longitude": "55.30535650000000000000",
+            "rooms": [
+              {
+                "code": "DBL.DX",
+                "name": "DELUXE DOUBLE KING",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|129800|DBL.DX|BAR NOR 25|RO||1~1~0||P@07~~25318c~2092112263~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000823513e",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "318.53",
+                    "allotment": 122,
+                    "paymentType": "AT_WEB",
+                    "packaging": true,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "318.53",
+                        "from": "2026-08-11T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "offers": [
+                      {
+                        "code": "9005",
+                        "name": "Exclusive discount",
+                        "amount": "-308.53"
+                      },
+                      {
+                        "code": "9002",
+                        "name": "Early Booking discount",
+                        "amount": "-15.44"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "318.53",
+            "maxRate": "318.53",
+            "currency": "EUR"
+          },
+          {
+            "code": 405925,
+            "name": "MENA ApartHotel Al Barsha",
+            "exclusiveDeal": 3,
+            "categoryCode": "3LL",
+            "categoryName": "3 KEYS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 2,
+            "zoneName": "Jumeirah",
+            "latitude": "25.11685953956350700000",
+            "longitude": "55.19562988349821000000",
+            "rooms": [
+              {
+                "code": "DBT.ST-1",
+                "name": "Studio",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|405925|DBT.ST-1|FIT-RO|RO||1~1~0||N@07~~232df~1421048126~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE00440000000008232df",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "223.50",
+                    "allotment": 10,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "44.70",
+                        "from": "2026-08-09T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "223.50",
+            "maxRate": "223.50",
+            "currency": "EUR"
+          },
+          {
+            "code": 872492,
+            "name": "Staybridge Suites Dubai Internet City",
+            "exclusiveDeal": 3,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.10191400000000000000",
+            "longitude": "55.10085000000000000000",
+            "rooms": [
+              {
+                "code": "STU.ST",
+                "name": "Studio Suite",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|872492|STU.ST|FIT RO|RO||1~1~0||N@07~~2192da~408509602~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE004400000000082192da",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "730.25",
+                    "allotment": 10,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "146.05",
+                        "from": "2026-08-09T23:59:00+04:00"
+                      },
+                      {
+                        "amount": "730.25",
+                        "from": "2026-08-12T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "730.25",
+            "maxRate": "730.25",
+            "currency": "EUR"
+          },
+          {
+            "code": 141490,
+            "name": "One&Only The Palm",
+            "exclusiveDeal": 3,
+            "categoryCode": "5EST",
+            "categoryName": "5 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 2,
+            "zoneName": "Jumeirah",
+            "latitude": "25.09958900000000000000",
+            "longitude": "55.13374700000000000000",
+            "rooms": [
+              {
+                "code": "DBL.KG-PE",
+                "name": "Palm Manor House Premiere Room",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|141490|DBL.KG-PE|WHLBNSBB3|BB||1~1~0||N@07~~24b8c7~-1208047625~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE0044000000000821474f",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "1871.20",
+                    "allotment": 12,
+                    "rateCommentsId": "148|73178|0",
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "BB",
+                    "boardName": "BED AND BREAKFAST",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "1871.20",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "Non-refundable rate. No amendments permitted"
+                      },
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "1871.20",
+            "maxRate": "1871.20",
+            "currency": "EUR"
+          },
+          {
+            "code": 185069,
+            "name": "City Premiere Hotel Apartments",
+            "exclusiveDeal": 3,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.19314900000000000000",
+            "longitude": "55.26277700000000000000",
+            "rooms": [
+              {
+                "code": "APT.B1-1",
+                "name": "ONE BEDROOM STANDARD",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|185069|APT.B1-1|FIT-RO-NEW|RO||1~1~0||N@07~~20f18b~-966011272~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000820f18b",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "395.15",
+                    "allotment": 40,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "79.03",
+                        "from": "2026-08-09T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "395.15",
+            "maxRate": "395.15",
+            "currency": "EUR"
+          },
+          {
+            "code": 125231,
+            "name": "Address Montgomerie Dubai",
+            "exclusiveDeal": 3,
+            "categoryCode": "5EST",
+            "categoryName": "5 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.06741700000000000000",
+            "longitude": "55.16378000000000000000",
+            "rooms": [
+              {
+                "code": "DBT.DX",
+                "name": "DELUXE  COURTYARD",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|125231|DBT.DX|SPE-BAR-RO|RO||1~1~0||N@07~~24b286~1352814843~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE0044000000000822821a",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "538.40",
+                    "allotment": 10,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "107.68",
+                        "from": "2026-08-11T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "100.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "23.38",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "323",
+                        "name": "Welcome amenity"
+                      }
+                    ],
+                    "features": [
+                      "LUXURY_COLLECTION"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "538.40",
+            "maxRate": "538.40",
+            "currency": "EUR"
+          },
+          {
+            "code": 286837,
+            "name": "Grand Astoria Hotel",
+            "exclusiveDeal": 3,
+            "categoryCode": "3EST",
+            "categoryName": "3 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.26198000000000000000",
+            "longitude": "55.29231000000000000000",
+            "rooms": [
+              {
+                "code": "DBL.ST",
+                "name": "Double standard",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|286837|DBL.ST|BAR NRF RO|RO||1~1~0||N@07~~2467d~511317907~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE004400000000082006c",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "108.00",
+                    "allotment": 30,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "108.00",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "offers": [
+                      {
+                        "code": "9009",
+                        "name": "Special discount",
+                        "amount": "-12.00"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "108.00",
+            "maxRate": "108.00",
+            "currency": "EUR"
+          },
+          {
+            "code": 405298,
+            "name": "Black Stone Hotel",
+            "exclusiveDeal": 3,
+            "categoryCode": "4EST",
+            "categoryName": "4 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.26414100000000000000",
+            "longitude": "55.31956700000000000000",
+            "rooms": [
+              {
+                "code": "DBL.SU",
+                "name": "Superior King Room",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|405298|DBL.SU|FIT RO|RO||1~1~0||N@07~~219ba~2116353319~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE00440000000008219ba",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "186.25",
+                    "allotment": 5,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "37.25",
+                        "from": "2026-08-09T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "75.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "17.53",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "186.25",
+            "maxRate": "186.25",
+            "currency": "EUR"
+          },
+          {
+            "code": 7662,
+            "name": "Palette San Marino Hotel",
+            "exclusiveDeal": 3,
+            "categoryCode": "3EST",
+            "categoryName": "3 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.26666670000000000000",
+            "longitude": "55.31666670000004000000",
+            "rooms": [
+              {
+                "code": "DBL.ST",
+                "name": "Standard Double - King",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|7662|DBL.ST|BAR-25_RO-NOR|RO||1~1~0||P@07~~23b4c8~518919079~N~~~NOR~~5D822A2EE24A45A178068328586805AWAE004400000000082283dd",
+                    "rateClass": "NOR",
+                    "rateType": "BOOKABLE",
+                    "net": "989.40",
+                    "allotment": 47,
+                    "paymentType": "AT_WEB",
+                    "packaging": true,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "989.40",
+                        "from": "2026-08-11T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "offers": [
+                      {
+                        "code": "9009",
+                        "name": "Special discount",
+                        "amount": "-109.92"
+                      },
+                      {
+                        "code": "9005",
+                        "name": "Exclusive discount",
+                        "amount": "-1099.34"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "minRate": "989.40",
+            "maxRate": "989.40",
+            "currency": "EUR"
+          },
+          {
+            "code": 409618,
+            "name": "White Fort Hotel",
+            "exclusiveDeal": 3,
+            "categoryCode": "1EST",
+            "categoryName": "1 STAR",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 5,
+            "zoneName": "Deira",
+            "latitude": "25.26900000000000000000",
+            "longitude": "55.30580000000000000000",
+            "rooms": [
+              {
+                "code": "DBT.ST",
+                "name": "Double or twin standard",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|409618|DBT.ST|BAR RO NRF|RO||1~1~0||N@07~~246d6~2049694691~N~~~NRF~~5D822A2EE24A45A178068328586805AWAE00440000000008246b8",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "184.70",
+                    "allotment": 5,
+                    "rateCommentsId": "148|23887|0",
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "184.70",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "35.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "8.18",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "184.70",
+            "maxRate": "184.70",
+            "currency": "EUR"
+          }
+        ],
+        "checkIn": "2026-08-13",
+        "total": 44,
+        "checkOut": "2026-08-18"
+      }
+    }
+  },
+  "priority": 1000
+}

@@ -1,0 +1,56 @@
+{
+  "httpRequest": {
+    "path": "/api/b2b/v3/hotel/order/cancel/",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "data": {
+        "amount_payable": {
+          "amount": "0.00",
+          "currency_code": "USD",
+          "amount_info": null
+        },
+        "amount_refunded": {
+          "amount": "63.00",
+          "currency_code": "USD",
+          "amount_info": null
+        },
+        "amount_sell": {
+          "amount": "63.00",
+          "currency_code": "USD",
+          "amount_info": null
+        }
+      },
+      "debug": {
+        "api_endpoint": {
+          "endpoint": "api/b2b/v3/hotel/order/cancel",
+          "is_active": true,
+          "is_limited": true,
+          "remaining": 29,
+          "requests_number": 30,
+          "reset": "2026-02-18T19:50:00",
+          "seconds_number": 60
+        },
+        "request": {
+          "partner_order_id": "a7HtT29geBZsrj_-7018cc0d-4736-4488-acdb-67505fab9ca9"
+        },
+        "method": "POST",
+        "real_ip": "63.33.82.220",
+        "request_id": "561c05d3420c791406ec488d1d456b08",
+        "key_id": 6712,
+        "api_key_id": 6712,
+        "utcnow": "2026-02-18T19:49:20.917234"
+      },
+      "status": "ok",
+      "error": null
+    }
+  },
+  "priority": 1000
+}

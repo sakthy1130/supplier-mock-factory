@@ -1,0 +1,24 @@
+{
+  "supplier": "EXP",
+  "log_types": [
+    "Booking",
+    "CancelOrder",
+    "GetOrder",
+    "Packages",
+    "PreBooking",
+    "Search"
+  ],
+  "paths": {
+    "check_in": [],
+    "check_out": [],
+    "booking_id": [
+      "httpResponse.body.itinerary_id"
+    ],
+    "distributor_res_id": [],
+    "derby_res_id": [],
+    "hotel_id": [],
+    "price": [],
+    "package_id": [],
+    "price_per_night": []
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "httpRequest": {
+    "path": "/v3/itineraries/7556800480832/rooms/8d2abd9a-2497-4e94-b042-be536369cefb",
+    "method": "DELETE"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "unparsedBody": "<empty body>"
+    }
+  },
+  "priority": 1000
+}

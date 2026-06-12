@@ -1,0 +1,295 @@
+{
+  "httpRequest": {
+    "path": "/hotel-api/1.2/hotels",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "auditData": {
+        "processTime": "42",
+        "timestamp": "2026-06-05 18:14:52.281",
+        "requestHost": "",
+        "serverId": "",
+        "environment": "",
+        "release": "",
+        "token": "DCC76A79307C441BB70236163AA0E2ED",
+        "internal": "0|35180BFE2F53496178068329223905|AE|05|1|6|||||||AT_WEB|||||9||1~1~1~0|0|0||0|f3833ab2d24cc35ac181aab793592b86||||"
+      },
+      "hotels": {
+        "hotels": [
+          {
+            "code": 156652,
+            "name": "Sun And Sands Downtown",
+            "exclusiveDeal": 3,
+            "categoryCode": "3EST",
+            "categoryName": "3 STARS",
+            "destinationCode": "DXB",
+            "destinationName": "Dubai",
+            "zoneCode": 1,
+            "zoneName": "Dubai",
+            "latitude": "25.26448518425460000000",
+            "longitude": "55.31902084127070000000",
+            "rooms": [
+              {
+                "code": "DBL.ST",
+                "name": "Standard Room King Size Bed",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|156652|DBL.ST|FIT NRF RO|RO||1~1~0||N@07~~21959~-15287454~N~~~NRF~~35180BFE2F53496178068329223905AWAE0001000000000521959",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "89.25",
+                    "allotment": 5,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "89.25",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "NON REFUNDABLE RATES"
+                      }
+                    ]
+                  },
+                  {
+                    "rateKey": "20260813|20260818|W|148|156652|DBL.ST|FIT NRF BB|BB||1~1~0||N@07~~22888~1885379190~N~~~NRF~~35180BFE2F53496178068329223905AWAE0001000000000522888",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "136.40",
+                    "allotment": 5,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "BB",
+                    "boardName": "BED AND BREAKFAST",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "136.40",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              },
+              {
+                "code": "TWN.ST",
+                "name": "Twin Standard Room",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|156652|TWN.ST|FIT NRF RO|RO||1~1~0||N@07~~21959~-1380863259~N~~~NRF~~35180BFE2F53496178068329223905AWAE0001000000000521959",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "89.25",
+                    "allotment": 5,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "89.25",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "NON REFUNDABLE RATES"
+                      }
+                    ]
+                  },
+                  {
+                    "rateKey": "20260813|20260818|W|148|156652|TWN.ST|FIT NRF BB|BB||1~1~0||N@07~~22888~519803385~N~~~NRF~~35180BFE2F53496178068329223905AWAE0001000000000522888",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "136.40",
+                    "allotment": 5,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "BB",
+                    "boardName": "BED AND BREAKFAST",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "136.40",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              },
+              {
+                "code": "SUI.AS",
+                "name": "SUITE",
+                "rates": [
+                  {
+                    "rateKey": "20260813|20260818|W|148|156652|SUI.AS|FIT NRF RO|RO||1~1~0||N@07~~22d180~-1926558910~N~~~NRF~~35180BFE2F53496178068329223905AWAE0001000000000522d180",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "384.45",
+                    "allotment": 2,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "RO",
+                    "boardName": "ROOM ONLY",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "384.45",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0,
+                    "promotions": [
+                      {
+                        "code": "073",
+                        "name": "Non-refundable rate. No amendments permitted",
+                        "remark": "NON REFUNDABLE RATES"
+                      }
+                    ]
+                  },
+                  {
+                    "rateKey": "20260813|20260818|W|148|156652|SUI.AS|FIT NRF BB|BB||1~1~0||N@07~~2051b2~-1293169406~N~~~NRF~~35180BFE2F53496178068329223905AWAE000100000000052051b2",
+                    "rateClass": "NRF",
+                    "rateType": "BOOKABLE",
+                    "net": "434.05",
+                    "allotment": 2,
+                    "paymentType": "AT_WEB",
+                    "packaging": false,
+                    "boardCode": "BB",
+                    "boardName": "BED AND BREAKFAST",
+                    "cancellationPolicies": [
+                      {
+                        "amount": "434.05",
+                        "from": "2026-06-04T23:59:00+04:00"
+                      }
+                    ],
+                    "taxes": {
+                      "taxes": [
+                        {
+                          "included": false,
+                          "amount": "50.00",
+                          "currency": "AED",
+                          "type": "TAX",
+                          "clientAmount": "11.69",
+                          "clientCurrency": "EUR",
+                          "subType": "City Tax"
+                        }
+                      ],
+                      "allIncluded": false
+                    },
+                    "rooms": 1,
+                    "adults": 1,
+                    "children": 0
+                  }
+                ]
+              }
+            ],
+            "minRate": "89.25",
+            "maxRate": "434.05",
+            "currency": "EUR"
+          }
+        ],
+        "checkIn": "2026-08-13",
+        "total": 1,
+        "checkOut": "2026-08-18"
+      }
+    }
+  },
+  "priority": 1000
+}

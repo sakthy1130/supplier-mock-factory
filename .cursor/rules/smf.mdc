@@ -1,0 +1,50 @@
+---
+description: Supplier Mock Factory — always-on project rules for agents
+alwaysApply: true
+---
+
+# Supplier Mock Factory (SMF)
+
+## Before any work
+
+1. Read `docs/ARCHITECTURE.md` for full spec
+2. Read `docs/PROGRESS.md` for current phase and next tasks
+3. Only implement the current phase — do not skip ahead to UI before orchestrator works
+
+## Stack (locked)
+
+- Backend: Python 3.12, FastAPI, Pydantic v2, httpx, SQLAlchemy + SQLite
+- Frontend: React 18, Vite, TypeScript, Tailwind CSS, shadcn/ui
+- Do NOT add Java, MongoDB, or callback host service
+
+## Architecture rules
+
+- Port Enigma integration logic from `qaBackend_Enigma` Java as reference — paths listed in PROGRESS.md
+- Templates live in `templates/{HBS,EXP,RHK}/{LogType}/v1.json`
+- Field maps in `field-maps/{HBS,EXP,RHK}.json`
+- Every MockServer expectation must use id-based isolation: `smf-{namespace}-{supplier}-{logType}` with id-based teardown; do not rely on `X-Mock-Scenario-Id` header matchers
+- MockServer expectation priority: 1000
+- Request body matcher: `ONLY_MATCHING_FIELDS`, strip `header` from request JSON
+- `DELETE /api/scenarios/all` is the bulk clear path; it must remove active scenarios plus leftover expectations/contracts/apiKeys
+- New apiKey per scenario — never reuse shared test keys
+- BookingIdInjector: same id in Booking + GetOrder + CancelOrder; refresh via API
+
+## Code conventions
+
+- Backend package: `backend/app/`
+- Use Pydantic models in `app/models/`
+- Integrations (HTTP to external systems) in `app/integrations/` only
+- Supplier-specific logic in `app/plugins/`
+- All Enigma URLs and secrets from `app/config.py` / `.env` — never hardcode
+
+## Session end (mandatory)
+
+Update `docs/PROGRESS.md`:
+- Phase checklist status
+- "Next session" prompt block with exact tasks
+- Blockers table
+- Last session summary
+
+## Suppliers v1
+
+HBS, EXP, and RHK. Seven log types: Search, Packages, CancellationPolicy, PreBooking, Booking, GetOrder, CancelOrder. CancellationPolicy optional at ingest (RHK often absent).

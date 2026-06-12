@@ -1,0 +1,171 @@
+{
+  "httpRequest": {
+    "path": "/v3/properties/1723385/rooms/201836237/rates/209336313",
+    "method": "GET"
+  },
+  "httpResponse": {
+    "headers": {
+      "content-type": [
+        "application/json"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "status": "available",
+      "occupancy_pricing": {
+        "1": {
+          "nightly": [
+            [
+              {
+                "type": "tax_and_service_fee",
+                "value": "10.75",
+                "currency": "AED"
+              },
+              {
+                "type": "base_rate",
+                "value": "86.00",
+                "currency": "AED"
+              }
+            ],
+            [
+              {
+                "type": "tax_and_service_fee",
+                "value": "10.75",
+                "currency": "AED"
+              },
+              {
+                "type": "base_rate",
+                "value": "86.00",
+                "currency": "AED"
+              }
+            ],
+            [
+              {
+                "type": "tax_and_service_fee",
+                "value": "10.75",
+                "currency": "AED"
+              },
+              {
+                "type": "base_rate",
+                "value": "86.00",
+                "currency": "AED"
+              }
+            ],
+            [
+              {
+                "type": "tax_and_service_fee",
+                "value": "10.75",
+                "currency": "AED"
+              },
+              {
+                "type": "base_rate",
+                "value": "86.00",
+                "currency": "AED"
+              }
+            ],
+            [
+              {
+                "type": "tax_and_service_fee",
+                "value": "10.75",
+                "currency": "AED"
+              },
+              {
+                "type": "base_rate",
+                "value": "86.00",
+                "currency": "AED"
+              }
+            ]
+          ],
+          "stay": [
+            {
+              "type": "property_fee",
+              "value": "43.00",
+              "currency": "AED"
+            }
+          ],
+          "fees": {
+            "mandatory_tax": {
+              "billable_currency": {
+                "value": "50.00",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "50.00",
+                "currency": "AED"
+              }
+            }
+          },
+          "totals": {
+            "exclusive": {
+              "billable_currency": {
+                "value": "430.00",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "430.00",
+                "currency": "AED"
+              }
+            },
+            "gross_profit": {
+              "billable_currency": {
+                "value": "81",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "81",
+                "currency": "AED"
+              }
+            },
+            "inclusive": {
+              "billable_currency": {
+                "value": "526.75",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "526.75",
+                "currency": "AED"
+              }
+            },
+            "property_inclusive": {
+              "billable_currency": {
+                "value": "576.75",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "576.75",
+                "currency": "AED"
+              }
+            },
+            "marketing_fee": {
+              "billable_currency": {
+                "value": "55.08",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "55.08",
+                "currency": "AED"
+              }
+            },
+            "property_fees": {
+              "billable_currency": {
+                "value": "50.00",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "50.00",
+                "currency": "AED"
+              }
+            }
+          }
+        }
+      },
+      "links": {
+        "book": {
+          "method": "POST",
+          "href": "/v3/itineraries?token=QldfCGlcUA4FVFBaBwACVg9DRwdWXBBLDwheZkFdBwUDCAMKVAgFBxldCVZVSwcDX1cYXFUDVUwFW1NVUQBVAFIBAQIQXlVHVApVC0BrDlBnQ1BWWxYBD3w9YHNxcSceQBZfUFI-UAtZWgMEUAVUAFUVUENDVk0AbApXCwZWClcKAAMCAxNADUNdORZNEVUOTRNYVQtMCFcPVA1tVhQMRUZQQEMJVgFBRQBfBU0OBRQMUUMJB0ILDVZrBABUCAYMHQdaEQhXV18UVV5WCQNbFGxjREZXREEAUQlCBUJdAR4VEFsHAEhTCQZbCBdGBEUGZ0BBFFIOZzd1KHEkNHNAVgAQa0YCRlAQCgBQCkdcQ1AAQQhcWAcQW19XBggLWQVWAFcBTgQKHVMGR0hYRhFdVRNuQ0ULA1pUA2kPXQwPVQwAXQ4SDwZdUgZCWF5VDUcARFATExdWXFBBWXh9JkJaFEpYEQZRWxcPWFpsBVsAVwwjMyNDQwcAFgsCA1VbB19UUVRDABBYVUFcARULWlFvBlAEWwxVVV8KVlcfWl1RAFMJRBIOBwlWVRlUAUkFXhVUXAFqDQAIUFYCCFQSRhZfVgkDBAMGFUNdWBJEDFpTPkZZRV0IZzAkfH0kfHl7fUBaXAtVWGgMVg5aURY-W1ZeGGYCUARdRAQDUg9AUxIHXgtMWEQOBQcFSgANQBBRB1VBSwhXVj1LDk0TVgQPRgcTW1EYQhcPVgcZVglUBV8VV0cSRF4PB0Q9EFRHEQxeW2xQVwpXDl1UAV1TBBQCBVAEFA1VAw0VUwFSURkJVgcAA1AGVQRSVVwWEgZLEFhbC24KXAlbVlQABFtSVxhVBFJRFVEFVgVOUFcBUktXBAYIBAIAB1QKAQcQSEVdFQYQQ0E7WQEKUgMAA1ENVB5eUQtWQgBFVlM7EVpVAwtUCQMPSAQASQgBNlIIFVBxVwARUnVQVR1eV1QFAwQJVQ9iRBdRDV1CPQdWTgoUWFpeA1oQD1kNFQMJbg0IDxxAFkVWFAdeb0hFF0ZaR1YKJjQxfXh1NmtDVg1FVxZLHzlaVlFRXnkjFwRWUWYABkcHSw1EElpZV1gEQVYFJw5EWw5RF1QGcFFSEVFTV29WWAxSDFNBE1dMWFpbCUFQcBxSchMHChJBQAETAQVEACIdBlYnQVReI1wCEFcDEgsmFlEBRV0cVkELBBUAcRABVnFNCg4RUwIWCyIcA1BJFFkPQQhGTUNRABAGc1RDAiYRACUXFUFDRF4IVUM9C1JfUQUSIQ1UVlhKRlpfAFQCCw5XBgoA"
+        }
+      }
+    }
+  },
+  "priority": 1000
+}
