@@ -30,3 +30,6 @@ backend/smf.db
 
 # Logs
 *.log
+
+# Claude Code local
+.claude/
