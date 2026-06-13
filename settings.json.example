@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /Users/sakthivel.sunder/.claude/projects/ 2>/dev/null)",
+      "Read(//Users/sakthivel.sunder/.claude/projects/**)",
+      "Bash(python3 -c ' *)",
+      "Bash(python -m pytest tests/test_plugins_p2.py -v)",
+      "Bash(python3 -m pytest tests/test_plugins_p2.py -v)",
+      "Bash(python3 -m pytest --tb=short)",
+      "Bash(python3 -m pytest tests/test_exp_search_prices.py -v -m \"not integration\")",
+      "Bash(python3 -m pytest --tb=short -m \"not integration\")"
+    ],
+    "additionalDirectories": [
+      "/Users/sakthivel.sunder/.claude/projects/-Users-sakthivel-sunder-officeWork-gitHub-GitHub-qaBackend-Enigma-supplier-mock-factory/memory"
+    ]
+  },
+  "model": "opus",
+  "switchModelsOnFlag": true
+}
