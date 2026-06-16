@@ -40,16 +40,18 @@ function parseHotelIds(text: string): string[] {
 
 function suggestPrices(base: number, bucket: CrawlaBucket) {
   const expPrices: Record<CrawlaBucket, number> = {
-    CRAWLA_LOWER: base * 1.15,
-    EXPEDIA_LOWER: base * 0.85,
-    EQUAL: base,
-    ONLY_EXPEDIA: 500,
-    ONLY_CRAWLA: base,
+    CRAWLA_LOWER:      base * 1.15,  // EXP higher than Crawla → Crawla wins
+    EXPEDIA_LOWER:     base * 0.85,  // EXP lower  than Crawla → Expedia wins
+    EQUAL:             base,         // EXP ≈ Crawla
+    ONLY_EXPEDIA:      500,          // no Crawla anchor; fixed base
+    ONLY_CRAWLA:       base,         // EXP excluded; base kept for reference
+    CHEAPEST_L2_GROSS: base * 0.85,  // EXP < Crawla → EXP is cheapest gross → L2 fires
   }
   const exp = expPrices[bucket]
+  // HBS is always 65% less than EXP (60-70% requirement, midpoint = 65%)
   return {
     exp: Number(exp.toFixed(2)),
-    hbs: Number((exp * 0.5).toFixed(2)),
+    hbs: Number((exp * 0.35).toFixed(2)),
   }
 }
 
@@ -240,6 +242,11 @@ export function CrawlaMocksWizard({ onSubmit, busy }: Props) {
       return
     }
 
+    const rawRoomBasis = selectedOffer.room_basis ?? selectedOffer.meal ?? 'RO'
+    // CHEAPEST_L2_GROSS: hardcode RO for both HBS and EXP.
+    // Enigma requires RO for L2 eligibility.
+    const effectiveRoomBasis = bucket === 'CHEAPEST_L2_GROSS' ? 'RO' : rawRoomBasis
+
     const request: CrawlaScenarioRequest = {
       namespace: namespace.trim(),
       check_in: checkIn,
@@ -259,8 +266,8 @@ export function CrawlaMocksWizard({ onSubmit, busy }: Props) {
         package_price_step: packagePriceStep,
         crawla_room_id: selectedOffer.room_id,
         crawla_room_name: selectedOffer.room_name,
-        room_basis: selectedOffer.room_basis ?? selectedOffer.meal ?? 'RO',
-        meal: selectedOffer.meal ?? selectedOffer.room_basis ?? 'RO',
+        room_basis: effectiveRoomBasis,
+        meal: selectedOffer.meal ?? effectiveRoomBasis,
         refundability: selectedOffer.refundability ?? 'NO',
         bed_type: selectedOffer.bed_type ?? null,
         exp_mode: bucket === 'ONLY_CRAWLA' ? 'EXCLUDE_HOTEL' : 'INCLUDE_HOTEL',
@@ -372,6 +379,7 @@ export function CrawlaMocksWizard({ onSubmit, busy }: Props) {
               <option value="EQUAL">EQUAL</option>
               <option value="ONLY_EXPEDIA">ONLY_EXPEDIA</option>
               <option value="ONLY_CRAWLA">ONLY_CRAWLA</option>
+              <option value="CHEAPEST_L2_GROSS">CHEAPEST_L2_GROSS</option>
             </select>
           </label>
         </div>

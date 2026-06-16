@@ -108,12 +108,16 @@ def _build_scenario_request(request: CrawlaScenarioRequest) -> ScenarioRequest:
         search=search_price,
         packages=package_price,
     )
+    is_l2 = request.bucket == CrawlaBucket.CHEAPEST_L2_GROSS
+    raw_room_basis = package_price.room_basis or package_price.meal or "RO"
+    pkg_room_basis = "RO" if is_l2 else raw_room_basis
+
     suppliers = [
         SupplierScenario(
             code=SupplierCode.HBS,
             packages=PackageSpec(
                 count=package_count,
-                room_basis=package_price.room_basis or package_price.meal,
+                room_basis=pkg_room_basis,
                 prices=hbs_prices,
                 refundable=refundable,
             ),
@@ -122,24 +126,48 @@ def _build_scenario_request(request: CrawlaScenarioRequest) -> ScenarioRequest:
             code=SupplierCode.EXP,
             packages=PackageSpec(
                 count=package_count,
-                room_basis=package_price.room_basis or package_price.meal,
+                room_basis=pkg_room_basis,
                 prices=exp_prices,
                 refundable=refundable,
             ),
         ),
     ]
+    # CHEAPEST_L2_GROSS room-basis rule:
+    #   - Enigma's verifyRoomBasisIsROorBBAndReturnRoomBasisAsList() hard-asserts RO.
+    #   - Hardcode RO (not just normalise) so L2 eligibility is guaranteed.
+    effective_room_basis = "RO" if is_l2 else raw_room_basis
+
+    # CHEAPEST_L2_GROSS room-name rule:
+    #   - HBS room_name  == Crawla room_name  (same — Crawla anchor drives HBS)
+    #   - EXP room_name  != HBS room_name     (different — forces separate similar-package group)
+    #   When HBS and EXP are in *different* groups, Enigma fires L2 independently:
+    #   if EXP gross < Crawla anchor and L2 is enabled on the API key,
+    #   CHEAPEST_L2_GROSS_PARTICIPATING_PACKAGES_IDS is populated { HBS_id -> EXP_id }.
+    hbs_room_name = package_price.crawla_room_name
+    exp_room_name = ("Single " + package_price.crawla_room_name) if is_l2 else package_price.crawla_room_name
+
+    # CHEAPEST_L2_GROSS Search room-name rule:
+    #   Both HBS and EXP Search use the same room_name, which differs from the
+    #   Crawla anchor. This ensures they appear in the same group in Search
+    #   but are separated in Packages (HBS = crawla_room_name, EXP = "Single " + crawla_room_name).
+    l2_search_room_name = ("Double " + package_price.crawla_room_name) if is_l2 else None
+
     supplier_mutations = {
         "HBS": SupplierMutation(
             search_price=search_price.hbs_price,
             package_price=package_price.hbs_price,
-            room_name=package_price.crawla_room_name,
-            room_basis=package_price.room_basis or package_price.meal,
+            room_name=hbs_room_name,
+            search_room_name=l2_search_room_name,
+            room_basis=effective_room_basis,
         ),
         "EXP": SupplierMutation(
             search_price=search_price.exp_price,
             package_price=package_price.exp_price,
-            room_name=package_price.crawla_room_name,
-            room_basis=package_price.meal or package_price.room_basis,
+            room_name=exp_room_name,
+            search_room_name=l2_search_room_name,
+            # For L2: hardcoded RO (both suppliers must be RO for L2 eligibility).
+            # For other buckets: preserve original meal/room_basis order.
+            room_basis=effective_room_basis if is_l2 else (package_price.meal or package_price.room_basis),
             bed_groups_description="3 Bed" if request.bucket == CrawlaBucket.ONLY_CRAWLA else None,
         ),
     }

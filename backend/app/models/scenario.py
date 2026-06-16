@@ -43,6 +43,7 @@ class SupplierMutation(BaseModel):
     search_price: Optional[float] = None
     package_price: Optional[float] = None
     room_name: Optional[str] = None
+    search_room_name: Optional[str] = None  # overrides room_name for Search log_type only
     room_basis: Optional[str] = None
     bed_groups_description: Optional[str] = None
     exclude_hotel: bool = False
