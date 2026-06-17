@@ -275,7 +275,7 @@ function App() {
             onClick={() => setTab('test-run')}
           >
             <span className="nav-icon">⬡</span>
-            SB Test Runs
+            Test Runs
           </button>
         </nav>
 
@@ -444,10 +444,10 @@ function App() {
         {tab === 'test-run' && (
           <>
             <header className="page-header">
-              <h1>SB Test Runs</h1>
+              <h1>Test Runs</h1>
               <p>
-                Live dashboard — results stream in as Java tests execute. Polls every 2s while a run
-                is active.
+                Live dashboard — Smart Booking and Crawla results stream in as Java tests execute.
+                Polls every 2s while a run is active.
               </p>
             </header>
 

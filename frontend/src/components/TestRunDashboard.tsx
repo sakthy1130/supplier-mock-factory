@@ -51,6 +51,52 @@ function shortClass(fqn: string) {
 }
 
 // ------------------------------------------------------------------
+// Suite labelling — the /test-run backend is generic, so a single run list
+// mixes Smart Booking and Crawla runs. Derive a suite label per run from its
+// test classes so the dashboard distinguishes them at a glance.
+// ------------------------------------------------------------------
+const SUITE_COLOR: Record<string, string> = {
+  'Smart Booking': '#8b5cf6',
+  Crawla: '#06b6d4',
+  Other: '#6b7280',
+}
+
+function suiteOf(testClass: string): string {
+  const name = shortClass(testClass)
+  if (/crawla/i.test(name)) return 'Crawla'
+  if (/^sb|smartbook/i.test(name)) return 'Smart Booking'
+  return 'Other'
+}
+
+function runSuites(results: TestResult[]): string[] {
+  const seen = new Set<string>()
+  for (const r of results) seen.add(suiteOf(r.test_class))
+  return [...seen]
+}
+
+function suiteBadge(suite: string) {
+  const color = SUITE_COLOR[suite] ?? SUITE_COLOR.Other
+  return (
+    <span
+      key={suite}
+      style={{
+        display: 'inline-block',
+        padding: '1px 7px',
+        borderRadius: 10,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.04em',
+        background: `${color}22`,
+        color,
+        border: `1px solid ${color}55`,
+      }}
+    >
+      {suite}
+    </span>
+  )
+}
+
+// ------------------------------------------------------------------
 // Result row with expandable failure details
 // ------------------------------------------------------------------
 function ResultRow({ result }: { result: TestResult }) {
@@ -325,6 +371,7 @@ function RunPanel({ runId }: { runId: string }) {
         <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#6b7280' }}>
           {state.run_id}
         </span>
+        {runSuites(state.results).map(suiteBadge)}
         {state.status === 'RUNNING' && (
           <span style={{ fontSize: 12, color: '#3b82f6' }}>● live</span>
         )}
@@ -483,6 +530,11 @@ export function TestRunDashboard() {
                 </span>
                 {statusBadge(run.status, color)}
               </div>
+              {runSuites(run.results).length > 0 && (
+                <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {runSuites(run.results).map(suiteBadge)}
+                </div>
+              )}
               <div style={{ marginTop: 4, fontSize: 11, color: '#6b7280' }}>
                 {new Date(run.started_at).toLocaleString()}
               </div>
