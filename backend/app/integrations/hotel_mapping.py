@@ -66,7 +66,7 @@ class HotelMappingClient:
         """
         GET /v2/supplier/{supplierCode}/{atgHotelId}
 
-        Example: /v2/supplier/HBS/1446194 → supplierHotelId 156652
+        Example: /v2/supplier/HBS/1446194 -> supplierHotelId 156652
         """
         atg_id = atg_hotel_id.strip()
         code = supplier_code.strip().upper()
