@@ -77,7 +77,22 @@ class HotelMappingClient:
 
         url = f"{self._base_url()}/v2/supplier/{code}/{atg_id}"
         client = self._get_client()
-        response = await client.get(url, headers=self._headers())
+        try:
+            response = await client.get(url, headers=self._headers())
+        except httpx.ConnectError as exc:
+            raise HotelMappingError(
+                f"Cannot reach mapping service at {self._base_url()} — "
+                f"check MAPPING_SERVICE_URL in backend/.env and ensure you are on the staging VPN. "
+                f"Detail: {exc}"
+            ) from exc
+        except httpx.TimeoutException as exc:
+            raise HotelMappingError(
+                f"Mapping service timed out (supplier={code} atg={atg_id}): {exc}"
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise HotelMappingError(
+                f"Mapping service HTTP error (supplier={code} atg={atg_id}): {exc}"
+            ) from exc
 
         if response.status_code != 200:
             raise HotelMappingError(

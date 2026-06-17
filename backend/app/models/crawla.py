@@ -14,6 +14,7 @@ class CrawlaBucket(str, Enum):
     EQUAL = "EQUAL"
     ONLY_EXPEDIA = "ONLY_EXPEDIA"
     ONLY_CRAWLA = "ONLY_CRAWLA"
+    CHEAPEST_L2_GROSS = "CHEAPEST_L2_GROSS"
 
 
 class CrawlaAnchorRequest(BaseModel):

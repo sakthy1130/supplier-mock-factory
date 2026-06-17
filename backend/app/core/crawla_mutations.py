@@ -48,12 +48,22 @@ def apply_supplier_mutation(
         else:
             _apply_price_override(result, price)
 
-    if supplier_code == "HBS" and mutation.room_name:
-        _apply_hbs_room_name(result, mutation.room_name)
+    if supplier_code == "HBS":
+        effective_room_name = (
+            mutation.search_room_name if log_type == "Search" and mutation.search_room_name
+            else mutation.room_name
+        )
+        if effective_room_name:
+            _apply_hbs_room_name(result, effective_room_name)
     if supplier_code == "HBS" and mutation.room_basis:
         _apply_hbs_room_basis(result, mutation.room_basis)
-    if supplier_code == "EXP" and mutation.room_name:
-        _apply_exp_room_name(result, mutation.room_name)
+    if supplier_code == "EXP":
+        effective_room_name = (
+            mutation.search_room_name if log_type == "Search" and mutation.search_room_name
+            else mutation.room_name
+        )
+        if effective_room_name:
+            _apply_exp_room_name(result, effective_room_name)
     if supplier_code == "EXP" and mutation.room_basis:
         _apply_exp_room_basis(result, mutation.room_basis)
     if supplier_code == "EXP" and mutation.bed_groups_description:

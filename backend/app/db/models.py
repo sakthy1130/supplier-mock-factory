@@ -38,3 +38,6 @@ class ScenarioRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # SB-specific — null for non-SB scenarios
+    sb_config_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    sb_group_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)

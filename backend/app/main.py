@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import admin, crawla, health, hotels, logs, scenarios, suppliers
+from app.api.routes import admin, crawla, health, hotels, logs, scenarios, suppliers, test_run
 from app.config import get_settings
 from app.db.database import init_db
 
@@ -41,3 +41,4 @@ app.include_router(suppliers.router, prefix="/api")
 app.include_router(hotels.router, prefix="/api")
 app.include_router(logs.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(test_run.router, prefix="/api")

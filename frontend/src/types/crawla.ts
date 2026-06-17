@@ -4,6 +4,7 @@ export type CrawlaBucket =
   | 'EQUAL'
   | 'ONLY_EXPEDIA'
   | 'ONLY_CRAWLA'
+  | 'CHEAPEST_L2_GROSS'
 
 export interface CrawlaAnchorRequest {
   check_in: string

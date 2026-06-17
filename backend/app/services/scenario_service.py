@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.orchestrator import SupplierMockScenarioOrchestrator
 from app.db.models import ScenarioRecord
 from app.integrations.mock_server import MockServerClient
+from app.services import provisioning_log_cache
 from app.models.scenario import (
     ScenarioBundle,
     ScenarioListItem,
@@ -57,6 +58,8 @@ def record_to_bundle(record: ScenarioRecord) -> ScenarioBundle:
         error_message=record.error_message,
         created_at=record.created_at,
         expires_at=record.expires_at,
+        sb_config_id=record.sb_config_id,
+        sb_group_id=record.sb_group_id,
     )
 
 
@@ -122,6 +125,10 @@ def apply_bundle(db: Session, record: ScenarioRecord, bundle: ScenarioBundle) ->
     record.updated_at = _utcnow()
     if bundle.expires_at:
         record.expires_at = bundle.expires_at
+    if bundle.sb_config_id is not None:
+        record.sb_config_id = bundle.sb_config_id
+    if bundle.sb_group_id is not None:
+        record.sb_group_id = bundle.sb_group_id
     db.commit()
     db.refresh(record)
     return record
@@ -145,6 +152,8 @@ async def run_create_scenario(scenario_id: str) -> None:
             bundle = await orchestrator.create_scenario(request)
             bundle.id = scenario_id
             apply_bundle(session, record, bundle)
+            if bundle.provisioning_log:
+                provisioning_log_cache.store(scenario_id, bundle.provisioning_log)
         except Exception as exc:
             logger.exception("Scenario create failed id=%s", scenario_id)
             record.status = ScenarioStatus.FAILED.value
@@ -219,6 +228,8 @@ async def _teardown_record(session: Session, record: ScenarioRecord) -> None:
         br_setup=(record.request_json or {}).get("br_setup"),
         contracts=record.contracts_json or {},
         suppliers=record.suppliers_json or [],
+        sb_config_id=record.sb_config_id,
+        sb_group_id=record.sb_group_id,
     )
     bundle.id = record.id
     bundle.namespace = record.namespace

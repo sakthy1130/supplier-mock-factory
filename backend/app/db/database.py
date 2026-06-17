@@ -34,7 +34,42 @@ def get_session_factory():
 def init_db() -> None:
     from app.db.models import Base
 
-    Base.metadata.create_all(bind=get_engine())
+    engine = get_engine()
+    Base.metadata.create_all(bind=engine)
+    _run_migrations(engine)
+
+
+def _run_migrations(engine) -> None:
+    """Apply incremental column additions that create_all won't handle for existing tables."""
+    import logging
+    from sqlalchemy import text
+
+    log = logging.getLogger(__name__)
+    migrations = [
+        ("scenarios", "sb_config_id", "VARCHAR(64)"),
+    ]
+    with engine.connect() as conn:
+        for table, column, col_type in migrations:
+            # SQLite PRAGMA, works for both SQLite and can be extended for Postgres
+            if engine.dialect.name == "sqlite":
+                result = conn.execute(text(f"PRAGMA table_info({table})"))
+                existing = {row[1] for row in result}
+                if column not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
+                    conn.commit()
+                    log.info("Migration: added column %s.%s", table, column)
+            # For PostgreSQL (future)
+            elif engine.dialect.name == "postgresql":
+                result = conn.execute(text(
+                    f"SELECT column_name FROM information_schema.columns "
+                    f"WHERE table_name='{table}' AND column_name='{column}'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {col_type}"
+                    ))
+                    conn.commit()
+                    log.info("Migration: added column %s.%s", table, column)
 
 
 def reset_engine() -> None:

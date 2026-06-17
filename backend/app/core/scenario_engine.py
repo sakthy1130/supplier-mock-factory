@@ -57,11 +57,15 @@ class ScenarioEngine:
             supplier_mutation = request.supplier_mutations.get(supplier_code)
             if supplier_mutation and supplier_mutation.room_basis:
                 validation_spec = validation_spec.model_copy(update={"room_basis": supplier_mutation.room_basis})
-            self.linkage_validator.validate(
-                mutated,
-                supplier_code,
-                validation_spec,
-            )
+            # Skip linkage validation when the hotel is intentionally excluded from
+            # the supplier response (e.g. ONLY_CRAWLA — EXP hotel stripped out).
+            # There are no rates to validate in that case.
+            if not (supplier_mutation and supplier_mutation.exclude_hotel):
+                self.linkage_validator.validate(
+                    mutated,
+                    supplier_code,
+                    validation_spec,
+                )
             for log_type, expectation in mutated.items():
                 built.append(
                     BuiltExpectation(

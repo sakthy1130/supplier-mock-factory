@@ -8,3 +8,28 @@ After creating the APIKEY I want you to creat BusinessRule for the created APIKE
 -Stricy tell your understning for this and how you will implement this
 -No code
 -Ask as many as question u need
+
+
+
+So now I want you to create one more screen for crawler mock.
+So in the existing crawler Mock screen, we have 5 buckets:
+
+- crawler lower
+- Expedia lower
+- Equal
+- only Expedia
+- only crawler
+Now I want you to develop a screen where all these five flows should be called separately, one after the other by clicking a button.
+Flow is creating the mock for each and every bucket:
+
+- crawler lower
+- expedia lower
+- equal
+- only expedia
+- only crawler
+For each and every flow, the run scenario should be called, and the output should be populated on the screen.
+After that the clear data should be called, then, all the created data should be deleted with the existing process for clear data. Once clear is done, then only the next flow should be called.
+Strictly once the run scenario is completed, then only the next flow should be called.
+This process should be in a queued UI, so after completing each and every flow, the UI should be updated with the corresponding output data.
+Strictly make sure the existing flow is not getting impacted because of the new development.
+

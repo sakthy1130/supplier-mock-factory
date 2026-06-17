@@ -133,10 +133,12 @@ class BackofficeClient:
 
     async def create_api_key(self, body: dict[str, Any]) -> dict[str, Any]:
         client = self._get_client()
-        response = await client.post(
-            f"{self.base_url}/api/node/user",
-            json=body,
-            headers=await self.auth_headers(),
+        url = f"{self.base_url}/api/node/user"
+        logger.info("[BackofficeClient] POST %s  body=%s", url, body)
+        response = await client.post(url, json=body, headers=await self.auth_headers())
+        logger.info(
+            "[BackofficeClient] POST %s  status=%d  response=%s",
+            url, response.status_code, response.text,
         )
         if response.status_code not in (200, 201):
             raise BackofficeError(f"Create apiKey failed status={response.status_code} body={response.text}")
@@ -144,10 +146,12 @@ class BackofficeClient:
 
     async def update_api_key(self, api_key_id: str, node_id: str, body: dict[str, Any]) -> dict[str, Any]:
         client = self._get_client()
-        response = await client.put(
-            f"{self.base_url}/api/node/user/{api_key_id}/{node_id}",
-            json=body,
-            headers=await self.auth_headers(),
+        url = f"{self.base_url}/api/node/user/{api_key_id}/{node_id}"
+        logger.info("[BackofficeClient] PUT %s  body=%s", url, body)
+        response = await client.put(url, json=body, headers=await self.auth_headers())
+        logger.info(
+            "[BackofficeClient] PUT %s  status=%d  response=%s",
+            url, response.status_code, response.text,
         )
         if response.status_code != 200:
             raise BackofficeError(f"Update apiKey failed status={response.status_code} body={response.text}")

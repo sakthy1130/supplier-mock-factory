@@ -16,10 +16,12 @@ import { ScenarioResult } from './components/ScenarioResult'
 import { ScenarioWizard } from './components/ScenarioWizard'
 import { useScenarioPoll } from './hooks/useScenarioPoll'
 import { CrawlaMocksWizard } from './components/CrawlaMocksWizard'
+import { CrawlaQueueRunner } from './components/CrawlaQueueRunner'
+import { TestRunDashboard } from './components/TestRunDashboard'
 import type { CrawlaScenarioRequest, CrawlaScenarioRunResult } from './types/crawla'
 import type { ScenarioListItem, ScenarioRequest, ScenarioStatus } from './types/scenario'
 
-type Tab = 'create' | 'browse' | 'crawla'
+type Tab = 'create' | 'browse' | 'crawla' | 'queue' | 'test-run'
 
 function App() {
   const [tab, setTab] = useState<Tab>('create')
@@ -259,6 +261,22 @@ function App() {
             <span className="nav-icon">◌</span>
             Crawla Mocks
           </button>
+          <button
+            type="button"
+            className={tab === 'queue' ? 'nav-item active' : 'nav-item'}
+            onClick={() => setTab('queue')}
+          >
+            <span className="nav-icon">⏵</span>
+            Queue Runner
+          </button>
+          <button
+            type="button"
+            className={tab === 'test-run' ? 'nav-item active' : 'nav-item'}
+            onClick={() => setTab('test-run')}
+          >
+            <span className="nav-icon">⬡</span>
+            SB Test Runs
+          </button>
         </nav>
 
         <div className="side-stats">
@@ -394,6 +412,48 @@ function App() {
                     />
                   </div>
                 )}
+              </section>
+            </div>
+          </>
+        )}
+
+        {tab === 'queue' && (
+          <>
+            <header className="page-header">
+              <h1>Crawla Mock Queue Runner</h1>
+              <p>
+                Runs all five Crawla bucket scenarios sequentially — each scenario is fully provisioned,
+                executed, and cleared before the next one begins.
+              </p>
+            </header>
+
+            <div className="layout">
+              <section className="card">
+                <div className="card-header">
+                  <div>
+                    <h2>Queue runner</h2>
+                    <p>Crawla Lower → Expedia Lower → Equal → Only Expedia → Only Crawla</p>
+                  </div>
+                </div>
+                <CrawlaQueueRunner />
+              </section>
+            </div>
+          </>
+        )}
+
+        {tab === 'test-run' && (
+          <>
+            <header className="page-header">
+              <h1>SB Test Runs</h1>
+              <p>
+                Live dashboard — results stream in as Java tests execute. Polls every 2s while a run
+                is active.
+              </p>
+            </header>
+
+            <div className="layout" style={{ height: 'calc(100vh - 130px)', overflow: 'hidden' }}>
+              <section className="card" style={{ padding: 0, overflow: 'hidden', height: '100%' }}>
+                <TestRunDashboard />
               </section>
             </div>
           </>

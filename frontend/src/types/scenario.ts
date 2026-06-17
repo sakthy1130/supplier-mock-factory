@@ -49,6 +49,7 @@ export interface ScenarioBundle {
   error_message?: string
   created_at?: string
   expires_at?: string
+  provisioning_log?: string[]
 }
 
 export interface ScenarioListItem {

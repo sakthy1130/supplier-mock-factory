@@ -256,6 +256,21 @@ export function ScenarioResult({
           {bundle.br_setup && (
             <CopyJson label="Business Rule setup" value={bundle.br_setup as Record<string, unknown>} />
           )}
+
+          {bundle.provisioning_log && bundle.provisioning_log.length > 0 && (
+            <>
+              <div className="data-section-title">Provisioning Log</div>
+              <div className="json-panel">
+                <pre style={{ fontSize: '0.72rem', lineHeight: '1.6', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                  {bundle.provisioning_log.map((line, i) => (
+                    <span key={i} style={{ display: 'block', borderBottom: '1px solid rgba(128,128,128,0.15)', paddingBottom: '2px', marginBottom: '2px' }}>
+                      {line}
+                    </span>
+                  ))}
+                </pre>
+              </div>
+            </>
+          )}
         </>
       )}
 
