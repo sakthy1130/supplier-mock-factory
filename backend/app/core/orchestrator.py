@@ -109,27 +109,30 @@ class SupplierMockScenarioOrchestrator:
         api_key, api_key_id = await self.apikey_provisioner.create_api_key(
             bundle.contracts,
             request.namespace,
+            sb_config_data=sb_config_data,
+            sb_group_data=sb_group_data,
+            sb_enabled=(
+                request.sb_config.enable_profitable_sb
+                if request.sb_config is not None
+                else True
+            ),
             prov_log=plog,
         )
         bundle.api_key = api_key
         bundle.api_key_id = api_key_id
 
-        # Step 5: Assign SB config + group to apiKey as opt.smartBooking, clear cache
+        # Step 5: SB config + group are now injected into opt.smartBooking at apiKey
+        # CREATE time (see ApiKeyProvisioner.create_api_key). We deliberately do NOT
+        # call assign_to_api_key here: that path does a get_api_key_config + PUT, and
+        # PUTting the read-config shape back corrupts the record (portal GET → 500).
         if request.sb_config is not None and sb_config_data is not None and sb_group_data is not None:
-            node_id = self.settings.tenant_id
-            await self.sb_group_provisioner.assign_to_api_key(
-                api_key_id=api_key_id,
-                api_key=api_key,
-                node_id=node_id,
-                sb_config_data=sb_config_data,
-                sb_group_data=sb_group_data,
-                sb_config=request.sb_config,
-                prov_log=plog,
-            )
             logger.info(
-                "SB config+group attached and cache cleared: api_key=%s "
-                "sb_config_id=%s sb_group_id=%s",
+                "SB config+group injected at create: api_key=%s sb_config_id=%s sb_group_id=%s",
                 api_key, sb_config_data["_id"], sb_group_data["_id"],
+            )
+            plog.append(
+                f"[sb_assign] injected at create → config={sb_config_data['_id']} "
+                f"group={sb_group_data['_id']} (no post-create PUT)"
             )
 
         # Step 6: BR provisioning — for crawla_export AND for all SB scenarios

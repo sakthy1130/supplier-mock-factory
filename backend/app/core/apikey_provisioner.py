@@ -30,6 +30,9 @@ class ApiKeyProvisioner:
         self,
         contract_ids: dict[str, str],
         namespace: str,
+        sb_config_data: dict[str, Any] | None = None,
+        sb_group_data: dict[str, Any] | None = None,
+        sb_enabled: bool = True,
         prov_log: list[str] | None = None,
     ) -> tuple[str, str]:
         api_key = _api_key_value(namespace)
@@ -50,7 +53,16 @@ class ApiKeyProvisioner:
 
             _plog(f"[apiKey TEMPLATE] fetching template uid={template_name} _id={summary['_id']}")
             template = await self.backoffice.get_api_key_config(str(summary["_id"]), node_id)
-            body = _clone_api_key_template(template, api_key, node_id)
+            contract_list = _ordered_contract_ids(contract_ids)
+            body = _build_api_key_body(
+                template,
+                api_key,
+                node_id,
+                contract_list,
+                sb_config_data=sb_config_data,
+                sb_group_data=sb_group_data,
+                sb_enabled=sb_enabled,
+            )
 
             # Get token now so we can build the curl before making the request
             token = await self.backoffice.ensure_token()
@@ -76,12 +88,11 @@ class ApiKeyProvisioner:
             if not api_key_id:
                 raise ValueError("Create apiKey response missing _id")
 
-            config = await self.backoffice.get_api_key_config(api_key_id, node_id)
-            contract_list = _ordered_contract_ids(contract_ids)
-            config["contracts"] = contract_list
-            _plog(f"[apiKey UPDATE contracts] PUT /api/node/user/{api_key_id}/{node_id}  contracts={contract_list}")
-            await self.backoffice.update_api_key(api_key_id, node_id, config)
-            _plog(f"[apiKey UPDATE contracts] → 200 OK")
+            # NOTE: contracts and opt.smartBooking are already set in the create body.
+            # Do NOT do a follow-up get_api_key_config + update_api_key here — the GET
+            # returns the read-config shape, and PUTting that shape back corrupts the
+            # record (portal GET then returns 500). The raw create curl works precisely
+            # because it does not do this round-trip.
 
             await self.config_manager.clear_api_key_cache(api_key)
             _plog(f"[cache clear] POST /api/v1/cache/config/clear/{api_key} → 200 OK")
@@ -104,20 +115,49 @@ def _ordered_contract_ids(contract_ids: dict[str, str]) -> list[str]:
     return ordered
 
 
-def _clone_api_key_template(template: dict[str, Any], api_key: str, node_id: str) -> dict[str, Any]:
-    body = copy.deepcopy(template)
-    for key in ("_id", "id", "createdAt", "updatedAt", "created_at", "update_at", "__v"):
-        body.pop(key, None)
-    body["apikey"] = api_key
-    body["uid"] = api_key
-    body["name"] = api_key
-    body["nodeId"] = node_id
-    body["contracts"] = []
-    # Fixed fields required for SB test scenarios
-    body["countryCode"] = "+971"
-    body["currency"] = "AFN"
-    body["locale"] = "EN"
-    body["pos"] = "AE"
-    body["platform"] = "all"
-    body["markup"] = "00"
-    return body
+def _build_api_key_body(
+    template: dict[str, Any],
+    api_key: str,
+    node_id: str,
+    contract_ids: list[str],
+    sb_config_data: dict[str, Any] | None = None,
+    sb_group_data: dict[str, Any] | None = None,
+    sb_enabled: bool = True,
+) -> dict[str, Any]:
+    """Build the POST /api/node/user create body.
+
+    The create endpoint expects an explicit, flat body (the shape the Backoffice
+    portal stores), NOT the GET-config response shape. Cloning the full GET
+    response produced records the portal could not open. We source the proven
+    `opt` block from the template but construct a clean top-level body, and
+    inject SB configuration + groups into `opt.smartBooking` at create time.
+    """
+    opt = copy.deepcopy(template.get("opt", {}))
+
+    # Drop stale flat SB fields that older code may have written.
+    for stale in ("smartBook", "smartBookGroup", "smartBookRetry", "smartBookErrorCodes"):
+        opt.pop(stale, None)
+
+    # Inject both SB configuration and SB groups into opt at create time.
+    if sb_config_data is not None and sb_group_data is not None:
+        opt["smartBooking"] = {
+            "configuration": sb_config_data,
+            "groups": [sb_group_data],
+            "isEnabled": sb_enabled,
+        }
+
+    return {
+        "name": api_key,
+        "uid": api_key,
+        "apikey": api_key,
+        "nodeId": node_id,
+        "contracts": contract_ids,
+        # Fixed fields required for SB test scenarios
+        "countryCode": "+971",
+        "currency": "AFN",
+        "locale": "EN",
+        "pos": "AE",
+        "platform": "all",
+        "markup": "00",
+        "opt": opt,
+    }

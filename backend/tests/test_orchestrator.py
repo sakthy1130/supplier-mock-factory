@@ -82,10 +82,13 @@ async def test_create_scenario_end_to_end_with_mocks():
     assert bundle.mock_server_base_url == "http://mockserver-staging.tajawal.io"
 
     contract_provisioner.create_contracts.assert_awaited_once()
-    apikey_provisioner.create_api_key.assert_awaited_once_with(
-        {"HBS": "contract-hbs", "EXP": "contract-exp"},
-        "qa-orch-001",
-    )
+    apikey_provisioner.create_api_key.assert_awaited_once()
+    ak_call = apikey_provisioner.create_api_key.await_args
+    assert ak_call.args[0] == {"HBS": "contract-hbs", "EXP": "contract-exp"}
+    assert ak_call.args[1] == "qa-orch-001"
+    # Non-SB scenario: no SB config/group injected at create time
+    assert ak_call.kwargs.get("sb_config_data") is None
+    assert ak_call.kwargs.get("sb_group_data") is None
 
 
 @pytest.mark.asyncio

@@ -12,10 +12,7 @@ async def test_create_api_key_attaches_contracts_and_clears_cache():
     backoffice.__aexit__ = AsyncMock(return_value=None)
     backoffice.find_api_key_by_uid = AsyncMock(return_value={"_id": "template-id", "apikey": "Fayrouztest"})
     backoffice.get_api_key_config = AsyncMock(
-        side_effect=[
-            {"_id": "template-id", "uid": "Fayrouztest", "apikey": "Fayrouztest", "opt": {}},
-            {"contracts": [], "currency": "AED"},
-        ]
+        return_value={"_id": "template-id", "uid": "Fayrouztest", "apikey": "Fayrouztest", "opt": {}},
     )
     backoffice.create_api_key = AsyncMock(
         return_value={"_id": "key-id-1", "uid": "smf-qa-p4-001", "apikey": "smf-qa-p4-001"}
@@ -35,6 +32,8 @@ async def test_create_api_key_attaches_contracts_and_clears_cache():
 
     assert api_key == "smf-qa-p4-001"
     assert api_key_id == "key-id-1"
-    update_body = backoffice.update_api_key.await_args.args[2]
-    assert update_body["contracts"] == ["mongo-hbs", "mongo-exp"]
+    # Contracts must be in the CREATE body — no corrupting follow-up PUT.
+    create_body = backoffice.create_api_key.await_args.args[0]
+    assert create_body["contracts"] == ["mongo-hbs", "mongo-exp"]
+    backoffice.update_api_key.assert_not_awaited()
     config_manager.clear_api_key_cache.assert_awaited_once_with("smf-qa-p4-001")
