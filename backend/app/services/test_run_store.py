@@ -55,7 +55,10 @@ def post_result(run_id: str, result: TestResult) -> None:
         state.passed += 1
     elif result.status == TestStatus.FAILED:
         state.failed += 1
-    elif result.status == TestStatus.SKIPPED:
+    elif result.status in (TestStatus.SKIPPED, TestStatus.ABORTED):
+        # Assumption-failures (e.g. Crawla service absent) arrive as ABORTED;
+        # count them as skipped so they show in the dashboard breakdown,
+        # matching how Surefire reports them.
         state.skipped += 1
 
     logger.debug(

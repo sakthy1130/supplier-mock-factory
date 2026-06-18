@@ -543,6 +543,8 @@ export function TestRunDashboard() {
                 {' · '}
                 <span style={{ color: '#ef4444' }}>{run.failed}✗</span>
                 {' · '}
+                <span style={{ color: '#f59e0b' }}>{run.skipped}⊘</span>
+                {' · '}
                 {run.total} total
               </div>
             </button>
