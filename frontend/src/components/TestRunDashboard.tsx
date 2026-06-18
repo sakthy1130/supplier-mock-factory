@@ -103,15 +103,18 @@ function ResultRow({ result }: { result: TestResult }) {
   const [open, setOpen] = useState(false)
   const color = STATUS_COLOR[result.status]
   const hasFail = !!(result.failure_message || result.stack_trace || result.http_details)
+  // Passed/skipped tests still carry the provisioning log + scenario id — make every
+  // row with any detail expandable, not just failures.
+  const hasDetail = hasFail || (result.provisioning_log?.length ?? 0) > 0 || !!result.scenario_id
 
   return (
     <>
       <tr
         style={{
-          cursor: hasFail ? 'pointer' : 'default',
+          cursor: hasDetail ? 'pointer' : 'default',
           background: open ? '#1a1a2e' : 'transparent',
         }}
-        onClick={() => hasFail && setOpen((v) => !v)}
+        onClick={() => hasDetail && setOpen((v) => !v)}
       >
         <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 13 }}>
           {shortClass(result.test_class)}
@@ -127,15 +130,23 @@ function ResultRow({ result }: { result: TestResult }) {
           {result.posted_at ? new Date(result.posted_at).toLocaleTimeString() : '—'}
         </td>
         <td style={{ padding: '8px 12px', fontSize: 12, color: '#6b7280' }}>
-          {hasFail ? (open ? '▲ hide' : '▼ details') : ''}
+          {hasDetail ? (open ? '▲ hide' : '▼ details') : ''}
         </td>
       </tr>
-      {open && hasFail && (
+      {open && hasDetail && (
         <tr>
           <td
             colSpan={6}
             style={{ padding: '0 12px 16px 12px', background: '#0f0f1a' }}
           >
+            {result.scenario_id && (
+              <div style={{ margin: '8px 0' }}>
+                <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4 }}>SCENARIO</div>
+                <div style={{ fontFamily: 'monospace', fontSize: 12, color: '#93c5fd' }}>
+                  {result.scenario_id}
+                </div>
+              </div>
+            )}
             {result.failure_message && (
               <div style={{ margin: '8px 0' }}>
                 <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4 }}>FAILURE MESSAGE</div>
