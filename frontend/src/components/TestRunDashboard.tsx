@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { listTestRuns, getTestRunState } from '../api/testRun'
-import type { TestResult, TestRunState, TestStatus } from '../types/testRun'
+import type { StepNode, TestResult, TestRunState, TestStatus } from '../types/testRun'
 
 const POLL_MS = 2000
 
@@ -97,6 +97,47 @@ function suiteBadge(suite: string) {
 }
 
 // ------------------------------------------------------------------
+// Allure @Step tree (recursive)
+// ------------------------------------------------------------------
+const STEP_ICON: Record<string, { icon: string; color: string }> = {
+  PASSED: { icon: '✓', color: '#22c55e' },
+  FAILED: { icon: '✗', color: '#ef4444' },
+  BROKEN: { icon: '✗', color: '#ef4444' },
+  SKIPPED: { icon: '⊘', color: '#f59e0b' },
+}
+
+function StepTree({ steps, depth = 0 }: { steps: StepNode[]; depth?: number }) {
+  return (
+    <div>
+      {steps.map((step, i) => {
+        const s = STEP_ICON[(step.status ?? '').toUpperCase()] ?? { icon: '•', color: '#8b949e' }
+        return (
+          <div key={i}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: 8,
+                padding: '2px 0',
+                paddingLeft: 12 + depth * 16,
+                fontFamily: 'monospace',
+                fontSize: 12,
+                borderBottom: '1px solid #161b22',
+              }}
+            >
+              <span style={{ color: s.color, width: 12, flexShrink: 0 }}>{s.icon}</span>
+              <span style={{ color: '#c9d1d9', flex: 1, wordBreak: 'break-word' }}>{step.name}</span>
+              <span style={{ color: '#6b7280', flexShrink: 0 }}>{formatMs(step.duration_ms)}</span>
+            </div>
+            {step.steps && step.steps.length > 0 && <StepTree steps={step.steps} depth={depth + 1} />}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------
 // Result row with expandable failure details
 // ------------------------------------------------------------------
 function ResultRow({ result }: { result: TestResult }) {
@@ -105,7 +146,8 @@ function ResultRow({ result }: { result: TestResult }) {
   const hasFail = !!(result.failure_message || result.stack_trace || result.http_details)
   // Passed/skipped tests still carry the provisioning log + scenario id — make every
   // row with any detail expandable, not just failures.
-  const hasDetail = hasFail || (result.provisioning_log?.length ?? 0) > 0 || !!result.scenario_id
+  const hasSteps = (result.steps?.length ?? 0) > 0
+  const hasDetail = hasFail || hasSteps || (result.provisioning_log?.length ?? 0) > 0 || !!result.scenario_id
 
   return (
     <>
@@ -146,6 +188,34 @@ function ResultRow({ result }: { result: TestResult }) {
                   {result.scenario_id}
                 </div>
               </div>
+            )}
+
+            {hasSteps && (
+              <details open style={{ margin: '8px 0' }}>
+                <summary
+                  style={{
+                    fontSize: 11,
+                    color: '#60a5fa',
+                    cursor: 'pointer',
+                    marginBottom: 4,
+                    fontWeight: 600,
+                  }}
+                >
+                  Steps ({result.steps!.length})
+                </summary>
+                <div
+                  style={{
+                    background: '#0d1117',
+                    border: '1px solid #1d3a5c',
+                    borderRadius: 4,
+                    padding: '4px 0',
+                    maxHeight: 360,
+                    overflow: 'auto',
+                  }}
+                >
+                  <StepTree steps={result.steps!} />
+                </div>
+              </details>
             )}
             {result.failure_message && (
               <div style={{ margin: '8px 0' }}>

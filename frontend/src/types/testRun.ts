@@ -9,12 +9,20 @@ export interface HttpDetails {
   response_body: string | null
 }
 
+export interface StepNode {
+  name: string
+  status: string | null
+  duration_ms: number
+  steps?: StepNode[]
+}
+
 export interface TestResult {
   scenario_id: string | null
   test_class: string
   test_method: string
   status: TestStatus
   duration_ms: number
+  steps?: StepNode[]
   failure_message: string | null
   stack_trace: string | null
   failed_step: string | null

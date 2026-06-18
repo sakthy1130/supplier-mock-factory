@@ -32,6 +32,15 @@ class HttpDetails(BaseModel):
     response_body: Optional[str] = None
 
 
+class StepNode(BaseModel):
+    """One Allure @Step in the captured step tree (recursive)."""
+
+    name: str
+    status: Optional[str] = None  # PASSED | FAILED | BROKEN | SKIPPED
+    duration_ms: int = 0
+    steps: list["StepNode"] = Field(default_factory=list)
+
+
 class TestResult(BaseModel):
     """Single test result posted by the JUnit TestExecutionListener."""
 
@@ -40,6 +49,8 @@ class TestResult(BaseModel):
     test_method: str
     status: TestStatus
     duration_ms: int = Field(ge=0)
+    # Allure @Step tree for Allure-style drill-down on the dashboard
+    steps: list[StepNode] = Field(default_factory=list)
     failure_message: Optional[str] = None
     stack_trace: Optional[str] = None
     failed_step: Optional[str] = None
@@ -47,6 +58,13 @@ class TestResult(BaseModel):
     posted_at: Optional[datetime] = None
     # Injected server-side from provisioning_log_cache when scenario_id is known
     provisioning_log: list[str] = Field(default_factory=list)
+
+
+class ResultStepsRequest(BaseModel):
+    """Allure @Step tree for one test, posted separately and merged by test_method."""
+
+    test_method: str
+    steps: list[StepNode] = Field(default_factory=list)
 
 
 class TestRunStartResponse(BaseModel):

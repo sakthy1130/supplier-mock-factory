@@ -6,7 +6,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from app.models.test_run import TestResult, TestRunStartResponse, TestRunState
+from app.models.test_run import ResultStepsRequest, TestResult, TestRunStartResponse, TestRunState
 from app.services import test_run_store, provisioning_log_cache
 
 logger = logging.getLogger(__name__)
@@ -39,6 +39,17 @@ def post_test_result(run_id: str, result: TestResult) -> None:
                 len(plog), result.scenario_id, run_id,
             )
     test_run_store.post_result(run_id, result)
+
+
+@router.post("/{run_id}/result-steps", status_code=204)
+def post_result_steps(run_id: str, payload: ResultStepsRequest) -> None:
+    """Attach an Allure @Step tree to a result (keyed by test_method).
+
+    Posted separately from the result because Allure finalizes the step tree slightly
+    after the JUnit listener posts the result; the store merges by test_method regardless
+    of arrival order.
+    """
+    test_run_store.attach_steps(run_id, payload.test_method, payload.steps)
 
 
 @router.post("/{run_id}/complete", status_code=204)

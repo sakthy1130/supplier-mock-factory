@@ -13,12 +13,15 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from app.models.test_run import RunStatus, TestResult, TestRunStartResponse, TestRunState, TestStatus
+from app.models.test_run import RunStatus, StepNode, TestResult, TestRunStartResponse, TestRunState, TestStatus
 
 logger = logging.getLogger(__name__)
 
 # Global in-memory store: run_id -> TestRunState
 _store: dict[str, TestRunState] = {}
+
+# Steps that arrived before their result was posted: (run_id, test_method) -> steps
+_pending_steps: dict[tuple[str, str], list[StepNode]] = {}
 
 
 def start_run() -> TestRunStartResponse:
@@ -48,6 +51,10 @@ def post_result(run_id: str, result: TestResult) -> None:
         _store[run_id] = state
 
     result.posted_at = datetime.now(timezone.utc)
+    # Steps may have arrived before this result — merge them in.
+    pending = _pending_steps.pop((run_id, result.test_method), None)
+    if pending and not result.steps:
+        result.steps = pending
     state.results.append(result)
     state.total += 1
 
@@ -68,6 +75,21 @@ def post_result(run_id: str, result: TestResult) -> None:
         result.status,
         result.duration_ms,
     )
+
+
+def attach_steps(run_id: str, test_method: str, steps: list[StepNode]) -> None:
+    """Attach an Allure @Step tree to the matching result, or buffer it until the
+    result is posted. Keyed by test_method within the run."""
+    state = _store.get(run_id)
+    if state is not None:
+        # Most recent matching result without steps yet.
+        for result in reversed(state.results):
+            if result.test_method == test_method and not result.steps:
+                result.steps = steps
+                logger.info("Attached %d step(s) to result: run_id=%s test=%s", len(steps), run_id, test_method)
+                return
+    _pending_steps[(run_id, test_method)] = steps
+    logger.debug("Buffered steps for not-yet-posted result: run_id=%s test=%s", run_id, test_method)
 
 
 def complete_run(run_id: str) -> None:
