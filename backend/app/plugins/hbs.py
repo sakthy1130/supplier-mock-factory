@@ -304,18 +304,7 @@ class HbsMockPlugin(SupplierMockPlugin):
         search_rooms = search_hotels[0].get("rooms") if isinstance(search_hotels[0], dict) else None
         if not isinstance(search_rooms, list) or not search_rooms:
             return
-        # Preserve Search-only fields the Package template omits; the HBS adapter
-        # accesses them during search-response transformation (NPE if absent).
-        existing_rates = search_rooms[0].get("rates", [])
-        search_only: dict = {}
-        if existing_rates and isinstance(existing_rates[0], dict):
-            for field in ("rateCommentsId", "offers"):
-                if field in existing_rates[0]:
-                    search_only[field] = existing_rates[0][field]
         synced_rate = deep_copy(primary_rate)
-        for field, value in search_only.items():
-            if field not in synced_rate:
-                synced_rate[field] = value
         search_rooms[0]["rates"] = [synced_rate]
         search_hotels[0]["rooms"] = [search_rooms[0]]
 
