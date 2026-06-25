@@ -5,8 +5,65 @@
   },
   "httpResponse": {
     "headers": {
+      "cache-control": [
+        "no-cache, no-store, max-age=0, must-revalidate"
+      ],
+      "connection": [
+        "keep-alive"
+      ],
+      "content-encoding": [
+        "gzip"
+      ],
+      "content-length": [
+        "1066"
+      ],
       "content-type": [
         "application/json"
+      ],
+      "date": [
+        "Fri, 05 Jun 2026 18:28:58 GMT"
+      ],
+      "expires": [
+        "0"
+      ],
+      "pragma": [
+        "no-cache"
+      ],
+      "referrer-policy": [
+        "no-referrer"
+      ],
+      "region": [
+        "us-west-2"
+      ],
+      "server": [
+        "Heighliner"
+      ],
+      "strict-transport-security": [
+        "max-age=31536000 ; includeSubDomains"
+      ],
+      "transaction-id": [
+        "3dcfdfb3-92e6-4322-bd72-7cbc9a2b0dee"
+      ],
+      "vary": [
+        "Origin,Access-Control-Request-Method,Access-Control-Request-Headers,accept-encoding"
+      ],
+      "x-akamai-reference-id": [
+        "0.7562645f.1780684138.383f34e5"
+      ],
+      "x-aws-region": [
+        "us-west-2"
+      ],
+      "x-content-type-options": [
+        "nosniff"
+      ],
+      "x-envoy-upstream-service-time": [
+        "462"
+      ],
+      "x-frame-options": [
+        "DENY"
+      ],
+      "x-xss-protection": [
+        "0"
       ]
     },
     "statusCode": 200,

@@ -5,8 +5,74 @@
   },
   "httpResponse": {
     "headers": {
-      "content-type": [
+      "Content-Type": [
         "application/json"
+      ],
+      "Transfer-Encoding": [
+        "chunked"
+      ],
+      "Connection": [
+        "keep-alive"
+      ],
+      "Date": [
+        "Fri, 05 Jun 2026 18:14:52 GMT"
+      ],
+      "X-Ratelimit-Reset": [
+        "1780697733"
+      ],
+      "X-Xss-Protection": [
+        "1; mode=block"
+      ],
+      "Access-Control-Allow-Headers": [
+        "x-requested-with, Content-Type, Api-Key"
+      ],
+      "Access-Control-Allow-Methods": [
+        "POST, GET, OPTIONS, DELETE"
+      ],
+      "Access-Control-Allow-Origin": [
+        "*"
+      ],
+      "Access-Control-Max-Age": [
+        "3600"
+      ],
+      "Cache-Control": [
+        "no-cache, no-store, max-age=0, must-revalidate"
+      ],
+      "Expires": [
+        "0"
+      ],
+      "Pragma": [
+        "no-cache"
+      ],
+      "X-Application-Context": [
+        "hotel-booking-api-1"
+      ],
+      "X-Content-Type-Options": [
+        "nosniff"
+      ],
+      "X-Frame-Options": [
+        "DENY"
+      ],
+      "X-Ratelimit-Limit": [
+        "50000"
+      ],
+      "X-Ratelimit-Remaining": [
+        "46063"
+      ],
+      "X-Cache": [
+        "Miss from cloudfront"
+      ],
+      "Via": [
+        "1.1 4077d2044c7730bc5c47619dce919130.cloudfront.net (CloudFront)"
+      ],
+      "X-Amz-Cf-Pop": [
+        "DUB56-P4"
+      ],
+      "Alt-Svc": [
+        "h3=\":443\"; ma=86400"
+      ],
+      "X-Amz-Cf-Id": [
+        "8_6T_tHsP_9Q26A6Fs40zePKhurbcCnGAqXUbrH0SwHqUB_ndw_SSg=="
       ]
     },
     "statusCode": 200,

@@ -106,6 +106,62 @@ def extract_response_body_payload(full_log: dict) -> dict:
     return copy.deepcopy(full_log)
 
 
+# MockServer expects response headers as {name: [values]}. Real supplier responses
+# carry headers the adapter depends on, so preserve them from the recorded log
+# instead of discarding everything but content-type.
+DEFAULT_RESPONSE_HEADERS: dict[str, list[str]] = {"content-type": ["application/json"]}
+
+
+def normalize_response_headers(raw: Any) -> dict[str, list[str]]:
+    """Coerce a recorded header collection into MockServer's {name: [values]} shape."""
+    if not raw:
+        return dict(DEFAULT_RESPONSE_HEADERS)
+    normalized: dict[str, list[str]] = {}
+    # Shape A: {name: value} or {name: [values]}
+    if isinstance(raw, dict):
+        for name, value in raw.items():
+            if not isinstance(name, str) or not name.strip():
+                continue
+            if isinstance(value, list):
+                values = [str(v) for v in value]
+            else:
+                values = [str(value)]
+            normalized[name] = values
+    # Shape B: [{"name": n, "values": [...]}] (MockServer / HAR style)
+    elif isinstance(raw, list):
+        for entry in raw:
+            if not isinstance(entry, dict):
+                continue
+            name = entry.get("name")
+            if not isinstance(name, str) or not name.strip():
+                continue
+            value = entry.get("values", entry.get("value"))
+            if isinstance(value, list):
+                normalized[name] = [str(v) for v in value]
+            elif value is not None:
+                normalized[name] = [str(value)]
+    if not normalized:
+        return dict(DEFAULT_RESPONSE_HEADERS)
+    # Always guarantee a content-type so MockServer serves JSON correctly.
+    if not any(k.lower() == "content-type" for k in normalized):
+        normalized["content-type"] = ["application/json"]
+    return normalized
+
+
+def extract_response_headers(full_log: dict) -> dict[str, list[str]]:
+    if not full_log:
+        return dict(DEFAULT_RESPONSE_HEADERS)
+    response = full_log.get("response")
+    if isinstance(response, dict):
+        for key in ("headers", "header", "responseHeaders"):
+            if response.get(key):
+                return normalize_response_headers(response[key])
+    for key in ("responseHeaders", "headers"):
+        if full_log.get(key):
+            return normalize_response_headers(full_log[key])
+    return dict(DEFAULT_RESPONSE_HEADERS)
+
+
 def parse_log_json_body(raw: Any) -> Any | None:
     if raw is None:
         return None
@@ -166,6 +222,7 @@ def build_expectation(
     request_body: Any | None,
     response_body: dict,
     status_code: int,
+    response_headers: dict[str, list[str]] | None = None,
 ) -> dict:
     # SMF mocks match on path/method only — no request body or header matchers.
     _ = request_body
@@ -177,7 +234,7 @@ def build_expectation(
     return {
         "httpRequest": http_request,
         "httpResponse": {
-            "headers": {"content-type": ["application/json"]},
+            "headers": response_headers or dict(DEFAULT_RESPONSE_HEADERS),
             "statusCode": status_code,
             "body": response_body,
         },

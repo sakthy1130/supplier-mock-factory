@@ -5,6 +5,54 @@
   },
   "httpResponse": {
     "headers": {
+      "cache-control": [
+        "no-cache, no-store, max-age=0, must-revalidate"
+      ],
+      "connection": [
+        "keep-alive"
+      ],
+      "date": [
+        "Fri, 05 Jun 2026 18:29:20 GMT"
+      ],
+      "expires": [
+        "0"
+      ],
+      "pragma": [
+        "no-cache"
+      ],
+      "referrer-policy": [
+        "no-referrer"
+      ],
+      "region": [
+        "us-west-2"
+      ],
+      "server": [
+        "istio-envoy"
+      ],
+      "strict-transport-security": [
+        "max-age=31536000 ; includeSubDomains"
+      ],
+      "transaction-id": [
+        "3ecab0de-3db3-4980-851f-db4ecba5cee7"
+      ],
+      "vary": [
+        "Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
+      ],
+      "x-akamai-reference-id": [
+        "0.4662645f.1780684159.39141267"
+      ],
+      "x-content-type-options": [
+        "nosniff"
+      ],
+      "x-envoy-upstream-service-time": [
+        "261"
+      ],
+      "x-frame-options": [
+        "DENY"
+      ],
+      "x-xss-protection": [
+        "0"
+      ],
       "content-type": [
         "application/json"
       ]

@@ -34,6 +34,15 @@ SUPPLIER_MUTABLE_KEYS: dict[str, dict[str, list[str]]] = {
         "price": ["amount", "show_amount", "daily_prices"],
         "package_id": ["match_hash", "book_hash", "search_hash"],
     },
+    # Derby/OTA-style payload via hotels-derby-bts-adapter.
+    "CHC": {
+        "check_in": ["checkin"],
+        "check_out": ["checkout"],
+        "booking_id": ["distributorResId", "derbyResId", "supplierResId"],
+        "hotel_id": ["hotelId"],
+        "price": ["amountBeforeTax", "amountAfterTax"],
+        "package_id": ["roomId", "rateId"],
+    },
 }
 
 

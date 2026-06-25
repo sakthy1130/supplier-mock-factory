@@ -5,8 +5,80 @@
   },
   "httpResponse": {
     "headers": {
+      "cache-control": [
+        "no-cache, no-store, max-age=0, must-revalidate"
+      ],
+      "connection": [
+        "keep-alive"
+      ],
+      "content-encoding": [
+        "gzip"
+      ],
+      "content-length": [
+        "3030"
+      ],
       "content-type": [
         "application/json"
+      ],
+      "date": [
+        "Fri, 05 Jun 2026 18:28:30 GMT"
+      ],
+      "expires": [
+        "0"
+      ],
+      "hotdays-requested": [
+        "5"
+      ],
+      "hotdays-responded": [
+        "5"
+      ],
+      "pragma": [
+        "no-cache"
+      ],
+      "rate-limit-day-remaining": [
+        "100"
+      ],
+      "rate-limit-day-reset": [
+        "1780617600000"
+      ],
+      "rate-limit-reduction-status": [
+        "inactive"
+      ],
+      "referrer-policy": [
+        "no-referrer"
+      ],
+      "region": [
+        "us-west-2"
+      ],
+      "room-nights-requested": [
+        "5"
+      ],
+      "room-nights-responded": [
+        "5"
+      ],
+      "server": [
+        "EAN"
+      ],
+      "strict-transport-security": [
+        "max-age=31536000 ; includeSubDomains"
+      ],
+      "transaction-id": [
+        "a1c347a9-a31c-47d1-9460-9eebf9ba4a68"
+      ],
+      "vary": [
+        "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, accept-encoding"
+      ],
+      "x-akamai-reference-id": [
+        "0.6462645f.1780684110.54ff5914"
+      ],
+      "x-content-type-options": [
+        "nosniff"
+      ],
+      "x-frame-options": [
+        "DENY"
+      ],
+      "x-xss-protection": [
+        "0"
       ]
     },
     "statusCode": 200,

@@ -18,6 +18,7 @@ from app.ingest.expectation_builder import (
     canonical_log_type,
     extract_request_payload_for_mock,
     extract_response_body_payload,
+    extract_response_headers,
     is_get_order_response_row,
     is_outbound_get_order_row,
     is_target_log_type,
@@ -171,6 +172,7 @@ class TemplateIngestor:
                 continue
 
             response_body = extract_response_body_payload(full_log)
+            response_headers = extract_response_headers(full_log)
             request_payload = extract_request_payload_for_mock(full_log)
             status_code = resolve_http_status_code(row, full_log)
             expectation = build_expectation(
@@ -179,6 +181,7 @@ class TemplateIngestor:
                 request_payload,
                 response_body,
                 status_code,
+                response_headers,
             )
             pending_by_type[canonical_type] = PendingExpectation(
                 expectation=expectation,
