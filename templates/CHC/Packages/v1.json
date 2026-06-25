@@ -1,0 +1,624 @@
+{
+  "httpRequest": {
+    "path": "/api/go/bookingusb/v4/availability",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "Date": [
+        "Tue, 28 Apr 2026 12:42:21 GMT"
+      ],
+      "Content-Type": [
+        "application/json;charset=UTF-8"
+      ],
+      "Transfer-Encoding": [
+        "chunked"
+      ],
+      "Connection": [
+        "keep-alive"
+      ],
+      "X-RateLimit-Limit": [
+        "1500"
+      ],
+      "X-RateLimit-Remaining": [
+        "1496"
+      ],
+      "X-RateLimit-Reset": [
+        "7"
+      ],
+      "vary": [
+        "accept-encoding"
+      ],
+      "Server": [
+        "APISIX"
+      ],
+      "Strict-Transport-Security": [
+        "max-age=31536000; includeSubDomains;"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "hotelId": "GB113",
+      "stayRange": {
+        "checkin": "2026-05-12",
+        "checkout": "2026-05-13"
+      },
+      "roomCriteria": {
+        "roomCount": 1,
+        "adultCount": 1,
+        "childCount": 0,
+        "childAges": []
+      },
+      "iata": "71200614",
+      "roomRates": [
+        {
+          "roomId": "NDT",
+          "rateId": "SIT",
+          "connectionType": "Exchange",
+          "currency": "GBP",
+          "inventory": 7,
+          "amountBeforeTax": [
+            216
+          ],
+          "amountAfterTax": [
+            216
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2026-05-12",
+                "endDate": "2026-05-12"
+              },
+              "fee": {
+                "name": "TaxPercent",
+                "type": "Exclusive",
+                "amount": 20,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "4PM1D100P_100P",
+            "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1,
+                  "deadline": "4PM"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "roomId": "ND",
+          "rateId": "SITC",
+          "connectionType": "Exchange",
+          "currency": "GBP",
+          "inventory": 5,
+          "amountBeforeTax": [
+            208.25
+          ],
+          "amountAfterTax": [
+            208.25
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2026-05-12",
+                "endDate": "2026-05-12"
+              },
+              "fee": {
+                "name": "TaxPercent",
+                "type": "Exclusive",
+                "amount": 20,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "4PM1D100P_100P",
+            "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1,
+                  "deadline": "4PM"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "roomId": "SD",
+          "rateId": "SITC",
+          "connectionType": "Exchange",
+          "currency": "GBP",
+          "inventory": 2,
+          "amountBeforeTax": [
+            284.75
+          ],
+          "amountAfterTax": [
+            284.75
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2026-05-12",
+                "endDate": "2026-05-12"
+              },
+              "fee": {
+                "name": "TaxPercent",
+                "type": "Exclusive",
+                "amount": 20,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "4PM1D100P_100P",
+            "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1,
+                  "deadline": "4PM"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "roomId": "NDD",
+          "rateId": "SIT",
+          "connectionType": "Exchange",
+          "currency": "GBP",
+          "inventory": 2,
+          "amountBeforeTax": [
+            232
+          ],
+          "amountAfterTax": [
+            232
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2026-05-12",
+                "endDate": "2026-05-12"
+              },
+              "fee": {
+                "name": "TaxPercent",
+                "type": "Exclusive",
+                "amount": 20,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "4PM1D100P_100P",
+            "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1,
+                  "deadline": "4PM"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "roomId": "NDT",
+          "rateId": "LWTO",
+          "connectionType": "Exchange",
+          "currency": "GBP",
+          "inventory": 3,
+          "amountBeforeTax": [
+            202.5
+          ],
+          "amountAfterTax": [
+            202.5
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2026-05-12",
+                "endDate": "2026-05-12"
+              },
+              "fee": {
+                "name": "TaxPercent",
+                "type": "Exclusive",
+                "amount": 20,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "4PM1D100P_100P",
+            "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1,
+                  "deadline": "4PM"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "roomId": "NDT",
+          "rateId": "SITC",
+          "connectionType": "Exchange",
+          "currency": "GBP",
+          "inventory": 7,
+          "amountBeforeTax": [
+            229.5
+          ],
+          "amountAfterTax": [
+            229.5
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2026-05-12",
+                "endDate": "2026-05-12"
+              },
+              "fee": {
+                "name": "TaxPercent",
+                "type": "Exclusive",
+                "amount": 20,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "4PM1D100P_100P",
+            "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1,
+                  "deadline": "4PM"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "roomId": "ND",
+          "rateId": "SIT",
+          "connectionType": "Exchange",
+          "currency": "GBP",
+          "inventory": 5,
+          "amountBeforeTax": [
+            196
+          ],
+          "amountAfterTax": [
+            196
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2026-05-12",
+                "endDate": "2026-05-12"
+              },
+              "fee": {
+                "name": "TaxPercent",
+                "type": "Exclusive",
+                "amount": 20,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "4PM1D100P_100P",
+            "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1,
+                  "deadline": "4PM"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "roomId": "NDD",
+          "rateId": "SITC",
+          "connectionType": "Exchange",
+          "currency": "GBP",
+          "inventory": 2,
+          "amountBeforeTax": [
+            246.5
+          ],
+          "amountAfterTax": [
+            246.5
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2026-05-12",
+                "endDate": "2026-05-12"
+              },
+              "fee": {
+                "name": "TaxPercent",
+                "type": "Exclusive",
+                "amount": 20,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "4PM1D100P_100P",
+            "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1,
+                  "deadline": "4PM"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "roomId": "ND",
+          "rateId": "LWTO",
+          "connectionType": "Exchange",
+          "currency": "GBP",
+          "inventory": 3,
+          "amountBeforeTax": [
+            183.75
+          ],
+          "amountAfterTax": [
+            183.75
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2026-05-12",
+                "endDate": "2026-05-12"
+              },
+              "fee": {
+                "name": "TaxPercent",
+                "type": "Exclusive",
+                "amount": 20,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "4PM1D100P_100P",
+            "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1,
+                  "deadline": "4PM"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "roomId": "SD",
+          "rateId": "SIT",
+          "connectionType": "Exchange",
+          "currency": "GBP",
+          "inventory": 2,
+          "amountBeforeTax": [
+            268
+          ],
+          "amountAfterTax": [
+            268
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2026-05-12",
+                "endDate": "2026-05-12"
+              },
+              "fee": {
+                "name": "TaxPercent",
+                "type": "Exclusive",
+                "amount": 20,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "4PM1D100P_100P",
+            "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1,
+                  "deadline": "4PM"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "header": {
+        "version": "v4",
+        "token": "019dd41c-57e8-7bce-a38e-97cbf7415a99",
+        "supplierId": "CHOICE",
+        "distributorId": "ALTAYYAR"
+      }
+    }
+  },
+  "priority": 1000
+}

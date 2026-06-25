@@ -18,4 +18,4 @@ def test_list_suppliers():
     assert response.status_code == 200
     suppliers = response.json()
     codes = {s["code"] for s in suppliers}
-    assert codes == {"HBS", "EXP", "RHK"}
+    assert codes == {"HBS", "EXP", "RHK", "CHC"}

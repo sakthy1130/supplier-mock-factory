@@ -1,0 +1,127 @@
+{
+  "httpRequest": {
+    "path": "/api/go/bookingusb/v4/reservation/detail",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "Date": [
+        "Tue, 28 Apr 2026 12:45:10 GMT"
+      ],
+      "Content-Type": [
+        "application/json;charset=UTF-8"
+      ],
+      "Content-Length": [
+        "1314"
+      ],
+      "Connection": [
+        "keep-alive"
+      ],
+      "X-Frame-Options": [
+        "SAMEORIGIN"
+      ],
+      "Server": [
+        "APISIX"
+      ],
+      "Strict-Transport-Security": [
+        "max-age=31536000; includeSubDomains;"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "reservations": [
+        {
+          "comments": [
+            "This is a Majdi booking from Almosafer (Seera)"
+          ],
+          "roomRates": [
+            {
+              "roomId": "ND",
+              "rateId": "LWTO",
+              "currency": "GBP",
+              "amountBeforeTax": [
+                183.75
+              ],
+              "amountAfterTax": [
+                183.75
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 20,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "dealineTime": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "status": "Cancelled",
+          "cancellationId": "966702973",
+          "result": "Successful",
+          "connectionType": "Exchange",
+          "reservationIds": {
+            "distributorResId": "X7LaiK4d4dgrJk3-0-4ouiYl",
+            "derbyResId": "SKBSQHMHG5AHOPX0FPSU9",
+            "supplierResId": "33297027"
+          },
+          "iata": "71200614",
+          "hotelId": "GB113",
+          "stayRange": {
+            "checkin": "2026-05-12",
+            "checkout": "2026-05-13"
+          },
+          "roomCriteria": {
+            "roomCount": 1,
+            "adultCount": 1,
+            "childCount": 0
+          },
+          "total": {
+            "amountBeforeTax": 183.75,
+            "amountAfterTax": 183.75
+          }
+        }
+      ],
+      "header": {
+        "version": "v4",
+        "token": "019dd41c-57e8-7bce-a38e-97cbf7415a99",
+        "supplierId": "CHOICE",
+        "distributorId": "ALTAYYAR"
+      }
+    }
+  },
+  "priority": 1000
+}

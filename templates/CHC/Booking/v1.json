@@ -1,0 +1,47 @@
+{
+  "httpRequest": {
+    "path": "/api/go/bookingusb/v4/reservation/book",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "Date": [
+        "Tue, 28 Apr 2026 12:42:46 GMT"
+      ],
+      "Content-Type": [
+        "application/json;charset=UTF-8"
+      ],
+      "Content-Length": [
+        "280"
+      ],
+      "Connection": [
+        "keep-alive"
+      ],
+      "X-Frame-Options": [
+        "SAMEORIGIN"
+      ],
+      "Server": [
+        "APISIX"
+      ],
+      "Strict-Transport-Security": [
+        "max-age=31536000; includeSubDomains;"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "reservationIds": {
+        "distributorResId": "X7LaiK4d4dgrJk3-0-4ouiYl",
+        "derbyResId": "SKBSQHMHG5AHOPX0FPSU9",
+        "supplierResId": "33297027"
+      },
+      "connectionType": "Exchange",
+      "header": {
+        "version": "v4",
+        "token": "019dd41c-57e8-7bce-a38e-97cbf7415a99",
+        "supplierId": "CHOICE",
+        "distributorId": "ALTAYYAR"
+      }
+    }
+  },
+  "priority": 1000
+}

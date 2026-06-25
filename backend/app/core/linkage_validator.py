@@ -23,6 +23,8 @@ class LinkageValidator:
             self._validate_exp(expectations_by_type, spec)
         elif supplier_code == "RHK":
             self._validate_rhk(expectations_by_type, spec)
+        elif supplier_code == "CHC":
+            self._validate_chc(expectations_by_type, spec)
         else:
             raise LinkageError(f"Unsupported supplier for linkage validation: {supplier_code}")
 
@@ -121,6 +123,30 @@ class LinkageValidator:
             prebook_hashes = collect_field_values(prebook, "match_hash")
             if primary_hash and prebook_hashes and primary_hash not in prebook_hashes:
                 raise LinkageError("RHK PreBooking match_hash does not match Packages primary match_hash")
+
+
+    def _validate_chc(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
+        packages = expectations_by_type.get("Packages")
+        if packages is None:
+            raise LinkageError("CHC Packages template missing")
+
+        rates = _chc_package_rates(packages)
+        if len(rates) < spec.count:
+            raise LinkageError(
+                f"CHC package rate count {len(rates)} < requested {spec.count}"
+            )
+
+        expected_meal = spec.room_basis.upper()
+        for rate in rates[: spec.count]:
+            meal = rate.get("mealPlan")
+            if meal and meal != expected_meal:
+                raise LinkageError("CHC package mealPlan does not match requested room_basis")
+
+
+def _chc_package_rates(packages: dict) -> list[dict]:
+    body = packages.get("httpResponse", {}).get("body", {})
+    rates = body.get("roomRates") if isinstance(body, dict) else None
+    return [rate for rate in rates if isinstance(rate, dict)] if isinstance(rates, list) else []
 
 
 def _rhk_meal_for_basis(room_basis: str) -> str:

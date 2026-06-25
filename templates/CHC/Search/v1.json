@@ -1,0 +1,2061 @@
+{
+  "httpRequest": {
+    "path": "/api/go/shoppingengine/v4/shopping/multihotels",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "Date": [
+        "Tue, 28 Apr 2026 12:42:01 GMT"
+      ],
+      "Content-Type": [
+        "application/json;charset=UTF-8"
+      ],
+      "Transfer-Encoding": [
+        "chunked"
+      ],
+      "Connection": [
+        "keep-alive"
+      ],
+      "X-RateLimit-Limit": [
+        "3000"
+      ],
+      "X-RateLimit-Remaining": [
+        "1100"
+      ],
+      "X-RateLimit-Reset": [
+        "1"
+      ],
+      "vary": [
+        "accept-encoding"
+      ],
+      "Server": [
+        "DGateway/2.0"
+      ],
+      "Strict-Transport-Security": [
+        "max-age=31536000; includeSubDomains;"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "stayRange": {
+        "checkin": "2026-05-12",
+        "checkout": "2026-05-13"
+      },
+      "iata": "71200614",
+      "availHotels": [
+        {
+          "stayRange": {
+            "checkin": "2026-05-12",
+            "checkout": "2026-05-13"
+          },
+          "iata": "71200614",
+          "availRoomRates": [
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 3,
+              "roomId": "ND",
+              "connectionType": "Exchange",
+              "rateId": "LWTO",
+              "currency": "GBP",
+              "amountBeforeTax": [
+                183.75
+              ],
+              "amountAfterTax": [
+                183.75
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 20,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 3,
+              "roomId": "NDT",
+              "connectionType": "Exchange",
+              "rateId": "LWTO",
+              "currency": "GBP",
+              "amountBeforeTax": [
+                202.5
+              ],
+              "amountAfterTax": [
+                202.5
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 20,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 2,
+              "roomId": "NDD",
+              "connectionType": "Exchange",
+              "rateId": "SIT",
+              "currency": "GBP",
+              "amountBeforeTax": [
+                232
+              ],
+              "amountAfterTax": [
+                232
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 20,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 2,
+              "roomId": "SD",
+              "connectionType": "Exchange",
+              "rateId": "SIT",
+              "currency": "GBP",
+              "amountBeforeTax": [
+                268
+              ],
+              "amountAfterTax": [
+                268
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 20,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 7,
+              "roomId": "NDT",
+              "connectionType": "Exchange",
+              "rateId": "SIT",
+              "currency": "GBP",
+              "amountBeforeTax": [
+                216
+              ],
+              "amountAfterTax": [
+                216
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 20,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 5,
+              "roomId": "ND",
+              "connectionType": "Exchange",
+              "rateId": "SIT",
+              "currency": "GBP",
+              "amountBeforeTax": [
+                196
+              ],
+              "amountAfterTax": [
+                196
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 20,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 5,
+              "roomId": "ND",
+              "connectionType": "Exchange",
+              "rateId": "SITC",
+              "currency": "GBP",
+              "amountBeforeTax": [
+                208.25
+              ],
+              "amountAfterTax": [
+                208.25
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 20,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 2,
+              "roomId": "SD",
+              "connectionType": "Exchange",
+              "rateId": "SITC",
+              "currency": "GBP",
+              "amountBeforeTax": [
+                284.75
+              ],
+              "amountAfterTax": [
+                284.75
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 20,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 2,
+              "roomId": "NDD",
+              "connectionType": "Exchange",
+              "rateId": "SITC",
+              "currency": "GBP",
+              "amountBeforeTax": [
+                246.5
+              ],
+              "amountAfterTax": [
+                246.5
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 20,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 7,
+              "roomId": "NDT",
+              "connectionType": "Exchange",
+              "rateId": "SITC",
+              "currency": "GBP",
+              "amountBeforeTax": [
+                229.5
+              ],
+              "amountAfterTax": [
+                229.5
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 20,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "supplierId": "CHOICE",
+          "hotelId": "GB113",
+          "status": "Actived"
+        },
+        {
+          "stayRange": {
+            "checkin": "2026-05-12",
+            "checkout": "2026-05-13"
+          },
+          "iata": "71200614",
+          "availRoomRates": [
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 7,
+              "roomId": "KNE1",
+              "connectionType": "Exchange",
+              "rateId": "LWTO",
+              "currency": "USD",
+              "amountBeforeTax": [
+                193.5
+              ],
+              "amountAfterTax": [
+                252.15
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNE6",
+              "connectionType": "Exchange",
+              "rateId": "LWTO",
+              "currency": "USD",
+              "amountBeforeTax": [
+                213.75
+              ],
+              "amountAfterTax": [
+                278.17
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNEW",
+              "connectionType": "Exchange",
+              "rateId": "LWTO",
+              "currency": "USD",
+              "amountBeforeTax": [
+                213.75
+              ],
+              "amountAfterTax": [
+                278.17
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNE4",
+              "connectionType": "Exchange",
+              "rateId": "LWTO",
+              "currency": "USD",
+              "amountBeforeTax": [
+                420
+              ],
+              "amountAfterTax": [
+                543.2
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KST1",
+              "connectionType": "Exchange",
+              "rateId": "LWTO",
+              "currency": "USD",
+              "amountBeforeTax": [
+                184.5
+              ],
+              "amountAfterTax": [
+                240.59
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNE5",
+              "connectionType": "Exchange",
+              "rateId": "LWTO",
+              "currency": "USD",
+              "amountBeforeTax": [
+                442.5
+              ],
+              "amountAfterTax": [
+                572.12
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM1D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNEW",
+              "connectionType": "Exchange",
+              "rateId": "SIT",
+              "currency": "USD",
+              "amountBeforeTax": [
+                380
+              ],
+              "amountAfterTax": [
+                491.8
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNE4",
+              "connectionType": "Exchange",
+              "rateId": "SIT",
+              "currency": "USD",
+              "amountBeforeTax": [
+                448
+              ],
+              "amountAfterTax": [
+                579.18
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNE6",
+              "connectionType": "Exchange",
+              "rateId": "SIT",
+              "currency": "USD",
+              "amountBeforeTax": [
+                380
+              ],
+              "amountAfterTax": [
+                491.8
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KST1",
+              "connectionType": "Exchange",
+              "rateId": "SIT",
+              "currency": "USD",
+              "amountBeforeTax": [
+                328
+              ],
+              "amountAfterTax": [
+                424.98
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNE5",
+              "connectionType": "Exchange",
+              "rateId": "SIT",
+              "currency": "USD",
+              "amountBeforeTax": [
+                472
+              ],
+              "amountAfterTax": [
+                610.02
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 7,
+              "roomId": "KNE1",
+              "connectionType": "Exchange",
+              "rateId": "SIT",
+              "currency": "USD",
+              "amountBeforeTax": [
+                344
+              ],
+              "amountAfterTax": [
+                445.54
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KST1",
+              "connectionType": "Exchange",
+              "rateId": "SITC",
+              "currency": "USD",
+              "amountBeforeTax": [
+                348.5
+              ],
+              "amountAfterTax": [
+                451.33
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNEW",
+              "connectionType": "Exchange",
+              "rateId": "SITC",
+              "currency": "USD",
+              "amountBeforeTax": [
+                403.75
+              ],
+              "amountAfterTax": [
+                522.32
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNE5",
+              "connectionType": "Exchange",
+              "rateId": "SITC",
+              "currency": "USD",
+              "amountBeforeTax": [
+                501.5
+              ],
+              "amountAfterTax": [
+                647.93
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 7,
+              "roomId": "KNE1",
+              "connectionType": "Exchange",
+              "rateId": "SITC",
+              "currency": "USD",
+              "amountBeforeTax": [
+                365.5
+              ],
+              "amountAfterTax": [
+                473.17
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNE4",
+              "connectionType": "Exchange",
+              "rateId": "SITC",
+              "currency": "USD",
+              "amountBeforeTax": [
+                476
+              ],
+              "amountAfterTax": [
+                615.16
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "roomCriteria": {
+                "roomCount": 1,
+                "adultCount": 2,
+                "childCount": 0,
+                "childAges": []
+              },
+              "inventory": 9,
+              "roomId": "KNE6",
+              "connectionType": "Exchange",
+              "rateId": "SITC",
+              "currency": "USD",
+              "amountBeforeTax": [
+                403.75
+              ],
+              "amountAfterTax": [
+                522.32
+              ],
+              "mealPlan": "RO",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxPercent",
+                    "type": "Exclusive",
+                    "amount": 28.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2026-05-12",
+                    "endDate": "2026-05-12"
+                  },
+                  "fee": {
+                    "name": "TaxAmount",
+                    "type": "Exclusive",
+                    "amount": 3.5,
+                    "amountType": "Fix",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "4PM7D100P_100P",
+                "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 7 days before arrival date, if no show, will be charged the full amount of the booking.",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 7,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "FullStay",
+                      "percent": 100
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "supplierId": "CHOICE",
+          "hotelId": "AW007",
+          "status": "Actived"
+        },
+        {
+          "stayRange": {
+            "checkin": "2026-05-12",
+            "checkout": "2026-05-13"
+          },
+          "iata": "71200614",
+          "availRoomRates": [],
+          "supplierId": "CHOICE",
+          "hotelId": "PA637",
+          "status": "Actived"
+        }
+      ],
+      "header": {
+        "distributorId": "ALTAYYAR",
+        "version": "v4",
+        "token": "019dd41c-57e8-7bce-a38e-97cbf7415a99"
+      }
+    }
+  },
+  "priority": 1000
+}

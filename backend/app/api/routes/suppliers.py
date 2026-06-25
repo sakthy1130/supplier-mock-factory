@@ -19,4 +19,5 @@ def list_suppliers() -> list[dict]:
         {"code": "HBS", "name": "Hotelbeds", "log_types": LOG_TYPES, "status": "v1"},
         {"code": "EXP", "name": "Expedia", "log_types": LOG_TYPES, "status": "v1"},
         {"code": "RHK", "name": "RateHawk", "log_types": LOG_TYPES, "status": "v1"},
+        {"code": "CHC", "name": "Choice", "log_types": LOG_TYPES, "status": "v1"},
     ]

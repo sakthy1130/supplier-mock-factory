@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import httpx
 import pytest
 
+from app.core.namespace import ALL_SCENARIO_LOG_TYPES, SCENARIO_SUPPLIER_CODES
 from app.integrations.mock_server import MockServerClient, MockServerError
 
 
@@ -53,7 +54,7 @@ async def test_delete_by_namespace_clears_by_expectation_id():
     mock_server = MockServerClient(client=client)
     await mock_server.delete_by_namespace("qa-test-ns")
 
-    assert client.put.await_count == 21
+    assert client.put.await_count == len(SCENARIO_SUPPLIER_CODES) * len(ALL_SCENARIO_LOG_TYPES)
     first_kwargs = client.put.await_args_list[0].kwargs
     assert first_kwargs["params"] == {"type": "expectations"}
     assert first_kwargs["json"]["id"] == "smf-qa-test-ns-hbs-search"

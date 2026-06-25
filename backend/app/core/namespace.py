@@ -14,7 +14,7 @@ ALL_SCENARIO_LOG_TYPES = [
     "CancelOrder",
 ]
 
-SCENARIO_SUPPLIER_CODES = ("HBS", "EXP", "RHK")
+SCENARIO_SUPPLIER_CODES = ("HBS", "EXP", "RHK", "CHC")
 
 
 def build_expectation_id(namespace: str, supplier_code: str, log_type: str) -> str:

@@ -39,4 +39,17 @@ SUPPLIER_REGISTRY: dict[str, dict[str, str | int | dict[str, str | int]]] = {
             "autoId": 100671,
         },
     },
+    # TODO(CHC): replace placeholders with real staging supplier_id / auto_id / supplier_type.
+    "CHC": {
+        "supplier_id": "69ef11d11a41325a74bab5da",
+        "auto_id": 107017,
+        "code": "CHC",
+        "name": "Choice",
+        "supplier_type": "net",
+        "supplier_detail": {
+            "code": "CHC",
+            "name": "Choice",
+            "autoId": 107017,
+        },
+    },
 }

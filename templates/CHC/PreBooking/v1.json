@@ -1,0 +1,124 @@
+{
+  "httpRequest": {
+    "path": "/api/go/bookingusb/v4/availability",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "Date": [
+        "Tue, 28 Apr 2026 12:42:44 GMT"
+      ],
+      "Content-Type": [
+        "application/json;charset=UTF-8"
+      ],
+      "Transfer-Encoding": [
+        "chunked"
+      ],
+      "Connection": [
+        "keep-alive"
+      ],
+      "X-RateLimit-Limit": [
+        "1500"
+      ],
+      "X-RateLimit-Remaining": [
+        "1496"
+      ],
+      "X-RateLimit-Reset": [
+        "10"
+      ],
+      "vary": [
+        "accept-encoding"
+      ],
+      "Server": [
+        "APISIX"
+      ],
+      "Strict-Transport-Security": [
+        "max-age=31536000; includeSubDomains;"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "hotelId": "GB113",
+      "stayRange": {
+        "checkin": "2026-05-12",
+        "checkout": "2026-05-13"
+      },
+      "roomCriteria": {
+        "roomCount": 1,
+        "adultCount": 2,
+        "childCount": 0,
+        "childAges": []
+      },
+      "productCandidate": {
+        "roomId": "ND",
+        "rateId": "LWTO"
+      },
+      "iata": "71200614",
+      "roomRates": [
+        {
+          "roomId": "ND",
+          "rateId": "LWTO",
+          "connectionType": "Exchange",
+          "currency": "GBP",
+          "inventory": 3,
+          "amountBeforeTax": [
+            183.75
+          ],
+          "amountAfterTax": [
+            183.75
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2026-05-12",
+                "endDate": "2026-05-12"
+              },
+              "fee": {
+                "name": "TaxPercent",
+                "type": "Exclusive",
+                "amount": 20,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "4PM1D100P_100P",
+            "description": "Cancellations or changes to bookings for this room will be charged the full amount of the booking after 16:00 in 1 days before arrival date, if no show, will be charged the full amount of the booking.",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1,
+                  "deadline": "4PM"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "header": {
+        "version": "v4",
+        "token": "019dd41c-57e8-7bce-a38e-97cbf7415a99",
+        "supplierId": "CHOICE",
+        "distributorId": "ALTAYYAR"
+      }
+    }
+  },
+  "priority": 1000
+}

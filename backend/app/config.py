@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     hbs_reference_contract_id: str = ""
     exp_reference_contract_id: str = ""
     rhk_reference_contract_id: str = ""
+    chc_reference_contract_id: str = ""
     api_key_template_uid: str = ""
 
     database_url: str = "sqlite:///./smf.db"

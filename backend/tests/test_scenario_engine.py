@@ -210,7 +210,14 @@ def test_scenario_engine_builds_rhk_expectations():
         suppliers=[
             SupplierScenario(
                 code=SupplierCode.RHK,
-                packages=PackageSpec(count=2, room_basis="RO", prices=[100.0, 200.0], refundable=[True, False]),
+                packages=PackageSpec(
+                    count=2,
+                    room_basis="RO",
+                    prices=[100.0, 200.0],
+                    refundable=[True, False],
+                    supplier_currency="EUR",
+                    room_names=["Deluxe Twin", "Premier King"],
+                ),
             )
         ],
     )
@@ -220,6 +227,8 @@ def test_scenario_engine_builds_rhk_expectations():
     assert len(rates) == 2
     assert rates[0]["meal"] == "nomeal"
     assert rates[0]["payment_options"]["payment_types"][0]["show_amount"] == "100.00"
+    assert rates[0]["payment_options"]["payment_types"][0]["currency_code"] == "EUR"
+    assert [rate["room_name"] for rate in rates] == ["Deluxe Twin", "Premier King"]
 
 
 @pytest.mark.skipif(

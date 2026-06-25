@@ -22,6 +22,7 @@ PACKAGE_MUTABLE_LOG_TYPES = {
     "HBS": {"Search", "Packages"},
     "EXP": {"Search", "Packages"},
     "RHK": {"Search", "Packages"},
+    "CHC": {"Search", "Packages", "PreBooking", "GetOrder"},
 }
 
 
