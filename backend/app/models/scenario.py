@@ -4,13 +4,14 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class SupplierCode(str, Enum):
     HBS = "HBS"
     EXP = "EXP"
     RHK = "RHK"
+    CHC = "CHC"
 
 
 class SBGroupConfiguration(BaseModel):
@@ -61,11 +62,36 @@ class ScenarioStatus(str, Enum):
 class PackageSpec(BaseModel):
     count: int = Field(ge=1, le=20, description="Number of packages in response")
     room_basis: str = Field(default="RO", description="e.g. RO, BB")
+    room_names: list[str] = Field(
+        default_factory=lambda: ["1 Double Bed, Nonsmoking"],
+        min_length=1,
+        description="Room display name per package (HBS mock; CHC uses content cache by roomId)",
+    )
+    supplier_currency: str = Field(
+        default="SAR",
+        min_length=3,
+        max_length=3,
+        description="ISO currency on supplier rate payloads (e.g. CHC availRoomRates.currency)",
+    )
     prices: list[float] = Field(min_length=1, description="Price per package")
     refundable: list[bool] = Field(
         default_factory=list,
         description="Refundable flag per package; defaults to false if shorter than count",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_legacy_room_name(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "room_names" not in data and "room_name" in data:
+            legacy = data.pop("room_name")
+            if isinstance(legacy, str) and legacy.strip():
+                data["room_names"] = [legacy.strip()]
+        return data
+
+    @field_validator("supplier_currency")
+    @classmethod
+    def _upper_currency(cls, value: str) -> str:
+        return value.strip().upper()
 
 
 class SupplierScenario(BaseModel):

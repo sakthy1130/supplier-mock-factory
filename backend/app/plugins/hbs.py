@@ -8,6 +8,8 @@ from typing import Any
 
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
+from app.plugins.room_names import apply_hbs_room_names, normalized_room_names
+from app.plugins.supplier_currency import apply_hbs_supplier_currency
 from app.plugins.json_utils import (
     collect_field_values,
     deep_copy,
@@ -92,7 +94,7 @@ class HbsMockPlugin(SupplierMockPlugin):
         log_type: str,
     ) -> dict:
         if log_type == "Search":
-            return self._mutate_search_hotel(expectation, hotel_id)
+            return self._mutate_search_hotel(expectation, hotel_id, spec)
 
         result = deep_copy(expectation)
         refundable = _normalized_refundable(spec)
@@ -145,21 +147,26 @@ class HbsMockPlugin(SupplierMockPlugin):
             rate["net"] = str(price)
             rate["boardCode"] = spec.room_basis
             rate["boardName"] = _board_name(spec.room_basis)
-            rate["rateClass"] = "REF" if is_refundable else "NRF"
+            _apply_hbs_rate_refundability(rate, price, is_refundable, check_in, check_out)
             if isinstance(rate.get("rateKey"), str):
                 rate["rateKey"] = rate["rateKey"].replace(" RO|", f" {spec.room_basis}|")
                 if index >= len(rates):
                     rate["rateKey"] = _with_unique_rate_key_suffix(rate["rateKey"], index)
-            cancellation_policies = rate.get("cancellationPolicies")
-            if isinstance(cancellation_policies, list):
-                for policy in cancellation_policies:
-                    if isinstance(policy, dict):
-                        policy["amount"] = str(price)
             new_rates.append(rate)
 
-        room["rates"] = new_rates
-        if isinstance(hotel, dict):
-            hotel["rooms"] = [room]
+        room_names = normalized_room_names(spec)
+        if len(set(room_names)) == 1:
+            room["rates"] = new_rates
+            if isinstance(hotel, dict):
+                hotel["rooms"] = [room]
+        else:
+            new_rooms = []
+            for index, rate in enumerate(new_rates):
+                room_copy = deep_copy(room)
+                room_copy["rates"] = [rate]
+                new_rooms.append(room_copy)
+            if isinstance(hotel, dict):
+                hotel["rooms"] = new_rooms
 
         if prices:
             primary_price = str(prices[0])
@@ -169,9 +176,10 @@ class HbsMockPlugin(SupplierMockPlugin):
                 serialized = serialized.replace(old_net, primary_price)
             result = json.loads(serialized)
 
+        apply_hbs_supplier_currency(result, spec.supplier_currency)
         return result
 
-    def _mutate_search_hotel(self, expectation: dict, hotel_id: str) -> dict:
+    def _mutate_search_hotel(self, expectation: dict, hotel_id: str, spec: PackageSpec) -> dict:
         """Search mock returns exactly one hotel — the scenario hotel_id."""
         result = deep_copy(expectation)
         hotel_code = int(hotel_id)
@@ -216,9 +224,14 @@ class HbsMockPlugin(SupplierMockPlugin):
         if "total" in hotels_wrapper:
             hotels_wrapper["total"] = 1
 
+        apply_hbs_supplier_currency(result, spec.supplier_currency)
         return result
 
     def propagate_package_linkage(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
+        room_names = normalized_room_names(spec)
+        if room_names:
+            self._apply_room_names(expectations_by_type, room_names)
+
         packages = expectations_by_type.get("Packages")
         prebook = expectations_by_type.get("PreBooking")
         if not packages or not prebook:
@@ -235,8 +248,14 @@ class HbsMockPlugin(SupplierMockPlugin):
         pkg_rooms = pkg_hotels[0].get("rooms") if isinstance(pkg_hotels[0], dict) else None
         if not isinstance(pkg_rooms, list) or not pkg_rooms:
             return
-        pkg_rates = pkg_rooms[0].get("rates") if isinstance(pkg_rooms[0], dict) else None
-        if not isinstance(pkg_rates, list) or not pkg_rates:
+        pkg_rates = []
+        for pkg_room in pkg_rooms:
+            if not isinstance(pkg_room, dict):
+                continue
+            room_rates = pkg_room.get("rates")
+            if isinstance(room_rates, list):
+                pkg_rates.extend(room_rates)
+        if not pkg_rates:
             return
 
         primary_rate = pkg_rates[0]
@@ -304,9 +323,13 @@ class HbsMockPlugin(SupplierMockPlugin):
         search_rooms = search_hotels[0].get("rooms") if isinstance(search_hotels[0], dict) else None
         if not isinstance(search_rooms, list) or not search_rooms:
             return
-        synced_rate = deep_copy(primary_rate)
-        search_rooms[0]["rates"] = [synced_rate]
-        search_hotels[0]["rooms"] = [search_rooms[0]]
+        search_hotels[0]["rooms"] = deep_copy(pkg_rooms)
+
+    def _apply_room_names(self, expectations_by_type: dict[str, dict], room_names: list[str]) -> None:
+        for log_type in ("Search", "Packages", "PreBooking"):
+            expectation = expectations_by_type.get(log_type)
+            if isinstance(expectation, dict):
+                apply_hbs_room_names(expectation, room_names)
 
     @staticmethod
     def _force_confirmed_get_order(expectation: dict) -> None:
@@ -334,6 +357,45 @@ class HbsMockPlugin(SupplierMockPlugin):
     @property
     def log_types(self) -> list[str]:
         return LOG_TYPES
+
+
+def _apply_hbs_rate_refundability(
+    rate: dict,
+    price: float,
+    is_refundable: bool,
+    check_in: str,
+    check_out: str,
+) -> None:
+    """Align rateClass, rateKey token, and cancellationPolicies with refundability.
+
+    HBS adapter treats a future ``cancellationPolicies.from`` as a free-cancel window.
+    ``mutate_dates`` shifts template ``from`` values to check-in + 1 day, which makes
+    NRF mocks look refundable unless we override here.
+    """
+    rate["rateClass"] = "REF" if is_refundable else "NRF"
+    rate_key = rate.get("rateKey")
+    key_token = "NOR" if is_refundable else "NRF"
+    if isinstance(rate_key, str):
+        updated = rate_key
+        for token in ("NRF", "NOR", "REF"):
+            updated = updated.replace(f"~~~{token}~~", f"~~~{key_token}~~")
+        rate["rateKey"] = updated
+
+    policies = rate.get("cancellationPolicies")
+    if not isinstance(policies, list):
+        policies = []
+        rate["cancellationPolicies"] = policies
+    if not policies:
+        policies.append({})
+    for policy in policies:
+        if not isinstance(policy, dict):
+            continue
+        if is_refundable:
+            policy["amount"] = "0"
+            policy["from"] = f"{check_out}T00:00:00+04:00"
+        else:
+            policy["amount"] = str(price)
+            policy["from"] = "2000-01-01T00:00:00+00:00"
 
 
 def _board_name(room_basis: str) -> str:

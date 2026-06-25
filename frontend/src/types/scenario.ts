@@ -1,4 +1,4 @@
-export type SupplierCode = 'HBS' | 'EXP' | 'RHK'
+export type SupplierCode = 'HBS' | 'EXP' | 'RHK' | 'CHC'
 
 export type ScenarioStatus =
   | 'PENDING'
@@ -13,8 +13,19 @@ export type ScenarioStatus =
 export interface PackageSpec {
   count: number
   room_basis: string
+  room_names: string[]
+  supplier_currency: string
   prices: number[]
   refundable: boolean[]
+}
+
+export const DEFAULT_ROOM_NAME = '1 Double Bed, Nonsmoking'
+
+export const DEFAULT_SUPPLIER_CURRENCIES: Record<SupplierCode, string> = {
+  HBS: 'EUR',
+  EXP: 'USD',
+  RHK: 'USD',
+  CHC: 'SAR',
 }
 
 export interface SupplierScenario {

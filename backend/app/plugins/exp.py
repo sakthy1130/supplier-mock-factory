@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from app.core.exp_paths import build_exp_price_check_href, extract_price_check_token
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
+from app.plugins.room_names import apply_exp_room_names, normalized_room_names
+from app.plugins.supplier_currency import apply_exp_supplier_currency
 from app.plugins.json_utils import (
     deep_copy,
     replace_url_query_param,
@@ -103,11 +105,24 @@ class ExpMockPlugin(SupplierMockPlugin):
                 _rewrite_property_hrefs(rate, hotel_id, room_id, rate_id)
                 new_rates.append(rate)
 
-            if log_type == "Search":
-                room["rates"] = [new_rates[0]] if new_rates else []
+            room_names = normalized_room_names(spec)
+            if len(set(room_names)) == 1 or log_type == "Search":
+                if log_type == "Search":
+                    room["rates"] = [new_rates[0]] if new_rates else []
+                else:
+                    room["rates"] = new_rates
+                if "room_name" in room:
+                    room["room_name"] = room_names[0]
+                property_entry["rooms"] = [room]
             else:
-                room["rates"] = new_rates
-            property_entry["rooms"] = [room]
+                new_rooms = []
+                for index, rate in enumerate(new_rates):
+                    room_copy = deep_copy(room)
+                    room_copy["rates"] = [rate]
+                    if "room_name" in room_copy:
+                        room_copy["room_name"] = room_names[index]
+                    new_rooms.append(room_copy)
+                property_entry["rooms"] = new_rooms
 
             if new_rates:
                 primary = new_rates[0]
@@ -125,9 +140,16 @@ class ExpMockPlugin(SupplierMockPlugin):
         if isinstance(path, str) and "/properties/" in path:
             result["httpRequest"]["path"] = _replace_path_property_id(path, hotel_id)
 
+        apply_exp_supplier_currency(result, spec.supplier_currency)
         return result
 
     def propagate_package_linkage(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
+        room_names = normalized_room_names(spec)
+        if room_names:
+            for log_type in ("Search", "Packages", "PreBooking"):
+                expectation = expectations_by_type.get(log_type)
+                if isinstance(expectation, dict):
+                    apply_exp_room_names(expectation, room_names)
         packages = expectations_by_type.get("Packages")
         prebook = expectations_by_type.get("PreBooking")
         if not packages or not prebook:

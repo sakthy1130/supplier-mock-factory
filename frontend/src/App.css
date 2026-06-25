@@ -333,9 +333,35 @@
   color: var(--text-muted);
 }
 
+.supplier-tile-field {
+  display: block;
+  margin-top: 0.65rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.supplier-tile-field input {
+  position: static;
+  opacity: 1;
+  pointer-events: auto;
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-strong);
+}
+
 .supplier-tile.hbs { --tile-color: var(--hbs); }
 .supplier-tile.exp { --tile-color: var(--exp); }
 .supplier-tile.rhk { --tile-color: var(--rhk); }
+.supplier-tile.chc { --tile-color: var(--chc); }
 
 .form-footer {
   display: flex;

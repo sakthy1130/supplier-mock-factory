@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
+from app.plugins.room_names import apply_rhk_room_names, normalized_room_names
+from app.plugins.supplier_currency import apply_rhk_supplier_currency
 from app.plugins.json_utils import deep_copy, replace_in_json_strings, update_fields_recursive
 
 LOG_TYPES = [
@@ -90,9 +92,17 @@ class RhkMockPlugin(SupplierMockPlugin):
                 if isinstance(hotel_data, dict) and hid is not None:
                     hotel_data["hid"] = hid
 
+        apply_rhk_supplier_currency(result, spec.supplier_currency)
         return result
 
     def propagate_package_linkage(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
+        room_names = normalized_room_names(spec)
+        if room_names:
+            for log_type in ("Search", "Packages", "PreBooking"):
+                expectation = expectations_by_type.get(log_type)
+                if isinstance(expectation, dict):
+                    apply_rhk_room_names(expectation, room_names)
+
         packages = expectations_by_type.get("Packages")
         prebook = expectations_by_type.get("PreBooking")
         if not packages or not prebook:
@@ -155,6 +165,7 @@ class RhkMockPlugin(SupplierMockPlugin):
             return
 
         template_rate = deep_copy(rates[0])
+        room_names = normalized_room_names(spec)
         new_rates = []
         for index in range(spec.count):
             rate = deep_copy(template_rate)
@@ -162,6 +173,8 @@ class RhkMockPlugin(SupplierMockPlugin):
             price_str = f"{price:.2f}"
             is_refundable = refundable[index]
             rate["meal"] = meal
+            if "room_name" in rate:
+                rate["room_name"] = room_names[index]
             meal_data = rate.get("meal_data")
             if isinstance(meal_data, dict):
                 meal_data["value"] = meal
