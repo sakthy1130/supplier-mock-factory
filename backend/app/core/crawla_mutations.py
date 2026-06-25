@@ -7,6 +7,7 @@ from typing import Optional
 
 from app.models.scenario import SupplierMutation
 from app.plugins.json_utils import deep_copy, update_fields_recursive
+from app.plugins.room_names import apply_hbs_room_name
 
 PRICE_FIELD_NAMES = {
     "amount",
@@ -54,7 +55,7 @@ def apply_supplier_mutation(
             else mutation.room_name
         )
         if effective_room_name:
-            _apply_hbs_room_name(result, effective_room_name)
+            apply_hbs_room_name(result, effective_room_name)
     if supplier_code == "HBS" and mutation.room_basis:
         _apply_hbs_room_basis(result, mutation.room_basis)
     if supplier_code == "EXP":
@@ -183,39 +184,6 @@ def _parse_money(value: Any) -> float | None:
         return float(str(value).strip())
     except ValueError:
         return None
-
-
-def _apply_hbs_room_name(expectation: dict, room_name: str) -> None:
-    body = expectation.get("httpResponse", {}).get("body")
-    if not isinstance(body, dict):
-        return
-
-    def update_room(room: dict) -> None:
-        if not isinstance(room, dict):
-            return
-        if "name" in room or "rates" in room:
-            room["name"] = room_name
-            room["originalRoomName"] = room_name
-            existing = room.get("roomName")
-            if isinstance(existing, dict):
-                existing["en"] = room_name
-            else:
-                room["roomName"] = {"en": room_name}
-
-    def walk(node: Any) -> None:
-        if isinstance(node, dict):
-            rooms = node.get("rooms")
-            if isinstance(rooms, list):
-                for room in rooms:
-                    update_room(room)
-                    walk(room)
-            for value in node.values():
-                walk(value)
-        elif isinstance(node, list):
-            for item in node:
-                walk(item)
-
-    walk(body)
 
 
 def _apply_hbs_room_basis(expectation: dict, room_basis: str) -> None:

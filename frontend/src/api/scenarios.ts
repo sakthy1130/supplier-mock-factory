@@ -1,4 +1,5 @@
 import type { ScenarioBundle, ScenarioListItem, ScenarioRequest } from '../types/scenario'
+import type { CrawlaScenarioRunResult } from '../types/crawla'
 import type { QuickwitSearchResponse } from '../types/quickwit'
 import { API_BASE } from './base'
 
@@ -37,6 +38,12 @@ export function listScenarios() {
 
 export function getScenario(id: string) {
   return request<ScenarioBundle>(`/api/scenarios/${id}`)
+}
+
+export function runScenario(id: string) {
+  return request<CrawlaScenarioRunResult>(`/api/scenarios/${id}/run`, {
+    method: 'POST',
+  })
 }
 
 export function refreshBookingIds(id: string) {

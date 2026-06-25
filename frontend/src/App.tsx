@@ -8,6 +8,7 @@ import {
   listScenarios,
   listSuppliers,
   refreshBookingIds,
+  runScenario,
   teardownScenario,
 } from './api/client'
 import { ScenarioList } from './components/ScenarioList'
@@ -122,13 +123,17 @@ function App() {
     setCrawlaRunning(true)
     setBackendError(null)
     try {
-      const result = await runCrawlaScenario(activeScenarioId)
+      // Crawla scenarios carry a crawla_export payload and use the Crawla run route;
+      // regular scenarios use the generic scenarios run route (no export required).
+      const result = bundle?.crawla_export
+        ? await runCrawlaScenario(activeScenarioId)
+        : await runScenario(activeScenarioId)
       setCrawlaRunResult(result)
       setShowCrawlaLogs(false)
       await refreshBundle()
       await loadList()
     } catch (err) {
-      setBackendError(err instanceof Error ? err.message : 'Crawla run failed')
+      setBackendError(err instanceof Error ? err.message : 'Scenario run failed')
     } finally {
       setCrawlaRunning(false)
     }
@@ -349,7 +354,7 @@ function App() {
                     {pollError && <p className="error-text">{pollError}</p>}
                     <ScenarioResult
                       bundle={bundle}
-                      onRunCrawlaScenario={bundle.status === 'READY' && bundle.crawla_export ? handleRunCrawlaScenario : undefined}
+                      onRunCrawlaScenario={bundle.status === 'READY' ? handleRunCrawlaScenario : undefined}
                       onToggleLogs={
                         crawlaRunResult && (crawlaRunResult.logs.length > 0 || crawlaRunResult.error_message)
                           ? handleToggleCrawlaLogs
@@ -397,7 +402,7 @@ function App() {
                     {pollError && <p className="error-text">{pollError}</p>}
                     <ScenarioResult
                       bundle={bundle}
-                      onRunCrawlaScenario={bundle.status === 'READY' && bundle.crawla_export ? handleRunCrawlaScenario : undefined}
+                      onRunCrawlaScenario={bundle.status === 'READY' ? handleRunCrawlaScenario : undefined}
                       onToggleLogs={
                         crawlaRunResult && (crawlaRunResult.logs.length > 0 || crawlaRunResult.error_message)
                           ? handleToggleCrawlaLogs
@@ -505,7 +510,7 @@ function App() {
                     {pollError && <p className="error-text">{pollError}</p>}
                     <ScenarioResult
                       bundle={bundle}
-                      onRunCrawlaScenario={bundle.status === 'READY' && bundle.crawla_export ? handleRunCrawlaScenario : undefined}
+                      onRunCrawlaScenario={bundle.status === 'READY' ? handleRunCrawlaScenario : undefined}
                       onToggleLogs={
                         crawlaRunResult && (crawlaRunResult.logs.length > 0 || crawlaRunResult.error_message)
                           ? handleToggleCrawlaLogs

@@ -6,6 +6,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.integrations.core_app import CoreAppClient
+from app.models.crawla import CrawlaRunScenarioResponse
 from app.models.quickwit import QuickwitSearchResponse
 from app.services.quickwit_service import run_quickwit_search_http
 from app.models.scenario import (
@@ -66,6 +68,35 @@ async def scenario_quickwit_logs(
 @router.get("/{scenario_id}", response_model=ScenarioBundle)
 def get_scenario(scenario_id: str, db: Session = Depends(get_db)) -> ScenarioBundle:
     return scenario_service.record_to_bundle(scenario_service.get_record(db, scenario_id))
+
+
+@router.post("/{scenario_id}/run", response_model=CrawlaRunScenarioResponse)
+async def run_scenario(
+    scenario_id: str,
+    db: Session = Depends(get_db),
+) -> CrawlaRunScenarioResponse:
+    """Fire a real search + packages against the core app with this scenario's apiKey.
+
+    Same core flow as the Crawla run, but available to any READY scenario (no Crawla
+    export required). Returns the search sId + statuses for staging trace/validation.
+    """
+    record = scenario_service.get_record(db, scenario_id)
+    bundle = scenario_service.record_to_bundle(record)
+    if bundle.status != ScenarioStatus.READY:
+        raise HTTPException(status_code=409, detail="Scenario must be READY before running")
+    if not bundle.api_key:
+        raise HTTPException(status_code=409, detail="Scenario has no apiKey")
+
+    async with CoreAppClient() as client:
+        result = await client.run_search_and_packages(
+            api_key=bundle.api_key,
+            check_in=bundle.check_in,
+            check_out=bundle.check_out,
+            hotel_id=bundle.atg_hotel_id,
+        )
+
+    result.scenario_id = scenario_id
+    return result
 
 
 @router.post("/{scenario_id}/refresh-booking-ids", response_model=ScenarioBundle, status_code=202)

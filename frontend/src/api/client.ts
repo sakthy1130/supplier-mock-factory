@@ -41,5 +41,6 @@ export {
   listScenarios,
   getScenario,
   refreshBookingIds,
+  runScenario,
   teardownScenario,
 } from './scenarios'

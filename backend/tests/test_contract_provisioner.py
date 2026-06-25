@@ -90,6 +90,53 @@ async def test_create_contracts_clones_reference_contract():
 
 
 @pytest.mark.asyncio
+async def test_create_contracts_chc_clone_normalizes_currency_to_scenario():
+    """CHC clone must override the reference contract currency (AED) with the scenario
+    supplier currency so it matches the mock rate currency (else Crawla rejects price)."""
+    backoffice = AsyncMock()
+    backoffice.__aenter__ = AsyncMock(return_value=backoffice)
+    backoffice.__aexit__ = AsyncMock(return_value=None)
+    backoffice.get_contract = AsyncMock(
+        return_value={
+            "_id": "chc-ref",
+            "uid": "chc-mock-test",
+            "currency": "AED",
+            "supportedCurrencies": [],
+            "opt": {},
+            "supplierId": "69ef11d11a41325a74bab5da",
+        }
+    )
+    backoffice.create_contract = AsyncMock(return_value="mongo-chc-clone")
+
+    request = ScenarioRequest(
+        namespace="qa-chc-cur",
+        check_in="2026-09-01",
+        check_out="2026-09-03",
+        atg_hotel_id="1446194",
+        supplier_hotel_ids={"CHC": "GB113"},
+        suppliers=[
+            SupplierScenario(
+                code=SupplierCode.CHC,
+                packages=PackageSpec(count=1, room_basis="RO", prices=[100.0], supplier_currency="SAR"),
+            )
+        ],
+    )
+
+    provisioner = ContractProvisioner(backoffice=backoffice)
+    provisioner.settings.chc_reference_contract_id = "chc-ref"
+
+    await provisioner.create_contracts(
+        request,
+        {"CHC": {"Search": "/api/go/shoppingengine/v4/shopping/multihotels", "Packages": "/api/go/bookingusb/v4/availability"}},
+        "http://mockserver-staging.tajawal.io",
+    )
+
+    body = backoffice.create_contract.await_args.args[0]
+    assert body["currency"] == "SAR"
+    assert "SAR" in body["supportedCurrencies"]
+
+
+@pytest.mark.asyncio
 async def test_create_contracts_hbs_overwrites_zero_timeout_from_reference():
     backoffice = AsyncMock()
     backoffice.__aenter__ = AsyncMock(return_value=backoffice)
@@ -221,3 +268,60 @@ async def test_create_contracts_exp_clones_reference_contract():
     assert body["opt"]["overrideSearchUrl"].endswith("/new-ns/search")
     assert body["opt"]["overridePackagesUrl"].endswith("/new-ns/package")
     assert body["opt"]["enableAdapterTransformedLog"] is True
+
+
+@pytest.mark.asyncio
+async def test_create_contracts_chc_sets_one_slot_cancel_policy():
+    backoffice = AsyncMock()
+    backoffice.__aenter__ = AsyncMock(return_value=backoffice)
+    backoffice.__aexit__ = AsyncMock(return_value=None)
+    backoffice.get_contract = AsyncMock(
+        return_value={
+            "_id": "chc-ref-1",
+            "autoId": "88",
+            "uid": "old-chc",
+            "supplierId": "652cd63a90fb03102f226030",
+            "opt": {
+                "searchUrl": "http://old/search",
+                "isCancellationPolicyOneSlot": False,
+                "availabilityTimeoutSeconds": "0",
+            },
+        }
+    )
+    backoffice.create_contract = AsyncMock(return_value="mongo-chc-clone")
+
+    provisioner = ContractProvisioner(backoffice=backoffice)
+    provisioner.settings.chc_reference_contract_id = "chc-ref-1"
+    provisioner.settings.mock_server_url = "http://mockserver-staging.tajawal.io"
+
+    request = ScenarioRequest(
+        namespace="qa-chc-clone",
+        check_in="2026-09-01",
+        check_out="2026-09-03",
+        atg_hotel_id="1055070",
+        supplier_hotel_ids={"CHC": "GB113"},
+        suppliers=[
+            SupplierScenario(
+                code=SupplierCode.CHC,
+                packages=PackageSpec(count=1, room_basis="RO", prices=[100.0]),
+            )
+        ],
+    )
+    contract_ids = await provisioner.create_contracts(
+        request,
+        {
+            "CHC": {
+                "Search": "/api/go/shoppingengine/v4/shopping/multihotels",
+                "Packages": "/api/go/bookingusb/v4/availability",
+            }
+        },
+        "http://mockserver-staging.tajawal.io",
+    )
+
+    assert contract_ids == {"CHC": "mongo-chc-clone"}
+    body = backoffice.create_contract.await_args.args[0]
+    assert body["uid"] == "smf-qa-chc-clone-chc"
+    assert body["opt"]["isCancellationPolicyOneSlot"] is True
+    assert body["opt"]["availabilityTimeoutSeconds"] == "30"
+    assert body["opt"]["searchUrl"].endswith("/api/go/shoppingengine/v4/shopping/multihotels")
+    assert body["opt"]["availabilityUrl"].endswith("/api/go/bookingusb/v4/availability")
