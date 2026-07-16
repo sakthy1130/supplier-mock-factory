@@ -18,6 +18,32 @@ def strip_http_request_matchers(expectation: dict[str, Any]) -> dict[str, Any]:
     return expectation
 
 
+# Body-framing headers captured verbatim from the real supplier response. Once the
+# mock body is mutated (prices, room names) or served uncompressed, these become
+# invalid: a stale Content-Length makes the client wait for bytes that never arrive
+# and Content-Encoding: gzip makes it try to gunzip plain JSON — the socket hangs
+# until the adapter's read timeout fires (EXP → E1011.1 "could not parse"). Let
+# MockServer recompute framing instead of replaying the recorded values.
+_FRAMING_RESPONSE_HEADERS = {
+    "content-length",
+    "content-encoding",
+    "transfer-encoding",
+    "connection",
+}
+
+
+def strip_response_framing_headers(expectation: dict[str, Any]) -> dict[str, Any]:
+    """Drop stale body-framing headers from httpResponse (Content-Length, gzip, etc.)."""
+    http_response = expectation.get("httpResponse")
+    if isinstance(http_response, dict):
+        headers = http_response.get("headers")
+        if isinstance(headers, dict):
+            for key in list(headers.keys()):
+                if key.lower() in _FRAMING_RESPONSE_HEADERS:
+                    headers.pop(key, None)
+    return expectation
+
+
 def finalize_expectation_for_register(
     expectation: dict[str, Any],
     namespace: str,
@@ -30,6 +56,7 @@ def finalize_expectation_for_register(
         apply_hbs_mock_path(expectation, log_type)
     elif supplier_code == "EXP":
         apply_exp_mock_path(expectation, namespace, log_type)
+    strip_response_framing_headers(expectation)
     return strip_http_request_matchers(expectation)
 
 

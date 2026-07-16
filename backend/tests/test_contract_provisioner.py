@@ -134,6 +134,9 @@ async def test_create_contracts_chc_clone_normalizes_currency_to_scenario():
     body = backoffice.create_contract.await_args.args[0]
     assert body["currency"] == "SAR"
     assert "SAR" in body["supportedCurrencies"]
+    # CHC is a net supplier like HBS — must participate as a markup target, not inherit
+    # the reference contract's "NotParticipating".
+    assert body["dynamicMarketType"] == "DynamicMarkupTarget"
 
 
 @pytest.mark.asyncio

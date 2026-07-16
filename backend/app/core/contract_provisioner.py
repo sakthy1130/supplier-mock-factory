@@ -166,7 +166,10 @@ def _contract_uid(namespace: str, supplier_code: str) -> str:
 
 
 def _apply_hbs_contract_defaults(body: dict[str, Any], supplier_code: str) -> None:
-    if supplier_code == "HBS":
+    # Net suppliers receive the borrowed market price (DynamicMarkupTarget); gross
+    # suppliers provide it (MarketPriceSource). CHC is net like HBS — without this it
+    # inherits the reference contract's "NotParticipating" and is left out of merge.
+    if supplier_code in ("HBS", "CHC"):
         body["dynamicMarketType"] = "DynamicMarkupTarget"
     elif supplier_code == "EXP":
         body["dynamicMarketType"] = "MarketPriceSource"

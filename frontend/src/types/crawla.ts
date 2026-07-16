@@ -31,6 +31,7 @@ export interface CrawlaHotelOffer {
   meal?: string | null
   refundability?: string | null
   bed_type?: string | null
+  pay_at_property?: string | null
 }
 
 export interface CrawlaHotelAnchorItem {

@@ -112,6 +112,7 @@ def _build_scenario_request(request: CrawlaScenarioRequest) -> ScenarioRequest:
     raw_room_basis = package_price.room_basis or package_price.meal or "RO"
     pkg_room_basis = "RO" if is_l2 else raw_room_basis
 
+    is_only_crawla = request.bucket == CrawlaBucket.ONLY_CRAWLA
     suppliers = [
         SupplierScenario(
             code=SupplierCode.HBS,
@@ -122,16 +123,21 @@ def _build_scenario_request(request: CrawlaScenarioRequest) -> ScenarioRequest:
                 refundable=refundable,
             ),
         ),
-        SupplierScenario(
-            code=SupplierCode.EXP,
-            packages=PackageSpec(
-                count=package_count,
-                room_basis=pkg_room_basis,
-                prices=exp_prices,
-                refundable=refundable,
-            ),
-        ),
     ]
+    # ONLY_CRAWLA: Expedia must not participate at all — skip the EXP mock AND
+    # the EXP contract so only Crawla anchors the price (HBS stays as the seller).
+    if not is_only_crawla:
+        suppliers.append(
+            SupplierScenario(
+                code=SupplierCode.EXP,
+                packages=PackageSpec(
+                    count=package_count,
+                    room_basis=pkg_room_basis,
+                    prices=exp_prices,
+                    refundable=refundable,
+                ),
+            )
+        )
     # CHEAPEST_L2_GROSS room-basis rule:
     #   - Enigma's verifyRoomBasisIsROorBBAndReturnRoomBasisAsList() hard-asserts RO.
     #   - Hardcode RO (not just normalise) so L2 eligibility is guaranteed.
@@ -168,9 +174,12 @@ def _build_scenario_request(request: CrawlaScenarioRequest) -> ScenarioRequest:
             # For L2: hardcoded RO (both suppliers must be RO for L2 eligibility).
             # For other buckets: preserve original meal/room_basis order.
             room_basis=effective_room_basis if is_l2 else (package_price.meal or package_price.room_basis),
-            bed_groups_description="3 Bed" if request.bucket == CrawlaBucket.ONLY_CRAWLA else None,
+            bed_groups_description="3 Bed" if is_only_crawla else None,
         ),
     }
+    # ONLY_CRAWLA drops EXP entirely (no mock/contract), so its mutation is unused.
+    if is_only_crawla:
+        supplier_mutations.pop("EXP", None)
     return ScenarioRequest(
         namespace=request.namespace,
         check_in=request.check_in,

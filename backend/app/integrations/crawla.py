@@ -69,7 +69,7 @@ class CrawlaClient:
             "adult_count": 2,
             "room_count": 1,
             "kids_count": 0,
-            "currency": "SAR",
+            "currency": "USD",
         }
         data = await self._post_json("/minPriceFlexible", payload)
         return CrawlaAnchorSearchResponse(
@@ -84,12 +84,12 @@ class CrawlaClient:
             "adult_count": 2,
             "room_count": 1,
             "kids_count": 0,
-            "currency": "SAR",
+            "currency": "USD",
         }
         data = await self._post_json("/hotelPage", payload)
-        return CrawlaAnchorPackagesResponse(
-            hotels=[_normalize_hotel_item(item) for item in _as_list(data.get("hotels"))]
-        )
+        hotels = [_normalize_hotel_item(item) for item in _as_list(data.get("hotels"))]
+        _filter_prepay_offers(hotels)
+        return CrawlaAnchorPackagesResponse(hotels=hotels)
 
     async def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         client = self._get_client()
@@ -134,15 +134,20 @@ def _normalize_hotel_item(item: Any) -> CrawlaHotelAnchorItem:
     offers = []
     for row in _as_list(item.get("data")):
         if isinstance(row, dict):
+            bed_type = _as_str(row.get("bed_type"))
             offers.append(
                     CrawlaHotelOffer(
                         room_id=_as_str(row.get("room_id")) or "",
-                        room_name=_as_str(row.get("room_name") or row.get("roomName")) or "",
+                        room_name=_compose_room_name(
+                            _as_str(row.get("room_name") or row.get("roomName")),
+                            bed_type,
+                        ),
                         total_amount=_as_float(row.get("total_amount")) or 0.0,
                         room_basis=_as_str(row.get("room_basis") or row.get("roomBasis")),
                         meal=_as_str(row.get("meal")),
                         refundability=_as_str(row.get("refundability")),
-                        bed_type=_as_str(row.get("bed_type")),
+                        bed_type=bed_type,
+                        pay_at_property=_as_str(row.get("pay_at_property")),
                     )
                 )
 
@@ -152,6 +157,42 @@ def _normalize_hotel_item(item: Any) -> CrawlaHotelAnchorItem:
         status=_as_str(item.get("status")),
         data=offers,
     )
+
+
+def _is_postpay(offer: CrawlaHotelOffer) -> bool:
+    """Crawla marks pay-at-property (PostPay) offers with pay_at_property == 'Yes'."""
+    return (offer.pay_at_property or "").strip().lower() == "yes"
+
+
+def _filter_prepay_offers(hotels: list[CrawlaHotelAnchorItem]) -> None:
+    """Keep only PrePay offers (pay_at_property != 'Yes') for the next process.
+
+    HBS packages are PrePay, so a PostPay (pay-at-property) Crawla offer can never
+    pair with HBS in PACKAGES_INITIATIVES. Drop PostPay offers; if *every* offer is
+    PostPay, raise so the UI tells the user to pick different data.
+    """
+    all_offers = [offer for hotel in hotels for offer in hotel.data]
+    if all_offers and all(_is_postpay(offer) for offer in all_offers):
+        raise CrawlaApiError(
+            "All Crawla packages are PostPay (pay-at-property) only. "
+            "HBS is PrePay, so no package can pair for markup — try other hotel/dates."
+        )
+    for hotel in hotels:
+        hotel.data = [offer for offer in hotel.data if not _is_postpay(offer)]
+
+
+def _compose_room_name(room_name: Optional[str], bed_type: Optional[str]) -> str:
+    """Crawla /hotelPage splits the name: room_name=" Double Room", bed_type="2 twin beds".
+
+    The Crawla search/serp response the user compares against carries the full
+    "Double Room 2 twin beds" in room_name, so rebuild it by appending bed_type
+    (unless it is already present in the name).
+    """
+    name = (room_name or "").strip()
+    bed = (bed_type or "").strip()
+    if bed and bed.lower() not in name.lower():
+        name = f"{name} {bed}".strip()
+    return name
 
 
 def _as_float(value: Any) -> Optional[float]:

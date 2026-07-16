@@ -41,6 +41,7 @@ class CrawlaHotelOffer(BaseModel):
     meal: Optional[str] = None
     refundability: Optional[str] = None
     bed_type: Optional[str] = None
+    pay_at_property: Optional[str] = None
 
 
 class CrawlaHotelAnchorItem(BaseModel):
