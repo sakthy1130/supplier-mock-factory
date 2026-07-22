@@ -8,7 +8,7 @@ from typing import Any
 
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
-from app.plugins.room_names import apply_hbs_room_names, normalized_room_names
+from app.plugins.room_names import apply_hbs_room_names, normalized_room_basis, normalized_room_names
 from app.plugins.supplier_currency import apply_hbs_supplier_currency
 from app.plugins.json_utils import (
     collect_field_values,
@@ -139,17 +139,19 @@ class HbsMockPlugin(SupplierMockPlugin):
             return result
 
         template_rate = deep_copy(rates[0])
+        room_basis_list = normalized_room_basis(spec)
         new_rates = []
         for index in range(spec.count):
             rate = deep_copy(rates[index % len(rates)])
             price = prices[index]
             is_refundable = refundable[index]
+            basis = room_basis_list[index]
             rate["net"] = str(price)
-            rate["boardCode"] = spec.room_basis
-            rate["boardName"] = _board_name(spec.room_basis)
+            rate["boardCode"] = basis
+            rate["boardName"] = _board_name(basis)
             _apply_hbs_rate_refundability(rate, price, is_refundable, check_in, check_out)
             if isinstance(rate.get("rateKey"), str):
-                rate["rateKey"] = rate["rateKey"].replace(" RO|", f" {spec.room_basis}|")
+                rate["rateKey"] = rate["rateKey"].replace(" RO|", f" {basis}|")
                 if index >= len(rates):
                     rate["rateKey"] = _with_unique_rate_key_suffix(rate["rateKey"], index)
             new_rates.append(rate)

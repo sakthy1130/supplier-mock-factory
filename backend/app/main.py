@@ -2,12 +2,13 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import admin, crawla, health, hotels, logs, scenarios, suppliers, test_run
+from app.api.routes import admin, crawla, env as env_routes, health, hotels, logs, scenarios, suppliers, test_run
 from app.config import get_settings
 from app.db.database import init_db
+from app.env_context import get_current_env, reset_current_env, set_current_env
 
 settings = get_settings()
 
@@ -34,7 +35,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def env_context_middleware(request: Request, call_next):
+    """Resolve the active env (dev|stg) from X-SMF-Env for this request's contextvar.
+
+    Downstream get_settings() calls made synchronously during the request (hotel
+    mapping, suppliers, crawla anchors, quickwit search, ...) pick this up without
+    needing the env threaded through every call. Scenario background jobs do NOT
+    rely on this — they pin the env explicitly from the scenario's stored value
+    (see scenario_service.py) so a dropdown change mid-run can't retarget them.
+    """
+    token = set_current_env(request.headers.get("x-smf-env"))
+    try:
+        response = await call_next(request)
+    finally:
+        resolved = get_current_env()
+        reset_current_env(token)
+    response.headers["X-SMF-Env-Resolved"] = resolved
+    return response
+
+
 app.include_router(health.router)
+app.include_router(env_routes.router, prefix="/api")
 app.include_router(scenarios.router, prefix="/api")
 app.include_router(crawla.router, prefix="/api")
 app.include_router(suppliers.router, prefix="/api")

@@ -230,6 +230,28 @@ def test_hbs_applies_per_package_room_names_when_distinct():
     assert [room["name"] for room in search_rooms] == names
 
 
+def test_hbs_applies_per_package_room_basis_when_distinct():
+    plugin = HbsMockPlugin()
+    names = ["Double Room", "Twin Room"]
+    spec = PackageSpec(
+        count=2,
+        room_basis=["RO", "BB"],
+        prices=[100.0, 200.0],
+        room_names=names,
+        refundable=[True, False],
+    )
+    packages = plugin.mutate_packages(HBS_PACKAGES, spec, "156652", "2026-09-10", "2026-09-12", "Packages")
+    rooms = packages["httpResponse"]["body"]["hotels"]["hotels"][0]["rooms"]
+    assert len(rooms) == 2
+    assert rooms[0]["rates"][0]["boardCode"] == "RO"
+    assert rooms[1]["rates"][0]["boardCode"] == "BB"
+
+
+def test_package_spec_room_basis_string_applies_to_every_package():
+    spec = PackageSpec(count=3, room_basis="BB", prices=[100.0, 200.0, 300.0])
+    assert spec.room_basis == ["BB"]
+
+
 def test_hbs_mutate_packages_trims_and_prices():
     plugin = HbsMockPlugin()
     spec = PackageSpec(count=1, room_basis="BB", prices=[300.0], refundable=[True])

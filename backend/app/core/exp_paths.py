@@ -14,6 +14,13 @@ def apply_exp_contract_opt_defaults(opt: dict[str, Any], mock_base_url: str) -> 
     for key, value in EXP_CONTRACT_OPT_DEFAULTS.items():
         if opt.get(key) is None:
             opt[key] = value
+    # Always force off — some reference contracts (e.g. a dev clone source) carry
+    # enableGenericBedding: true, which makes the real EXP adapter emit a second,
+    # not-for-sale "generic bedding" package per rate (room name loses the mock's
+    # room_name and gets a ", <n> Bed" suffix instead). SMF mocks should produce
+    # exactly the requested room_names/count with nothing extra, regardless of
+    # what the cloned reference contract carried.
+    opt["enableGenericBedding"] = False
     return opt
 
 

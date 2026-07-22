@@ -6,6 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.env_context import get_current_env, use_env
 from app.integrations.core_app import CoreAppClient
 from app.models.crawla import CrawlaRunScenarioResponse
 from app.models.quickwit import QuickwitSearchResponse
@@ -29,15 +30,23 @@ async def create_scenario(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> ScenarioBundle:
+    env = get_current_env()
     resolved = await resolve_scenario_hotel_ids(request)
-    record = scenario_service.create_pending(db, resolved)
+    record = scenario_service.create_pending(db, resolved, env=env)
     background_tasks.add_task(scenario_service.run_create_scenario, record.id)
     return scenario_service.record_to_bundle(record)
 
 
 @router.get("", response_model=list[ScenarioListItem])
-def list_scenarios(db: Session = Depends(get_db)) -> list[ScenarioListItem]:
-    return [scenario_service.record_to_list_item(r) for r in scenario_service.list_records(db)]
+def list_scenarios(
+    db: Session = Depends(get_db),
+    env: Optional[str] = Query(default=None, description="'dev', 'stg', or 'all' for no filter"),
+) -> list[ScenarioListItem]:
+    resolved_env = None if env == "all" else (env or get_current_env())
+    return [
+        scenario_service.record_to_list_item(r)
+        for r in scenario_service.list_records(db, env=resolved_env)
+    ]
 
 
 @router.get("/{scenario_id}/quickwit-logs", response_model=QuickwitSearchResponse)
@@ -62,6 +71,7 @@ async def scenario_quickwit_logs(
         index=None,
         minutes=minutes,
         max_hits=max_hits,
+        env=record.env,
     )
 
 
@@ -87,13 +97,16 @@ async def run_scenario(
     if not bundle.api_key:
         raise HTTPException(status_code=409, detail="Scenario has no apiKey")
 
-    async with CoreAppClient() as client:
-        result = await client.run_search_and_packages(
-            api_key=bundle.api_key,
-            check_in=bundle.check_in,
-            check_out=bundle.check_out,
-            hotel_id=bundle.atg_hotel_id,
-        )
+    # Pin to the scenario's own env — its apiKey/contracts only exist there,
+    # regardless of what env is currently selected in the UI.
+    with use_env(record.env):
+        async with CoreAppClient() as client:
+            result = await client.run_search_and_packages(
+                api_key=bundle.api_key,
+                check_in=bundle.check_in,
+                check_out=bundle.check_out,
+                hotel_id=bundle.atg_hotel_id,
+            )
 
     result.scenario_id = scenario_id
     return result
@@ -119,9 +132,13 @@ def teardown_all_scenarios(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> TeardownAllResponse:
-    result = scenario_service.queue_teardown_all(db)
+    # Scoped to the currently selected env — clearing dev's mess must not touch
+    # stg's mocks/contracts (and vice versa); they live on different MockServer
+    # hosts entirely.
+    env = get_current_env()
+    result = scenario_service.queue_teardown_all(db, env=env)
     if result.queued:
-        background_tasks.add_task(scenario_service.run_teardown_all)
+        background_tasks.add_task(scenario_service.run_teardown_all, env)
     return result
 
 

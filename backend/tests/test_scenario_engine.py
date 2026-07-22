@@ -74,6 +74,32 @@ def test_scenario_engine_builds_hbs_expectations_with_namespace():
     assert booking.expectation["httpRequest"]["path"] == "/hotel-api/1.2/bookings/booking"
 
 
+def test_scenario_engine_builds_hbs_expectations_with_per_package_room_basis():
+    engine = ScenarioEngine()
+    request = _request(
+        suppliers=[
+            SupplierScenario(
+                code=SupplierCode.HBS,
+                packages=PackageSpec(
+                    count=2,
+                    room_basis=["RO", "BB"],
+                    room_names=["Double Room", "Twin Room"],
+                    prices=[100.0, 200.0],
+                    refundable=[True, False],
+                ),
+            )
+        ],
+    )
+    # Full build (mutation + linkage validation) must accept distinct per-package
+    # boards and thread them through in order — this exercises the linkage
+    # validator's per-index comparison, not just the plugin mutation.
+    built = engine.build_expectations(request)
+    packages = next(item for item in built if item.log_type == "Packages")
+    rooms = packages.expectation["httpResponse"]["body"]["hotels"]["hotels"][0]["rooms"]
+    assert rooms[0]["rates"][0]["boardCode"] == "RO"
+    assert rooms[1]["rates"][0]["boardCode"] == "BB"
+
+
 @pytest.mark.skipif(
     not (TEMPLATES_DIR / "HBS" / "Packages" / "v1.json").exists(),
     reason="HBS templates not ingested",

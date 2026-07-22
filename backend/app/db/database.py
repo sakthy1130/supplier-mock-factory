@@ -47,6 +47,10 @@ def _run_migrations(engine) -> None:
     log = logging.getLogger(__name__)
     migrations = [
         ("scenarios", "sb_config_id", "VARCHAR(64)"),
+        # Existing rows predate multi-env support and were all created against
+        # staging — backfill them as 'stg' so their lifecycle (teardown/refresh)
+        # keeps resolving to the staging settings they were actually built with.
+        ("scenarios", "env", "VARCHAR(16) DEFAULT 'stg'"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in migrations:

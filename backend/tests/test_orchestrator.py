@@ -7,8 +7,8 @@ from app.core.scenario_engine import BuiltExpectation
 from app.models.scenario import PackageSpec, ScenarioRequest, ScenarioStatus, SupplierCode, SupplierScenario
 
 
-def _request() -> ScenarioRequest:
-    return ScenarioRequest(
+def _request(**overrides) -> ScenarioRequest:
+    payload = dict(
         namespace="qa-orch-001",
         check_in="2026-09-01",
         check_out="2026-09-03",
@@ -25,6 +25,8 @@ def _request() -> ScenarioRequest:
             ),
         ],
     )
+    payload.update(overrides)
+    return ScenarioRequest(**payload)
 
 
 def _crawla_request() -> ScenarioRequest:
@@ -92,7 +94,35 @@ async def test_create_scenario_end_to_end_with_mocks():
 
 
 @pytest.mark.asyncio
-async def test_create_normal_scenario_does_not_provision_br():
+async def test_create_normal_scenario_provisions_br_by_default():
+    engine = AsyncMock()
+    engine.build_expectations = lambda request: []
+
+    contract_provisioner = AsyncMock()
+    contract_provisioner.create_contracts = AsyncMock(return_value={"HBS": "contract-hbs"})
+
+    apikey_provisioner = AsyncMock()
+    apikey_provisioner.create_api_key = AsyncMock(return_value=("smf-qa-orch-001", "key-id-99"))
+
+    br_provisioner = AsyncMock()
+    br_provisioner.provision = AsyncMock(return_value={"enabled": True, "status": "SUCCESS", "errors": []})
+
+    orchestrator = SupplierMockScenarioOrchestrator(
+        engine=engine,
+        contract_provisioner=contract_provisioner,
+        apikey_provisioner=apikey_provisioner,
+        br_provisioner=br_provisioner,
+    )
+
+    with patch("app.core.orchestrator.register_built_expectations", new=AsyncMock(return_value={})):
+        bundle = await orchestrator.create_scenario(_request())
+
+    assert bundle.status == ScenarioStatus.READY
+    br_provisioner.provision.assert_awaited_once_with("smf-qa-orch-001")
+
+
+@pytest.mark.asyncio
+async def test_create_normal_scenario_skips_br_when_opted_out():
     engine = AsyncMock()
     engine.build_expectations = lambda request: []
 
@@ -113,7 +143,7 @@ async def test_create_normal_scenario_does_not_provision_br():
     )
 
     with patch("app.core.orchestrator.register_built_expectations", new=AsyncMock(return_value={})):
-        bundle = await orchestrator.create_scenario(_request())
+        bundle = await orchestrator.create_scenario(_request(assign_to_br=False))
 
     assert bundle.status == ScenarioStatus.READY
     br_provisioner.provision.assert_not_awaited()

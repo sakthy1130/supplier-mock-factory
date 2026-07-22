@@ -10,7 +10,7 @@ from app.core.chc_paths import apply_chc_contract_opt_defaults
 from app.core.exp_paths import apply_exp_contract_opt_defaults
 from app.core.hbs_paths import apply_hbs_contract_opt_defaults
 from app.core.mock_urls import build_mock_opt_urls
-from app.core.supplier_registry import SUPPLIER_REGISTRY
+from app.core.supplier_registry import get_supplier_registry
 from app.integrations.backoffice import BackofficeClient
 from app.models.scenario import ScenarioRequest
 
@@ -119,7 +119,7 @@ def _minimal_contract_body(
     mock_base_url: str,
     supplier_currency: str,
 ) -> dict[str, Any]:
-    meta = SUPPLIER_REGISTRY[supplier_code]
+    meta = get_supplier_registry()[supplier_code]
     uid = _contract_uid(namespace, supplier_code)
     enabled_currencies = [supplier_currency, *(c for c in ("SAR", "AED", "USD", "EUR") if c != supplier_currency)]
     body = {

@@ -6,6 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.env_context import get_current_env, use_env
 from app.integrations.crawla import CrawlaApiError, CrawlaClient
 from app.integrations.core_app import CoreAppClient
 from app.models.crawla import (
@@ -49,9 +50,10 @@ async def create_crawla_scenario(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> ScenarioBundle:
+    env = get_current_env()
     base_request = _build_scenario_request(request)
     resolved = await resolve_scenario_hotel_ids(base_request)
-    record = scenario_service.create_pending(db, resolved)
+    record = scenario_service.create_pending(db, resolved, env=env)
     background_tasks.add_task(scenario_service.run_create_scenario, record.id)
     return scenario_service.record_to_bundle(record)
 
@@ -70,13 +72,14 @@ async def run_crawla_scenario(
     if not bundle.crawla_export:
         raise HTTPException(status_code=409, detail="Scenario has no Crawla export payload")
 
-    async with CoreAppClient() as client:
-        result = await client.run_search_and_packages(
-            api_key=bundle.api_key,
-            check_in=bundle.check_in,
-            check_out=bundle.check_out,
-            hotel_id=bundle.atg_hotel_id,
-        )
+    with use_env(record.env):
+        async with CoreAppClient() as client:
+            result = await client.run_search_and_packages(
+                api_key=bundle.api_key,
+                check_in=bundle.check_in,
+                check_out=bundle.check_out,
+                hotel_id=bundle.atg_hotel_id,
+            )
 
     result.scenario_id = scenario_id
     return result

@@ -6,6 +6,7 @@ from fastapi import HTTPException
 
 from app.config import get_settings
 from app.core.quickwit_indices import resolve_console_logs_index
+from app.env_context import get_current_env
 from app.integrations.quickwit import QuickwitClient, QuickwitError, extract_hits, hit_count
 from app.models.quickwit import QuickwitSearchResponse
 
@@ -26,13 +27,14 @@ async def run_quickwit_search(
     index: str | None,
     minutes: int,
     max_hits: int,
+    env: str | None = None,
 ) -> QuickwitSearchResponse:
     settings = get_settings()
     base_url = settings.quickwit_logs_api_url.rstrip("/")
     if not base_url:
         raise QuickwitError("QUICKWIT_LOGS_API_URL not configured")
 
-    resolved_index = index or resolve_console_logs_index(base_url)
+    resolved_index = index or resolve_console_logs_index(env or get_current_env())
 
     async with QuickwitClient() as client:
         raw = await client.search_last_minutes(
@@ -58,6 +60,7 @@ async def run_quickwit_search_http(
     index: str | None,
     minutes: int,
     max_hits: int,
+    env: str | None = None,
 ) -> QuickwitSearchResponse:
     require_quickwit_url()
     try:
@@ -66,6 +69,7 @@ async def run_quickwit_search_http(
             index=index,
             minutes=minutes,
             max_hits=max_hits,
+            env=env,
         )
     except QuickwitError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc

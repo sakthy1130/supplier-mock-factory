@@ -57,7 +57,11 @@ class ScenarioEngine:
             validation_spec = supplier_scenario.packages
             supplier_mutation = request.supplier_mutations.get(supplier_code)
             if supplier_mutation and supplier_mutation.room_basis:
-                validation_spec = validation_spec.model_copy(update={"room_basis": supplier_mutation.room_basis})
+                # model_copy() bypasses validators, so build the per-package list
+                # explicitly rather than relying on PackageSpec's str-coercion.
+                validation_spec = validation_spec.model_copy(
+                    update={"room_basis": [supplier_mutation.room_basis] * validation_spec.count}
+                )
             # Skip linkage validation when the hotel is intentionally excluded from
             # the supplier response (e.g. ONLY_CRAWLA — EXP hotel stripped out).
             # There are no rates to validate in that case.

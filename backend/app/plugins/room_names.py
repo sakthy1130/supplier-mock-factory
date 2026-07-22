@@ -19,6 +19,19 @@ def normalized_room_names(spec: PackageSpec) -> list[str]:
     return names[: spec.count]
 
 
+DEFAULT_ROOM_BASIS = "RO"
+
+
+def normalized_room_basis(spec: PackageSpec) -> list[str]:
+    """One board code per package, same padding/truncation rule as room names."""
+    values = [basis.strip().upper() for basis in spec.room_basis if basis and basis.strip()]
+    if not values:
+        values = [DEFAULT_ROOM_BASIS]
+    while len(values) < spec.count:
+        values.append(values[-1])
+    return values[: spec.count]
+
+
 def _set_room_name(room: dict, room_name: str) -> None:
     if "name" in room or "rates" in room:
         room["name"] = room_name

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
-from app.plugins.room_names import apply_rhk_room_names, normalized_room_names
+from app.plugins.room_names import apply_rhk_room_names, normalized_room_basis, normalized_room_names
 from app.plugins.supplier_currency import apply_rhk_supplier_currency
 from app.plugins.json_utils import deep_copy, replace_in_json_strings, update_fields_recursive
 
@@ -67,7 +67,7 @@ class RhkMockPlugin(SupplierMockPlugin):
         result = deep_copy(expectation)
         refundable = _normalized_refundable(spec)
         prices = _normalized_prices(spec)
-        meal = _meal_for_basis(spec.room_basis)
+        meals = [_meal_for_basis(basis) for basis in normalized_room_basis(spec)]
         hid = int(hotel_id) if hotel_id.isdigit() else None
 
         body = result.get("httpResponse", {}).get("body")
@@ -81,7 +81,7 @@ class RhkMockPlugin(SupplierMockPlugin):
         if isinstance(data, dict):
             hotels = data.get("hotels")
             if isinstance(hotels, list) and hotels:
-                self._apply_hotel_mutation(hotels[0], spec, prices, refundable, meal, hid)
+                self._apply_hotel_mutation(hotels[0], spec, prices, refundable, meals, hid)
                 if log_type == "Search":
                     data["hotels"] = [hotels[0]]
             orders = data.get("orders")
@@ -154,7 +154,7 @@ class RhkMockPlugin(SupplierMockPlugin):
         spec: PackageSpec,
         prices: list[float],
         refundable: list[bool],
-        meal: str,
+        meals: list[str],
         hid: int | None,
     ) -> None:
         if hid is not None:
@@ -172,6 +172,7 @@ class RhkMockPlugin(SupplierMockPlugin):
             price = prices[index]
             price_str = f"{price:.2f}"
             is_refundable = refundable[index]
+            meal = meals[index]
             rate["meal"] = meal
             if "room_name" in rate:
                 rate["room_name"] = room_names[index]

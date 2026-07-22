@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.models.scenario import PackageSpec
 from app.plugins.json_utils import collect_field_values
+from app.plugins.room_names import normalized_room_basis
 
 
 class LinkageError(ValueError):
@@ -47,7 +48,10 @@ class LinkageValidator:
             packages.get("httpResponse", {}).get("body", {}),
             "boardCode",
         )
-        if board_codes and any(code != spec.room_basis for code in board_codes[: spec.count]):
+        expected_boards = normalized_room_basis(spec)
+        if board_codes and any(
+            code != expected_boards[index] for index, code in enumerate(board_codes[: spec.count])
+        ):
             raise LinkageError("HBS package boardCode does not match requested room_basis")
 
         if prebook is not None:
@@ -106,10 +110,10 @@ class LinkageValidator:
                 f"RHK package rate count {len(rates)} < requested {spec.count}"
             )
 
-        expected_meal = _rhk_meal_for_basis(spec.room_basis)
+        expected_meals = [_rhk_meal_for_basis(basis) for basis in normalized_room_basis(spec)]
         for index, rate in enumerate(rates[: spec.count]):
             meal = rate.get("meal")
-            if meal and meal != expected_meal:
+            if meal and meal != expected_meals[index]:
                 raise LinkageError("RHK package meal does not match requested room_basis")
             if "refundable" in rate and len(spec.refundable) > index:
                 expected = spec.refundable[index]
@@ -136,10 +140,10 @@ class LinkageValidator:
                 f"CHC package rate count {len(rates)} < requested {spec.count}"
             )
 
-        expected_meal = spec.room_basis.upper()
-        for rate in rates[: spec.count]:
+        expected_meals = normalized_room_basis(spec)
+        for index, rate in enumerate(rates[: spec.count]):
             meal = rate.get("mealPlan")
-            if meal and meal != expected_meal:
+            if meal and meal != expected_meals[index]:
                 raise LinkageError("CHC package mealPlan does not match requested room_basis")
 
 

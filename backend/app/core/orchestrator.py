@@ -135,8 +135,9 @@ class SupplierMockScenarioOrchestrator:
                 f"group={sb_group_data['_id']} (no post-create PUT)"
             )
 
-        # Step 6: BR provisioning — for crawla_export AND for all SB scenarios
-        if request.crawla_export or request.sb_config is not None:
+        # Step 6: BR provisioning — for crawla_export, all SB scenarios, and plain
+        # scenarios that opted in via assign_to_br (default True; UI checkbox).
+        if request.crawla_export or request.sb_config is not None or request.assign_to_br:
             logger.info("Provisioning Business Rules for api_key=%s", api_key)
             br_setup = await self.br_provisioner.provision(api_key)
             bundle.br_setup = br_setup

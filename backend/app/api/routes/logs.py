@@ -10,7 +10,7 @@ router = APIRouter(prefix="/logs", tags=["logs"])
 
 @router.post("/quickwit/search", response_model=QuickwitSearchResponse)
 async def quickwit_search(request: QuickwitSearchRequest) -> QuickwitSearchResponse:
-    """Search Quickwit console logs (staging index auto-resolved by date)."""
+    """Search Quickwit console logs (index auto-resolved by active env + date)."""
     return await run_quickwit_search_http(
         request.query,
         index=request.index,

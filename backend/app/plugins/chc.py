@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
+from app.plugins.room_names import normalized_room_basis
 from app.plugins.supplier_currency import apply_chc_supplier_currency
 from app.plugins.json_utils import deep_copy, update_fields_recursive
 
@@ -71,7 +72,7 @@ class ChcMockPlugin(SupplierMockPlugin):
         result = self.mutate_dates(expectation, check_in, check_out)
         prices = _normalized_prices(spec)
         refundable = _normalized_refundable(spec)
-        meal = _meal_for_basis(spec.room_basis)
+        meals = [_meal_for_basis(basis) for basis in normalized_room_basis(spec)]
 
         body = result.get("httpResponse", {}).get("body")
         if not isinstance(body, dict):
@@ -89,7 +90,7 @@ class ChcMockPlugin(SupplierMockPlugin):
                     if hotel_id:
                         target["hotelId"] = hotel_id
                     self._apply_rates(
-                        target.get("availRoomRates"), spec, prices, refundable, meal, log_type
+                        target.get("availRoomRates"), spec, prices, refundable, meals, log_type
                     )
                     # Single-hotel scenario: keep only the target hotel.
                     body["availHotels"] = [target]
@@ -99,7 +100,7 @@ class ChcMockPlugin(SupplierMockPlugin):
         # Packages / PreBooking share body.hotelId + body.roomRates.
         if hotel_id:
             body["hotelId"] = hotel_id
-        self._apply_rates(body.get("roomRates"), spec, prices, refundable, meal, log_type)
+        self._apply_rates(body.get("roomRates"), spec, prices, refundable, meals, log_type)
         apply_chc_supplier_currency(result, spec.supplier_currency)
         return result
 
@@ -157,7 +158,7 @@ class ChcMockPlugin(SupplierMockPlugin):
         spec: PackageSpec,
         prices: list[float],
         refundable: list[bool],
-        meal: str,
+        meals: list[str],
         log_type: str,
     ) -> None:
         if not isinstance(rates, list) or not rates or not isinstance(rates[0], dict):
@@ -169,7 +170,7 @@ class ChcMockPlugin(SupplierMockPlugin):
             price = prices[index]
             rate["amountBeforeTax"] = [price]
             rate["amountAfterTax"] = [price]
-            rate["mealPlan"] = meal
+            rate["mealPlan"] = meals[index]
             rate["currency"] = spec.supplier_currency
             _apply_cancel_policy(rate, refundable[index], log_type)
             new_rates.append(rate)

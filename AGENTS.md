@@ -97,6 +97,21 @@ supplier-mock-factory/
 
 ---
 
+## Multi-env (dev / stg — default dev)
+
+Live UI toggle, no restart. Full design: [docs/MULTI_ENV_PLAN.md](docs/MULTI_ENV_PLAN.md).
+
+- **Selection:** every request carries `X-SMF-Env: dev|stg` (frontend `envHeaders()` in `frontend/src/api/base.ts`). Backend middleware (`main.py`) sets a contextvar (`app/env_context.py`) for the request; unset/unknown → `dev`.
+- **Settings:** `get_settings(env=None)` in `app/config.py` reads the contextvar when `env` omitted. Layering: legacy `backend/.env` → `.env.shared` → `.env.{env}` (later wins). Files are gitignored; copy from `.env.shared.example` / `.env.dev.example` / `.env.stg.example`.
+- **No client injection needed:** every integration client (`BackofficeClient`, `MockServerClient`, `CrawlaClient`, etc.) reads `self.settings = get_settings()` fresh at construction — since they're constructed per-call, the contextvar resolves correctly without threading `Settings` through call sites.
+- **Scenarios are env-tagged, not the ambient dropdown:** `ScenarioRecord.env` is set at create time and every lifecycle op (run / refresh-booking-ids / teardown) explicitly does `with use_env(record.env):` around the orchestrator call — so switching the dropdown mid-run can never retarget an in-flight or existing scenario. Background tasks always pin to `record.env`; only synchronous request-time calls (hotel mapping, crawla anchors, quickwit search) rely on the middleware-set contextvar.
+- **List filtering:** `GET /api/scenarios` filters to the request's env by default; `?env=all` bypasses. `DELETE /api/scenarios/all` (Clear all data) is also scoped to the active env — dev and stg have separate MockServer hosts, so a blanket clear must never cross envs.
+- **Quickwit index ≠ URL-derived anymore:** dev and stg share the same Quickwit URL; `resolve_console_logs_index(env, ...)` in `app/core/quickwit_indices.py` maps env → index prefix (`dev`→`dev`, `stg`→`staging`).
+- **Supplier registry:** `get_supplier_registry(env=None)` in `app/core/supplier_registry.py`. Dev currently shares stg's Backoffice supplier ids (confirmed) — if dev turns out to have its own Backoffice DB, only `_DEV_REGISTRY` needs new values.
+- **Adding a new env-specific value:** add the field to `Settings` in `config.py` with `= ""` default (no hardcoded staging/dev URL as default), then set it per env in `.env.dev` / `.env.stg` (or `.env.shared` if identical across envs).
+
+---
+
 ## Ingest extract modes
 
 P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from Enigma adapter logs.

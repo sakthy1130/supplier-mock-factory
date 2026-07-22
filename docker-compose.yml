@@ -6,14 +6,18 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
-    env_file:
-      - ./backend/.env
     volumes:
       - ./backend/app:/app/app
       - ./backend/tests:/app/tests
       - ./templates:/app/templates
       - ./field-maps:/app/field-maps
       - ./backend/pyproject.toml:/app/pyproject.toml:ro
+      # Multi-env settings: config.py reads these as FILES per selected env
+      # (not just OS env vars), so bind-mount rather than use env_file. Create
+      # them from the .example templates before `docker compose up`.
+      - ./backend/.env.shared:/app/.env.shared:ro
+      - ./backend/.env.dev:/app/.env.dev:ro
+      - ./backend/.env.stg:/app/.env.stg:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
       interval: 10s

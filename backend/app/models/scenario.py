@@ -61,7 +61,14 @@ class ScenarioStatus(str, Enum):
 
 class PackageSpec(BaseModel):
     count: int = Field(ge=1, le=20, description="Number of packages in response")
-    room_basis: str = Field(default="RO", description="e.g. RO, BB")
+    room_basis: list[str] = Field(
+        default_factory=lambda: ["RO"],
+        min_length=1,
+        description=(
+            "Board code per package (RO, BB, HB, FB, ...), same indexing as room_names. "
+            "A single string applies to every package; a shorter list pads with its last value."
+        ),
+    )
     room_names: list[str] = Field(
         default_factory=lambda: ["1 Double Bed, Nonsmoking"],
         min_length=1,
@@ -92,6 +99,14 @@ class PackageSpec(BaseModel):
     @classmethod
     def _upper_currency(cls, value: str) -> str:
         return value.strip().upper()
+
+    @field_validator("room_basis", mode="before")
+    @classmethod
+    def _coerce_room_basis(cls, value: Any) -> Any:
+        """Accept a plain string (applies to every package) or a list (per-package)."""
+        if isinstance(value, str):
+            return [value]
+        return value
 
 
 class SupplierScenario(BaseModel):
@@ -135,6 +150,14 @@ class ScenarioRequest(BaseModel):
         default=None,
         description="Smart Booking provisioning config. Omit for non-SB scenarios.",
     )
+    assign_to_br: bool = Field(
+        default=True,
+        description=(
+            "Assign the created apiKey to the Static/Dynamic Markup BR rules on create "
+            "(cleaned up on teardown). Crawla-exported and SB scenarios always assign "
+            "regardless of this flag; it only gates the plain scenario-wizard flow."
+        ),
+    )
 
     def hotel_id_for_supplier(self, supplier_code: str) -> str:
         return self.supplier_hotel_ids.get(supplier_code, self.atg_hotel_id)
@@ -143,6 +166,7 @@ class ScenarioRequest(BaseModel):
 class ScenarioBundle(BaseModel):
     id: Optional[str] = None
     namespace: str
+    env: str = "stg"
     status: ScenarioStatus = ScenarioStatus.PENDING
     api_key: Optional[str] = None
     api_key_id: Optional[str] = None
@@ -166,11 +190,16 @@ class ScenarioBundle(BaseModel):
     sb_group_name: Optional[str] = Field(default=None, description="Created SB group name")
     # Provisioning log — one entry per step, visible in the SMF dashboard
     provisioning_log: list[str] = Field(default_factory=list)
+    # Original create request (namespace/dates/hotel id/suppliers/package specs) as
+    # submitted — lets GET /api/scenarios/{id} answer "what was this scenario asked
+    # to create", not just its provisioning result.
+    request: Optional[dict[str, Any]] = None
 
 
 class ScenarioListItem(BaseModel):
     id: str
     namespace: str
+    env: str = "stg"
     status: ScenarioStatus
     created_at: Optional[datetime] = None
     suppliers: list[str] = Field(default_factory=list)

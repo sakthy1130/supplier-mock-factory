@@ -23,6 +23,10 @@ class ScenarioRecord(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     namespace: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     status: Mapped[str] = mapped_column(String(32), default="PENDING")
+    # Which env (dev|stg) this scenario was created in. Lifecycle ops (run, refresh,
+    # teardown) always resolve settings from THIS value, never the caller's current
+    # dropdown selection — see app/services/scenario_service.py.
+    env: Mapped[str] = mapped_column(String(16), default="stg", index=True)
     request_json: Mapped[dict] = mapped_column(JSON)
     api_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     api_key_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
