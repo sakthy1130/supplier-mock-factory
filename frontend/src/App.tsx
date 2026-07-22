@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import './App.css'
 import { createCrawlaScenario, runCrawlaScenario } from './api/crawla'
+import { getActiveEnv, setActiveEnv, type SmfEnv } from './api/base'
 import {
   clearAllScenarios,
   createScenario,
@@ -22,10 +23,19 @@ import { TestRunDashboard } from './components/TestRunDashboard'
 import type { CrawlaScenarioRequest, CrawlaScenarioRunResult } from './types/crawla'
 import type { ScenarioListItem, ScenarioRequest, ScenarioStatus } from './types/scenario'
 
-type Tab = 'create' | 'browse' | 'crawla' | 'queue' | 'test-run'
+type Tab = 'home' | 'create' | 'browse' | 'crawla' | 'queue' | 'test-run'
+
+const NAV_ITEMS: { tab: Tab; icon: string; label: string }[] = [
+  { tab: 'create', icon: '✦', label: 'New scenario' },
+  { tab: 'browse', icon: '☰', label: 'Scenarios' },
+  { tab: 'crawla', icon: '◌', label: 'Crawla Mocks' },
+  { tab: 'queue', icon: '⏵', label: 'Queue Runner' },
+  { tab: 'test-run', icon: '⬡', label: 'Test Runs' },
+]
 
 function App() {
-  const [tab, setTab] = useState<Tab>('create')
+  const [tab, setTab] = useState<Tab>('home')
+  const [env, setEnv] = useState<SmfEnv>(getActiveEnv())
   const [healthOk, setHealthOk] = useState(true)
   const [healthPhase, setHealthPhase] = useState('…')
   const [backendError, setBackendError] = useState<string | null>(null)
@@ -81,6 +91,28 @@ function App() {
       })
     loadList()
   }, [loadList])
+
+  const handleEnvChange = async (next: SmfEnv) => {
+    if (next === env) return
+    setActiveEnv(next)
+    setEnv(next)
+    // Scenario lists/actions are env-scoped — the previously active scenario may
+    // not belong to the newly selected env, so clear the detail view and reload.
+    setActiveScenarioId(null)
+    setCrawlaRunResult(null)
+    setShowCrawlaLogs(false)
+    setBackendError(null)
+    try {
+      const [h, suppliers] = await Promise.all([getHealth(), listSuppliers()])
+      setHealthPhase(h.phase)
+      setHealthOk(h.status === 'ok')
+      setSupplierCount(suppliers.length)
+    } catch {
+      setHealthOk(false)
+      setBackendError('Cannot reach backend — run: python3 -m uvicorn app.main:app --reload --port 8000')
+    }
+    await loadList()
+  }
 
   const handleCreate = async (request: ScenarioRequest) => {
     setCreating(true)
@@ -232,93 +264,60 @@ function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand">
+        <button
+          type="button"
+          className="brand"
+          onClick={() => setTab('home')}
+          style={{ border: 'none', background: 'none', cursor: 'pointer' }}
+        >
           <div className="brand-mark">SMF</div>
-          <div className="brand-text">
-            <strong>Mock Factory</strong>
-            <span>Supplier QA</span>
-          </div>
-        </div>
+        </button>
 
         <nav className="side-nav">
           <button
             type="button"
-            className={tab === 'create' ? 'nav-item active' : 'nav-item'}
-            onClick={() => setTab('create')}
+            className={`nav-item ${tab === 'home' ? 'active' : ''}`}
+            onClick={() => setTab('home')}
           >
-            <span className="nav-icon">✦</span>
-            New scenario
+            <span className="nav-icon">⌂</span>
+            <span className="nav-tip">Home</span>
           </button>
-          <button
-            type="button"
-            className={tab === 'browse' ? 'nav-item active' : 'nav-item'}
-            onClick={() => setTab('browse')}
-          >
-            <span className="nav-icon">☰</span>
-            Scenarios
-            {scenarioCount > 0 && ` (${scenarioCount})`}
-          </button>
-          <button
-            type="button"
-            className={tab === 'crawla' ? 'nav-item active' : 'nav-item'}
-            onClick={() => setTab('crawla')}
-          >
-            <span className="nav-icon">◌</span>
-            Crawla Mocks
-          </button>
-          <button
-            type="button"
-            className={tab === 'queue' ? 'nav-item active' : 'nav-item'}
-            onClick={() => setTab('queue')}
-          >
-            <span className="nav-icon">⏵</span>
-            Queue Runner
-          </button>
-          <button
-            type="button"
-            className={tab === 'test-run' ? 'nav-item active' : 'nav-item'}
-            onClick={() => setTab('test-run')}
-          >
-            <span className="nav-icon">⬡</span>
-            Test Runs
-          </button>
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.tab}
+              type="button"
+              className={`nav-item ${tab === item.tab ? 'active' : ''}`}
+              onClick={() => setTab(item.tab)}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-tip">
+                {item.label}
+                {item.tab === 'browse' && scenarioCount > 0 && ` (${scenarioCount})`}
+              </span>
+            </button>
+          ))}
         </nav>
-
-        <div className="side-stats">
-          <div className="stat-chip">
-            <span>Backend</span>
-            <strong style={{ color: healthOk ? 'var(--success)' : 'var(--danger)' }}>
-              {healthOk ? 'Connected' : 'Offline'}
-            </strong>
-          </div>
-          <div className="stat-chip">
-            <span>Phase</span>
-            <strong>{healthPhase}</strong>
-          </div>
-          <div className="stat-chip">
-            <span>Suppliers</span>
-            <strong>{supplierCount} active</strong>
-          </div>
-        </div>
 
         <div className="side-actions">
           <button
             type="button"
-            className="btn danger full-width"
+            className="icon-action danger"
             onClick={handleClearAll}
             disabled={!healthOk || clearingAll || activeScenarioCount === 0}
-            title={
-              activeScenarioCount === 0
-                ? 'No active scenarios to clear'
-                : 'Remove mocks, contracts, and apiKeys for all scenarios'
-            }
           >
-            {clearingAll ? 'Clearing…' : `Clear all data (${activeScenarioCount})`}
+            <span className="nav-icon">🗑</span>
+            <span className="nav-tip">
+              {activeScenarioCount === 0
+                ? 'No active scenarios to clear'
+                : clearingAll
+                  ? 'Clearing…'
+                  : `Clear all data (${activeScenarioCount})`}
+            </span>
           </button>
         </div>
       </aside>
 
-      <div className="main-panel">
+      <div className={`main-panel ${tab === 'home' ? 'main-panel--wide' : ''}`}>
         {backendError && (
           <div className="banner error">
             <span>⚠</span>
@@ -326,9 +325,82 @@ function App() {
           </div>
         )}
 
+        {tab === 'home' && (
+          <>
+            <header className="page-header">
+              <span className="page-eyebrow">Supplier QA</span>
+              <h1>Supplier Mock Factory</h1>
+              <p>Pick a section to get started.</p>
+
+              <div className="home-meta">
+                <div className="env-switcher">
+                  <span>Environment</span>
+                  <select
+                    className={env === 'stg' ? 'env-stg' : 'env-dev'}
+                    value={env}
+                    onChange={(e) => handleEnvChange(e.target.value as SmfEnv)}
+                  >
+                    <option value="dev">Dev</option>
+                    <option value="stg">Staging</option>
+                  </select>
+                </div>
+                <div className="stat-chip">
+                  <span>Backend</span>
+                  <strong className="status-value" style={{ color: healthOk ? 'var(--success)' : 'var(--danger)' }}>
+                    <span
+                      className={`pulse-dot ${healthOk ? '' : 'pulse-dot--off'}`}
+                      style={{ background: healthOk ? 'var(--success)' : 'var(--danger)' }}
+                    />
+                    {healthOk ? 'Connected' : 'Offline'}
+                  </strong>
+                </div>
+              </div>
+            </header>
+
+            <div className="home-menu">
+              <button type="button" className="home-tile tile-create" onClick={() => setTab('create')}>
+                <span className="home-tile-icon">✦</span>
+                <div>
+                  <strong>New scenario</strong>
+                  <span>Configure supplier packages and provision mocks, contracts, and apiKey</span>
+                </div>
+              </button>
+              <button type="button" className="home-tile tile-browse" onClick={() => setTab('browse')}>
+                <span className="home-tile-icon">☰</span>
+                <div>
+                  <strong>Scenarios{scenarioCount > 0 && ` (${scenarioCount})`}</strong>
+                  <span>Browse persisted scenarios and inspect details</span>
+                </div>
+              </button>
+              <button type="button" className="home-tile tile-crawla" onClick={() => setTab('crawla')}>
+                <span className="home-tile-icon">◌</span>
+                <div>
+                  <strong>Crawla Mocks</strong>
+                  <span>Fetch live Crawla anchors and provision a scenario export</span>
+                </div>
+              </button>
+              <button type="button" className="home-tile tile-queue" onClick={() => setTab('queue')}>
+                <span className="home-tile-icon">⏵</span>
+                <div>
+                  <strong>Crawla Mock Queue Runner</strong>
+                  <span>Run all Crawla bucket scenarios sequentially</span>
+                </div>
+              </button>
+              <button type="button" className="home-tile tile-test" onClick={() => setTab('test-run')}>
+                <span className="home-tile-icon">⬡</span>
+                <div>
+                  <strong>Test Runs</strong>
+                  <span>Live dashboard for Smart Booking and Crawla test results</span>
+                </div>
+              </button>
+            </div>
+          </>
+        )}
+
         {tab === 'create' && (
           <>
             <header className="page-header">
+              <span className="page-eyebrow">Provisioning</span>
               <h1>Create mock scenario</h1>
               <p>Configure HBS + EXP packages, then provision mocks, contracts, and apiKey.</p>
             </header>
@@ -347,6 +419,9 @@ function App() {
                   <div className="create-status">
                     <div className="id-badge">
                       ID <code>{activeScenarioId}</code>
+                      <span className={`env-badge env-${bundle.env}`} style={{ marginLeft: '0.5rem' }}>
+                        {bundle.env}
+                      </span>
                     </div>
                     {showProgress && (
                       <ScenarioProgress status={bundle.status as ScenarioStatus} polling={polling} />
@@ -377,6 +452,7 @@ function App() {
         {tab === 'crawla' && (
           <>
             <header className="page-header">
+              <span className="page-eyebrow">Live Anchors</span>
               <h1>Crawla mocks</h1>
               <p>Fetch live Crawla anchors, tune HBS/EXP prices, then provision the scenario export.</p>
             </header>
@@ -395,6 +471,9 @@ function App() {
                   <div className="create-status">
                     <div className="id-badge">
                       ID <code>{activeScenarioId}</code>
+                      <span className={`env-badge env-${bundle.env}`} style={{ marginLeft: '0.5rem' }}>
+                        {bundle.env}
+                      </span>
                     </div>
                     {showProgress && (
                       <ScenarioProgress status={bundle.status as ScenarioStatus} polling={polling} />
@@ -425,6 +504,7 @@ function App() {
         {tab === 'queue' && (
           <>
             <header className="page-header">
+              <span className="page-eyebrow">Automation</span>
               <h1>Crawla Mock Queue Runner</h1>
               <p>
                 Runs all five Crawla bucket scenarios sequentially — each scenario is fully provisioned,
@@ -449,6 +529,7 @@ function App() {
         {tab === 'test-run' && (
           <>
             <header className="page-header">
+              <span className="page-eyebrow">Live Dashboard</span>
               <h1>Test Runs</h1>
               <p>
                 Live dashboard — Smart Booking and Crawla results stream in as Java tests execute.
@@ -456,7 +537,7 @@ function App() {
               </p>
             </header>
 
-            <div className="layout" style={{ height: 'calc(100vh - 130px)', overflow: 'hidden' }}>
+            <div className="layout" style={{ height: 'calc(100vh - 185px)', overflow: 'hidden' }}>
               <section className="card" style={{ padding: 0, overflow: 'hidden', height: '100%' }}>
                 <TestRunDashboard />
               </section>
@@ -467,6 +548,7 @@ function App() {
         {tab === 'browse' && (
           <>
             <header className="page-header">
+              <span className="page-eyebrow">History</span>
               <h1>Scenario history</h1>
               <p>Browse persisted scenarios from SQLite. Select one to view details.</p>
             </header>
@@ -503,6 +585,9 @@ function App() {
                   <>
                     <div className="id-badge">
                       ID <code>{activeScenarioId}</code>
+                      <span className={`env-badge env-${bundle.env}`} style={{ marginLeft: '0.5rem' }}>
+                        {bundle.env}
+                      </span>
                     </div>
                     {showProgress && (
                       <ScenarioProgress status={bundle.status as ScenarioStatus} polling={polling} />

@@ -1,4 +1,4 @@
-import { API_BASE } from './base'
+import { API_BASE, envHeaders } from './base'
 import type {
   CrawlaAnchorPackagesResponse,
   CrawlaAnchorRequest,
@@ -13,6 +13,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (init?.body != null && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
+  headers.set('X-SMF-Env', envHeaders()['X-SMF-Env'])
 
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,

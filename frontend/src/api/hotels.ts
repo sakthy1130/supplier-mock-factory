@@ -1,4 +1,4 @@
-import { API_BASE } from './base'
+import { API_BASE, envHeaders } from './base'
 
 export interface HotelMappingResponse {
   atg_hotel_id: string
@@ -10,7 +10,9 @@ export async function resolveHotelMapping(atgHotelId: string, suppliers: string[
     atg_hotel_id: atgHotelId,
     suppliers: suppliers.join(','),
   })
-  const response = await fetch(`${API_BASE}/api/hotels/mapping?${params}`)
+  const response = await fetch(`${API_BASE}/api/hotels/mapping?${params}`, {
+    headers: envHeaders(),
+  })
   if (!response.ok) {
     const body = await response.text()
     let detail = body

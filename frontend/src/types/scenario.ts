@@ -12,7 +12,7 @@ export type ScenarioStatus =
 
 export interface PackageSpec {
   count: number
-  room_basis: string
+  room_basis: string[]
   room_names: string[]
   supplier_currency: string
   prices: number[]
@@ -20,6 +20,7 @@ export interface PackageSpec {
 }
 
 export const DEFAULT_ROOM_NAME = '1 Double Bed, Nonsmoking'
+export const DEFAULT_ROOM_BASIS = 'RO'
 
 export const DEFAULT_SUPPLIER_CURRENCIES: Record<SupplierCode, string> = {
   HBS: 'EUR',
@@ -39,11 +40,13 @@ export interface ScenarioRequest {
   check_out: string
   atg_hotel_id: string
   suppliers: SupplierScenario[]
+  assign_to_br?: boolean
 }
 
 export interface ScenarioBundle {
   id?: string
   namespace: string
+  env: string
   status: ScenarioStatus
   api_key?: string
   api_key_id?: string
@@ -66,6 +69,7 @@ export interface ScenarioBundle {
 export interface ScenarioListItem {
   id: string
   namespace: string
+  env: string
   status: ScenarioStatus
   created_at?: string
   suppliers: string[]

@@ -51,6 +51,7 @@ export function ScenarioList({ items, selectedId, onSelect, onClear, onRefresh, 
                 >
                   <div className="list-item-top">
                     <span className="list-ns">{item.namespace}</span>
+                    <span className={`env-badge env-${item.env}`}>{item.env}</span>
                     <span className={statusClass(item.status)}>{formatStatus(item.status)}</span>
                   </div>
                   <span className="list-meta">
