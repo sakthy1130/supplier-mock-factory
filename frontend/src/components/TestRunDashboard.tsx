@@ -61,14 +61,14 @@ const SUITE_COLOR: Record<string, string> = {
   Other: '#6b7280',
 }
 
-function suiteOf(testClass: string): string {
+export function suiteOf(testClass: string): string {
   const name = shortClass(testClass)
   if (/crawla/i.test(name)) return 'Crawla'
   if (/^sb|smartbook/i.test(name)) return 'Smart Booking'
   return 'Other'
 }
 
-function runSuites(results: TestResult[]): string[] {
+export function runSuites(results: TestResult[]): string[] {
   const seen = new Set<string>()
   for (const r of results) seen.add(suiteOf(r.test_class))
   return [...seen]

@@ -1,4 +1,5 @@
 import type { ScenarioListItem } from '../types/scenario'
+import { formatStatus, statusClass } from '../utils/scenarioFormat'
 
 interface Props {
   items: ScenarioListItem[]
@@ -8,14 +9,6 @@ interface Props {
   onRefresh: () => void
   loading: boolean
   clearingIds?: Set<string>
-}
-
-function statusClass(status: string) {
-  return `status-pill status-${status.toLowerCase().replace(/_/g, '-')}`
-}
-
-function formatStatus(status: string) {
-  return status.replace(/_/g, ' ')
 }
 
 export function ScenarioList({ items, selectedId, onSelect, onClear, onRefresh, loading, clearingIds = new Set() }: Props) {

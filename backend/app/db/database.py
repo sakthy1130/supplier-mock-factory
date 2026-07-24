@@ -51,6 +51,10 @@ def _run_migrations(engine) -> None:
         # staging — backfill them as 'stg' so their lifecycle (teardown/refresh)
         # keeps resolving to the staging settings they were actually built with.
         ("scenarios", "env", "VARCHAR(16) DEFAULT 'stg'"),
+        # Templates created before multi-supplier support only have the legacy
+        # supplier/packages_json columns — service layer falls back to those
+        # when suppliers_json is NULL.
+        ("scenario_templates", "suppliers_json", "JSON"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in migrations:

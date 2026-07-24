@@ -45,3 +45,25 @@ class ScenarioRecord(Base):
     # SB-specific — null for non-SB scenarios
     sb_config_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     sb_group_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
+
+class ScenarioTemplateRecord(Base):
+    """A saved supplier package preset — pasted in via the Template Bedding Mock UI
+    so a known package layout (room names/prices/board/refundability) can be reused
+    to seed the scenario wizard without retyping it each time."""
+
+    __tablename__ = "scenario_templates"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    label: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str] = mapped_column(String(500), default="")
+    atg_hotel_id: Mapped[str] = mapped_column(String(64), default="")
+    # Legacy (pre-multi-supplier) columns — kept so templates created before
+    # suppliers_json existed still read back correctly; see _record_to_model
+    # in scenario_template_service.py. New rows populate the first supplier
+    # here too, for anything that might still read the old shape.
+    supplier: Mapped[str] = mapped_column(String(8))
+    packages_json: Mapped[list] = mapped_column(JSON)
+    # Full multi-supplier payload: [{"supplier": "HBS", "packages": [...]}, ...]
+    suppliers_json: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

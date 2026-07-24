@@ -112,6 +112,17 @@ class PackageSpec(BaseModel):
 class SupplierScenario(BaseModel):
     code: SupplierCode
     packages: PackageSpec
+    contract_currency: str = Field(
+        default="USD",
+        min_length=3,
+        max_length=3,
+        description="ISO 4217 currency code for the contract; defaults to USD",
+    )
+
+    @field_validator("contract_currency")
+    @classmethod
+    def _upper_contract_currency(cls, value: str) -> str:
+        return value.strip().upper()
 
 
 class SupplierMutation(BaseModel):

@@ -121,6 +121,7 @@ async def test_create_contracts_chc_clone_normalizes_currency_to_scenario():
         suppliers=[
             SupplierScenario(
                 code=SupplierCode.CHC,
+                contract_currency="SAR",
                 packages=PackageSpec(count=1, room_basis="RO", prices=[100.0], supplier_currency="SAR"),
             )
         ],

@@ -10,7 +10,7 @@ function defaultNamespace() {
   return `qa-${stamp}-${suffix}`
 }
 
-interface PackageRow {
+export interface PackageRow {
   roomBasis: string
   roomName: string
   price: string
@@ -74,34 +74,50 @@ const SUPPLIER_META: {
   { code: 'CHC', className: 'chc', label: 'CHC', description: 'Choice · net supplier', currencyPlaceholder: 'SAR' },
 ]
 
+export interface ScenarioWizardTemplate {
+  atgHotelId?: string
+  enabledSuppliers?: Partial<Record<SupplierCode, boolean>>
+  packages?: Partial<Record<SupplierCode, PackageRow[]>>
+  supplierCurrencies?: Partial<Record<SupplierCode, string>>
+  contractCurrencies?: Partial<Record<SupplierCode, string>>
+}
+
 interface Props {
   onSubmit: (request: ScenarioRequest) => Promise<void>
   busy: boolean
+  initialTemplate?: ScenarioWizardTemplate
 }
 
-export function ScenarioWizard({ onSubmit, busy }: Props) {
+export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
   const [namespace, setNamespace] = useState(defaultNamespace)
   const [checkIn, setCheckIn] = useState('2026-09-01')
   const [checkOut, setCheckOut] = useState('2026-09-03')
-  const [atgHotelId, setAtgHotelId] = useState('1446194')
+  const [atgHotelId, setAtgHotelId] = useState(() => initialTemplate?.atgHotelId ?? '1446194')
   const [, setSupplierHotelIds] = useState<Record<string, string>>({})
   const [mappingHint, setMappingHint] = useState<string | null>(null)
   const [mappingLoading, setMappingLoading] = useState(false)
-  const [supplierCurrencies, setSupplierCurrencies] = useState<Record<SupplierCode, string>>({
+  const [supplierCurrencies, setSupplierCurrencies] = useState<Record<SupplierCode, string>>(() => ({
     ...DEFAULT_SUPPLIER_CURRENCIES,
-  })
-  const [supplierPackages, setSupplierPackages] = useState<Record<SupplierCode, PackageRow[]>>({
-    HBS: defaultPackageRows(3),
-    EXP: defaultPackageRows(3),
-    RHK: defaultPackageRows(3),
-    CHC: defaultPackageRows(3),
-  })
-  const [enabledSuppliers, setEnabledSuppliers] = useState<Record<SupplierCode, boolean>>({
-    HBS: true,
-    EXP: true,
-    RHK: false,
-    CHC: false,
-  })
+    ...(initialTemplate?.supplierCurrencies ?? {}),
+  }))
+  const [contractCurrencies, setContractCurrencies] = useState<Record<SupplierCode, string>>(() => ({
+    HBS: initialTemplate?.contractCurrencies?.HBS ?? 'USD',
+    EXP: initialTemplate?.contractCurrencies?.EXP ?? 'USD',
+    RHK: initialTemplate?.contractCurrencies?.RHK ?? 'USD',
+    CHC: initialTemplate?.contractCurrencies?.CHC ?? 'USD',
+  }))
+  const [supplierPackages, setSupplierPackages] = useState<Record<SupplierCode, PackageRow[]>>(() => ({
+    HBS: initialTemplate?.packages?.HBS ?? defaultPackageRows(3),
+    EXP: initialTemplate?.packages?.EXP ?? defaultPackageRows(3),
+    RHK: initialTemplate?.packages?.RHK ?? defaultPackageRows(3),
+    CHC: initialTemplate?.packages?.CHC ?? defaultPackageRows(3),
+  }))
+  const [enabledSuppliers, setEnabledSuppliers] = useState<Record<SupplierCode, boolean>>(() => ({
+    HBS: initialTemplate?.enabledSuppliers?.HBS ?? true,
+    EXP: initialTemplate?.enabledSuppliers?.EXP ?? true,
+    RHK: initialTemplate?.enabledSuppliers?.RHK ?? false,
+    CHC: initialTemplate?.enabledSuppliers?.CHC ?? false,
+  }))
   const [assignToBr, setAssignToBr] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -154,6 +170,10 @@ export function ScenarioWizard({ onSubmit, busy }: Props) {
     setSupplierCurrencies((prev) => ({ ...prev, [code]: value.toUpperCase().slice(0, 3) }))
   }
 
+  const updateContractCurrency = (code: SupplierCode, value: string) => {
+    setContractCurrencies((prev) => ({ ...prev, [code]: value.toUpperCase().slice(0, 3) }))
+  }
+
   const updateRow = (code: SupplierCode, index: number, patch: Partial<PackageRow>) => {
     setSupplierPackages((prev) => {
       const rows = prev[code].map((row, i) => (i === index ? { ...row, ...patch } : row))
@@ -195,6 +215,7 @@ export function ScenarioWizard({ onSubmit, busy }: Props) {
           const parsed = parseRows(code, rows)
           return {
             code,
+            contract_currency: contractCurrencies[code] || 'USD',
             packages: {
               count: rows.length,
               room_basis: parsed.room_basis,
@@ -301,13 +322,26 @@ export function ScenarioWizard({ onSubmit, busy }: Props) {
                 {enabled && (
                   <div className="supplier-tile-content">
                     <label className="supplier-tile-field" style={{ maxWidth: '140px' }}>
-                      Currency
+                      Supplier Currency
                       <input
                         value={supplierCurrencies[meta.code]}
                         onChange={(e) => updateSupplierCurrency(meta.code, e.target.value)}
                         maxLength={3}
                         placeholder={meta.currencyPlaceholder}
                       />
+                    </label>
+
+                    <label className="supplier-tile-field" style={{ maxWidth: '140px' }}>
+                      Contract Currency
+                      <select
+                        value={contractCurrencies[meta.code]}
+                        onChange={(e) => updateContractCurrency(meta.code, e.target.value)}
+                      >
+                        <option value="SAR">SAR</option>
+                        <option value="AED">AED</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                      </select>
                     </label>
 
                     <div className="package-rows">

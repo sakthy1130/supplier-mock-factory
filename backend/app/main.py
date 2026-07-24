@@ -5,7 +5,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import admin, crawla, env as env_routes, health, hotels, logs, scenarios, suppliers, test_run
+from app.api.routes import (
+    admin,
+    crawla,
+    env as env_routes,
+    health,
+    hotels,
+    logs,
+    scenario_templates,
+    scenarios,
+    suppliers,
+    test_run,
+)
 from app.config import get_settings
 from app.db.database import init_db
 from app.env_context import get_current_env, reset_current_env, set_current_env
@@ -59,6 +70,7 @@ async def env_context_middleware(request: Request, call_next):
 app.include_router(health.router)
 app.include_router(env_routes.router, prefix="/api")
 app.include_router(scenarios.router, prefix="/api")
+app.include_router(scenario_templates.router, prefix="/api")
 app.include_router(crawla.router, prefix="/api")
 app.include_router(suppliers.router, prefix="/api")
 app.include_router(hotels.router, prefix="/api")

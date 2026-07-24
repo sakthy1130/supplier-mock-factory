@@ -31,6 +31,7 @@ export const DEFAULT_SUPPLIER_CURRENCIES: Record<SupplierCode, string> = {
 
 export interface SupplierScenario {
   code: SupplierCode
+  contract_currency: string
   packages: PackageSpec
 }
 

@@ -152,6 +152,7 @@ P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from En
 - **Hotel ids:** UI sends **ATG hotel id**; backend resolves per-supplier ids via `GET /v2/supplier/{supplierCode}/{atgHotelId}`; mocks use supplier ids (e.g. HBS `156652`), core search uses ATG (e.g. `1446194`)
 - **Linkage critical:** `propagate_package_linkage` syncs packages → prebook → search (rateKey, net, boardCode, single room) — mismatch causes `E3021.1` price errors
 - Packages mutation collapses to **single room** (`hotel["rooms"] = [room]`)
+- **Not scenario-isolated by ATG hotel id:** unlike EXP (per-contract override URLs, naturally scoped to one namespace), HBS resolves packages by **contract for the ATG hotel id** across whatever's active in Backoffice. If two READY scenarios share the same `atg_hotel_id`, the real merge service returns packages from **both** contracts, surfacing as an unexpected package count/prices in only one of them (confirmed live in dev: a 3-package scenario showed 12, matching another still-active scenario's count on the same hotel id). Always tear down the previous scenario for a hotel id before creating a new one that reuses it — this is why the Template Bedding Mock presets warn about sharing a hotel id.
 
 ### EXP
 
