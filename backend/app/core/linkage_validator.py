@@ -153,17 +153,20 @@ class LinkageValidator:
         if packages is None:
             raise LinkageError("EXT Packages template missing")
 
-        rates = _ext_package_rates(packages)
-        if len(rates) < spec.count:
+        accommodations = _ext_package_rates(packages)
+        if len(accommodations) < spec.count:
             raise LinkageError(
-                f"EXT package rate count {len(rates)} < requested {spec.count}"
+                f"EXT accommodation count {len(accommodations)} < requested {spec.count}"
             )
 
         expected_meals = normalized_room_basis(spec)
-        for index, rate in enumerate(rates[: spec.count]):
-            meal = rate.get("mealPlan")
-            if meal and meal != expected_meals[index]:
-                raise LinkageError("EXT package mealPlan does not match requested room_basis")
+        for index, accommodation in enumerate(accommodations[: spec.count]):
+            # EXT stores board in distributions[0]
+            distributions = accommodation.get("distributions", [])
+            if distributions and isinstance(distributions[0], dict):
+                meal = distributions[0].get("board")
+                if meal and meal != expected_meals[index]:
+                    raise LinkageError("EXT accommodation board does not match requested room_basis")
 
 
 def _chc_package_rates(packages: dict) -> list[dict]:
@@ -173,12 +176,16 @@ def _chc_package_rates(packages: dict) -> list[dict]:
 
 
 def _ext_package_rates(packages: dict) -> list[dict]:
-    """Extract distributions from EXT Packages response (accommodations with distributions)."""
+    """Extract distributions from EXT Packages response (accommodations with distributions).
+
+    EXT structure: body.body[].accommodations[] (one per package count).
+    Each accommodation has distributions[], but we validate by accommodation count.
+    """
     body = packages.get("httpResponse", {}).get("body", {})
     if not isinstance(body, dict):
         return []
 
-    # EXT structure: body.body[].accommodations[].distributions[]
+    # EXT structure: body.body[].accommodations[]
     body_list = body.get("body")
     if not isinstance(body_list, list) or not body_list:
         return []
@@ -188,12 +195,11 @@ def _ext_package_rates(packages: dict) -> list[dict]:
         return []
 
     accommodations = hotel.get("accommodations")
-    if not isinstance(accommodations, list) or not accommodations:
+    if not isinstance(accommodations, list):
         return []
 
-    # Collect all distributions from first accommodation as "rates"
-    distributions = accommodations[0].get("distributions", [])
-    return [dist for dist in distributions if isinstance(dist, dict)]
+    # Return accommodations as "rates" — one accommodation per package
+    return [acc for acc in accommodations if isinstance(acc, dict)]
 
 
 def _rhk_meal_for_basis(room_basis: str) -> str:
