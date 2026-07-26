@@ -126,16 +126,29 @@ class ExtMockPlugin(SupplierMockPlugin):
                     price_details["netPrice"] = price * nights
                     price_details["totalPrice"] = price * nights
 
-                # Update per-night prices
+                # Update per-night prices (one entry per night)
+                from datetime import timedelta
                 per_night_prices = {}
                 total_per_night_prices = {}
                 for i in range(nights):
-                    night_date = (check_in_dt.replace(day=check_in_dt.day + i)).strftime("%Y-%m-%d") if i == 0 else (check_in_dt + __import__('datetime').timedelta(days=i)).strftime("%Y-%m-%d")
+                    night_date = (check_in_dt + timedelta(days=i)).strftime("%Y-%m-%d")
                     per_night_prices[night_date] = price
                     total_per_night_prices[night_date] = price
 
                 template_dist["netPricePerNight"] = per_night_prices
                 template_dist["totalPricePerNight"] = total_per_night_prices
+
+                # Update conditions (two objects required for EXT API)
+                conditions = template_dist.get("conditions", [])
+                if isinstance(conditions, list):
+                    # First condition with penalties
+                    if len(conditions) > 0 and isinstance(conditions[0], dict):
+                        if "penalties" in conditions[0]:
+                            conditions[0]["penalties"] = [{
+                                "deductionType": "PERCENTAGE",
+                                "daysBeforeArrival": 2,
+                                "deductingAmount": 100 if refundable[index] else 0
+                            }]
 
                 accommodation["distributions"] = [template_dist]
 

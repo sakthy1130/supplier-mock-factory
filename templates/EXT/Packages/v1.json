@@ -35,7 +35,7 @@
                   "ratePlanId": "25338",
                   "roomId": "206849",
                   "board": "BB",
-                  "rateType": "ROOM",
+                  "rateType": "PERSON",
                   "isNet": true,
                   "roomCriteria": {
                     "adults": 2,
@@ -46,12 +46,11 @@
                     "extraBed": 0
                   },
                   "promotions": [],
-                  "numberRooms": 1,
                   "conditions": [
                     {
                       "stayPeriods": [
                         {
-                          "from": "2026-01-01",
+                          "from": "2024-06-11",
                           "to": "2026-12-31"
                         }
                       ],
@@ -59,16 +58,28 @@
                         {
                           "deductionType": "PERCENTAGE",
                           "daysBeforeArrival": 2,
-                          "deductingAmount": 0
+                          "deductingAmount": 100
                         }
                       ],
                       "isMerged": false
+                    },
+                    {
+                      "stayPeriods": [],
+                      "penalties": [],
+                      "isMerged": true
                     }
                   ],
+                  "numberRooms": 1,
+                  "requestedNumberAdults": 2,
+                  "requestedChildrenAges": [],
+                  "supplierName": "ashfaqTest",
+                  "supplierId": 1001818,
                   "roomCode": "---:BUS:ROM:---:1G4:---:---:---",
                   "roomTemplateName": "Business Room",
+                  "isVCC": false,
                   "isBookingNetPrice": true,
                   "ratePlanName": "Standard Rate Plan",
+                  "ratePlanDescription": "",
                   "netPricePerNight": {
                     "2026-09-01": 500,
                     "2026-09-02": 500
@@ -76,7 +87,9 @@
                   "totalPricePerNight": {
                     "2026-09-01": 500,
                     "2026-09-02": 500
-                  }
+                  },
+                  "roomChannelId": "1121",
+                  "hotelTimeZoneId": "Asia/Colombo"
                 }
               ],
               "searchId": "019ac499-defd-746f-aea6-3523ed00009d"
