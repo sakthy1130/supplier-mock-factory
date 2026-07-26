@@ -8,6 +8,7 @@ from typing import Any
 from app.config import get_settings
 from app.core.chc_paths import apply_chc_contract_opt_defaults
 from app.core.exp_paths import apply_exp_contract_opt_defaults
+from app.core.ext_paths import apply_ext_contract_opt_defaults
 from app.core.hbs_paths import apply_hbs_contract_opt_defaults
 from app.core.mock_urls import build_mock_opt_urls
 from app.core.supplier_registry import get_supplier_registry
@@ -64,6 +65,8 @@ class ContractProvisioner:
             return self.settings.rhk_reference_contract_id
         if supplier_code == "CHC":
             return self.settings.chc_reference_contract_id
+        if supplier_code == "EXT":
+            return self.settings.ext_reference_contract_id
         return ""
 
 
@@ -90,6 +93,8 @@ def _clone_contract(
             apply_exp_contract_opt_defaults(opt, get_settings().mock_server_url)
         elif supplier_code == "CHC":
             apply_chc_contract_opt_defaults(opt, get_settings().mock_server_url)
+        elif supplier_code == "EXT":
+            apply_ext_contract_opt_defaults(opt, get_settings().mock_server_url)
     # Apply contract currency to all suppliers (not just CHC)
     body["currency"] = contract_currency
     supported = body.get("supportedCurrencies", [])
@@ -134,6 +139,8 @@ def _minimal_contract_body(
             if supplier_code == "EXP"
             else apply_chc_contract_opt_defaults(dict(opt_urls), mock_base_url)
             if supplier_code == "CHC"
+            else apply_ext_contract_opt_defaults(dict(opt_urls), mock_base_url)
+            if supplier_code == "EXT"
             else dict(opt_urls)
         ),
         "permission": {
@@ -156,9 +163,9 @@ def _contract_uid(namespace: str, supplier_code: str) -> str:
 
 def _apply_hbs_contract_defaults(body: dict[str, Any], supplier_code: str) -> None:
     # Net suppliers receive the borrowed market price (DynamicMarkupTarget); gross
-    # suppliers provide it (MarketPriceSource). CHC is net like HBS — without this it
+    # suppliers provide it (MarketPriceSource). CHC and EXT are net like HBS — without this it
     # inherits the reference contract's "NotParticipating" and is left out of merge.
-    if supplier_code in ("HBS", "CHC"):
+    if supplier_code in ("HBS", "CHC", "EXT"):
         body["dynamicMarketType"] = "DynamicMarkupTarget"
     elif supplier_code == "EXP":
         body["dynamicMarketType"] = "MarketPriceSource"

@@ -59,7 +59,7 @@ function parseRows(supplierLabel: string, rows: PackageRow[]): ParsedRows {
   return { room_basis, room_names, prices, refundable }
 }
 
-const SUPPLIER_CODES: SupplierCode[] = ['HBS', 'EXP', 'RHK', 'CHC']
+const SUPPLIER_CODES: SupplierCode[] = ['HBS', 'EXP', 'RHK', 'CHC', 'EXT']
 
 const SUPPLIER_META: {
   code: SupplierCode
@@ -72,6 +72,7 @@ const SUPPLIER_META: {
   { code: 'EXP', className: 'exp', label: 'EXP', description: 'Expedia · override URLs', currencyPlaceholder: 'USD' },
   { code: 'RHK', className: 'rhk', label: 'RHK', description: 'RateHawk · WorldOTA B2B', currencyPlaceholder: 'USD' },
   { code: 'CHC', className: 'chc', label: 'CHC', description: 'Choice · net supplier', currencyPlaceholder: 'SAR' },
+  { code: 'EXT', className: 'ext', label: 'EXT', description: 'Extranet · net supplier', currencyPlaceholder: 'EUR' },
 ]
 
 export interface ScenarioWizardTemplate {

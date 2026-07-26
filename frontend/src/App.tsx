@@ -962,6 +962,7 @@ function App() {
                               <option value="EXP">EXP</option>
                               <option value="RHK">RHK</option>
                               <option value="CHC">CHC</option>
+                              <option value="EXT">EXT</option>
                             </select>
                           </label>
                         </div>

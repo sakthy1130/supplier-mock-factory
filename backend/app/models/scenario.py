@@ -12,6 +12,7 @@ class SupplierCode(str, Enum):
     EXP = "EXP"
     RHK = "RHK"
     CHC = "CHC"
+    EXT = "EXT"
 
 
 class SBGroupConfiguration(BaseModel):

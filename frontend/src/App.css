@@ -821,6 +821,7 @@
 .supplier-tile.exp { --tile-color: var(--exp); }
 .supplier-tile.rhk { --tile-color: var(--rhk); }
 .supplier-tile.chc { --tile-color: var(--chc); }
+.supplier-tile.ext { --tile-color: var(--ext); }
 
 .form-footer {
   display: flex;

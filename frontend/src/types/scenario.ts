@@ -1,4 +1,4 @@
-export type SupplierCode = 'HBS' | 'EXP' | 'RHK' | 'CHC'
+export type SupplierCode = 'HBS' | 'EXP' | 'RHK' | 'CHC' | 'EXT'
 
 export type ScenarioStatus =
   | 'PENDING'

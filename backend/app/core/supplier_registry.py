@@ -66,9 +66,21 @@ _STG_REGISTRY: _SupplierRegistry = {
             "autoId": 107017,
         },
     },
+    "EXT": {
+        "supplier_id": "642c33cbff075a612ab6ad06",
+        "auto_id": 100423,
+        "code": "EXT",
+        "name": "Extranet",
+        "supplier_type": "net",
+        "supplier_detail": {
+            "code": "EXT",
+            "name": "Extranet",
+            "autoId": 100423,
+        },
+    },
 }
 
-# Dev's own confirmed supplier ids for HBS/EXP (see module docstring). RHK/CHC are
+# Dev's own confirmed supplier ids for HBS/EXP (see module docstring). RHK/CHC/EXT are
 # copied from stg as an unverified placeholder — fix the same way if they NPE too.
 _DEV_REGISTRY: _SupplierRegistry = {
     **_STG_REGISTRY,
