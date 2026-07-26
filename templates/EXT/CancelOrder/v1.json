@@ -1,0 +1,22 @@
+{
+  "httpRequest": {
+    "path": "/extranet/public/api/v1/accommodation/cancel",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "statusCode": 200,
+    "headers": {
+      "Content-Type": ["application/json"]
+    },
+    "body": {
+      "cancellationId": "cancel_67890",
+      "reservationId": "res_001",
+      "bookingId": "booking_12345",
+      "status": "Cancelled",
+      "result": "Successful",
+      "hotelId": "100000",
+      "refundAmount": 100.0,
+      "currency": "USD"
+    }
+  }
+}

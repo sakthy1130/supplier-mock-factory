@@ -1,0 +1,37 @@
+{
+  "httpRequest": {
+    "path": "/extranet/public/api/v1/accommodation/search",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "statusCode": 200,
+    "headers": {
+      "Content-Type": ["application/json"]
+    },
+    "body": {
+      "reservations": [
+        {
+          "reservationId": "res_001",
+          "bookingId": "booking_12345",
+          "status": "Confirmed",
+          "result": "Successful",
+          "hotelId": "100000",
+          "checkin": "2026-09-01",
+          "checkout": "2026-09-03",
+          "roomRates": [
+            {
+              "roomId": "1001",
+              "roomName": "Double Room",
+              "rateId": "rate_001",
+              "board": "RO",
+              "mealPlan": "RO",
+              "price": 100.0,
+              "total": 100.0,
+              "currency": "USD"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

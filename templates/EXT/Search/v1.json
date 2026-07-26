@@ -1,0 +1,49 @@
+{
+  "httpRequest": {
+    "path": "/extranet/public/api/v1/distribution/search",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "statusCode": 200,
+    "headers": {
+      "Content-Type": ["application/json"]
+    },
+    "body": {
+      "hotels": [
+        {
+          "hotelId": "100000",
+          "checkin": "2026-09-01",
+          "checkout": "2026-09-03",
+          "rooms": [
+            {
+              "roomId": "1001",
+              "roomName": "Double Room",
+              "board": "RO",
+              "mealPlan": "RO",
+              "price": 100.0,
+              "total": 100.0,
+              "currency": "USD",
+              "cancelPolicy": {
+                "code": "AD0_0",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1,
+                      "deadline": "4PM"
+                    },
+                    "penaltyCharge": {
+                      "percent": 0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
