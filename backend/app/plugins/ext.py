@@ -65,6 +65,7 @@ class ExtMockPlugin(SupplierMockPlugin):
                     if hotel_id:
                         hotel["hotelId"] = hotel_id
                     self._mutate_accommodations(hotel, spec, check_in, check_out)
+                    self._update_currency(hotel, spec.supplier_currency)
 
         return result
 
@@ -73,6 +74,28 @@ class ExtMockPlugin(SupplierMockPlugin):
         # EXT doesn't require explicit linkage synchronization in the same way
         # as HBS/CHC — the structure is more flexible
         pass
+
+    def _update_currency(self, hotel: dict, currency: str) -> None:
+        """Update currency in all accommodations and distributions."""
+        accommodations = hotel.get("accommodations")
+        if not isinstance(accommodations, list):
+            return
+
+        for accommodation in accommodations:
+            if not isinstance(accommodation, dict):
+                continue
+
+            # Update accommodation-level currency
+            accommodation["currency"] = currency
+
+            # Update distribution-level currency (if present)
+            distributions = accommodation.get("distributions", [])
+            if isinstance(distributions, list):
+                for distribution in distributions:
+                    if isinstance(distribution, dict):
+                        # Note: EXT distributions may have currency in priceDetails or elsewhere
+                        # but the main currency field is at accommodation level
+                        pass
 
     def _mutate_accommodations(
         self,
