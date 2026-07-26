@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
 from app.plugins.room_names import normalized_room_basis
@@ -99,6 +101,7 @@ class ExtMockPlugin(SupplierMockPlugin):
 
         for index in range(spec.count):
             accommodation = deep_copy(template_accommodation)
+            accommodation["id"] = str(uuid.uuid4())
             accommodation["checkInDate"] = check_in
             accommodation["checkOutDate"] = check_out
             accommodation["nights"] = nights

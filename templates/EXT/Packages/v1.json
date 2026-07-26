@@ -15,6 +15,7 @@
           "hotelId": "100000",
           "accommodations": [
             {
+              "id": "e0481d65-128d-4fd8-9e14-6ee4bc2f37c4",
               "checkInDate": "2026-09-01",
               "checkOutDate": "2026-09-03",
               "nights": 2,
