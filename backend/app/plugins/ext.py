@@ -130,13 +130,13 @@ class ExtMockPlugin(SupplierMockPlugin):
             accommodation["checkOutDate"] = check_out
             accommodation["nights"] = nights
 
-            # Update price fields (both accommodation and priceDetails)
-            price = prices[index]
-            total_price = price * nights
+            # Update price fields (UI passes TOTAL stay price, not per-night)
+            stay_total_price = prices[index]
 
-            accommodation["initialPrice"] = total_price
-            accommodation["totalPrice"] = total_price
-            accommodation["netPrice"] = total_price
+            # Accommodation level: use total stay price as-is
+            accommodation["initialPrice"] = stay_total_price
+            accommodation["totalPrice"] = stay_total_price
+            accommodation["netPrice"] = stay_total_price
             accommodation["noRefundable"] = not refundable[index]
 
             # Update distributions (rooms in EXT terminology)
@@ -146,12 +146,15 @@ class ExtMockPlugin(SupplierMockPlugin):
                 template_dist["board"] = meals[index]
                 template_dist["roomName"] = room_names[index]
 
-                # Update price details in distribution
+                # Update price details in distribution (use total stay price)
                 price_details = template_dist.get("priceDetails", {})
                 if isinstance(price_details, dict):
-                    price_details["initialPrice"] = total_price
-                    price_details["netPrice"] = total_price
-                    price_details["totalPrice"] = total_price
+                    price_details["initialPrice"] = stay_total_price
+                    price_details["netPrice"] = stay_total_price
+                    price_details["totalPrice"] = stay_total_price
+
+                # Calculate per-night price by dividing total by nights
+                per_night_price = stay_total_price / nights if nights > 0 else stay_total_price
 
                 # Update per-night prices (one entry per night)
                 from datetime import timedelta
@@ -159,8 +162,8 @@ class ExtMockPlugin(SupplierMockPlugin):
                 total_per_night_prices = {}
                 for i in range(nights):
                     night_date = (check_in_dt + timedelta(days=i)).strftime("%Y-%m-%d")
-                    per_night_prices[night_date] = price
-                    total_per_night_prices[night_date] = price
+                    per_night_prices[night_date] = per_night_price
+                    total_per_night_prices[night_date] = per_night_price
 
                 template_dist["netPricePerNight"] = per_night_prices
                 template_dist["totalPricePerNight"] = total_per_night_prices
