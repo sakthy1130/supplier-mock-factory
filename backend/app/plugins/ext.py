@@ -130,11 +130,13 @@ class ExtMockPlugin(SupplierMockPlugin):
             accommodation["checkOutDate"] = check_out
             accommodation["nights"] = nights
 
-            # Update price fields
+            # Update price fields (both accommodation and priceDetails)
             price = prices[index]
-            accommodation["initialPrice"] = price * nights
-            accommodation["totalPrice"] = price * nights
-            accommodation["netPrice"] = price * nights
+            total_price = price * nights
+
+            accommodation["initialPrice"] = total_price
+            accommodation["totalPrice"] = total_price
+            accommodation["netPrice"] = total_price
             accommodation["noRefundable"] = not refundable[index]
 
             # Update distributions (rooms in EXT terminology)
@@ -144,12 +146,12 @@ class ExtMockPlugin(SupplierMockPlugin):
                 template_dist["board"] = meals[index]
                 template_dist["roomName"] = room_names[index]
 
-                # Update price details
+                # Update price details in distribution
                 price_details = template_dist.get("priceDetails", {})
                 if isinstance(price_details, dict):
-                    price_details["initialPrice"] = price * nights
-                    price_details["netPrice"] = price * nights
-                    price_details["totalPrice"] = price * nights
+                    price_details["initialPrice"] = total_price
+                    price_details["netPrice"] = total_price
+                    price_details["totalPrice"] = total_price
 
                 # Update per-night prices (one entry per night)
                 from datetime import timedelta
