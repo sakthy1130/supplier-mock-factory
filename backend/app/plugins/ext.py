@@ -66,7 +66,17 @@ class ExtMockPlugin(SupplierMockPlugin):
             _force_confirmed_get_order(body)
             return result
 
-        # Update hotel ID if present
+        # Handle Search specially — hotelId is nested in hotels array
+        if log_type == "Search":
+            hotels = body.get("hotels")
+            if isinstance(hotels, list) and hotels and isinstance(hotels[0], dict):
+                if hotel_id:
+                    hotels[0]["hotelId"] = hotel_id
+                self._apply_package_mutations(hotels[0], spec, prices, refundable, meals)
+                apply_chc_supplier_currency(result, spec.supplier_currency)
+                return result
+
+        # For Packages/Booking/CancelOrder: hotelId at top level
         if hotel_id and "hotelId" in body:
             body["hotelId"] = hotel_id
 
