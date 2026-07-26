@@ -94,7 +94,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
   const [checkIn, setCheckIn] = useState('2026-09-01')
   const [checkOut, setCheckOut] = useState('2026-09-03')
   const [atgHotelId, setAtgHotelId] = useState(() => initialTemplate?.atgHotelId ?? '1446194')
-  const [, setSupplierHotelIds] = useState<Record<string, string>>({})
+  const [supplierHotelIds, setSupplierHotelIds] = useState<Record<string, string>>({})
   const [mappingHint, setMappingHint] = useState<string | null>(null)
   const [mappingLoading, setMappingLoading] = useState(false)
   const [supplierCurrencies, setSupplierCurrencies] = useState<Record<SupplierCode, string>>(() => ({
@@ -214,6 +214,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
         check_in: checkIn,
         check_out: checkOut,
         atg_hotel_id: atgHotelId.trim(),
+        supplier_hotel_ids: supplierHotelIds,
         suppliers: suppliers.map((code) => {
           const rows = supplierPackages[code]
           const parsed = parseRows(code, rows)

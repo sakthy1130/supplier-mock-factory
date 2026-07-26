@@ -41,6 +41,7 @@ export interface ScenarioRequest {
   check_in: string
   check_out: string
   atg_hotel_id: string
+  supplier_hotel_ids?: Record<string, string>
   suppliers: SupplierScenario[]
   assign_to_br?: boolean
 }
