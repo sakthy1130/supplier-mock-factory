@@ -132,7 +132,7 @@ P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from En
 
 ---
 
-## Supplier notes (HBS + EXP + RHK)
+## Supplier notes (HBS + EXP + RHK + CHC + EXT)
 
 ### Shared (v1)
 
@@ -175,6 +175,35 @@ P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from En
 - **Meal mapping:** RO→`nomeal`, BB→`breakfast`, HB→`halfboard`, FB→`fullboard`
 - Java ref: `qaBackend_Enigma/.../serviceAdapters/rhk/RhkAdapter*.java`
 
+### CHC (Choice Hotels)
+
+- Adapter source match: `hotels-choice-adapter-service`
+- **Supplier type:** NET (like HBS) — receives market price, DynamicMarkupTarget
+- **Contract opt:** `searchUrl`, `availabilityUrl`, `bookingUrl`, `orderUrl`, `cancelBookingUrl`
+- **Supported currencies:** SAR, AED, USD, etc.
+- **Hotel ids:** ATG mapping `GET /v2/supplier/CHC/{atgHotelId}` → supplier hotel id
+- **Reference contract:** `CHC_REFERENCE_CONTRACT_ID` (from `.env`)
+
+### EXT (Extranet)
+
+- **Supplier type:** NET (like HBS, CHC) — receives market price, DynamicMarkupTarget
+- **API endpoints** (`app/core/ext_paths.py`):
+  - Search: `/extranet/public/api/v1/distribution/search`
+  - Availability (Packages): `/extranet/public/api/v1/distribution/details`
+  - Booking: `/extranet/public/api/v1/accommodation/confirm`
+  - Order: `/extranet/public/api/v1/accommodation/search`
+  - Cancel: `/extranet/public/api/v1/accommodation/cancel`
+- **Contract opt:** `searchUrl`, `availabilityUrl`, `bookingUrl`, `orderUrl`, `cancelBookingUrl`
+- **Contract opt defaults:** `availabilityTimeoutSeconds: 7`, `cancellationPoliciesTimeoutSeconds: 10`, `supplierSubType: 2`
+- **Supplier registry:** `supplier_id=642c33cbff075a612ab6ad06`, `auto_id=100423`
+- **Reference contract:** `EXT_REFERENCE_CONTRACT_ID=64abf676042ebe591367e3dd` (contract 100423, in `.env.dev`)
+- **Default currencies:** EUR (supplier) / EUR (contract) for dev; configurable via UI
+- **Board types supported:** RO, BB, HB, FB, AI + Ramadan (IF, SO, IS)
+- **Pricing:** Per-person and per-room rates; percentage-based cancellation penalties
+- **Refundability:** Both refundable and non-refundable packages
+- **Hotel mapping:** Standard ATG → supplier hotel id (e.g., 1036203 test hotel)
+- **Test SID:** `019ac499-defd-746f-aea6-3523ed00009d` (booking flow with live data)
+
 ---
 
 ## API (implemented)
@@ -190,7 +219,11 @@ P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from En
 | DELETE | `/api/scenarios/all` | clear all active scenarios |
 | GET | `/api/scenarios/{id}/quickwit-logs` | Quickwit search by scenario api_key |
 | POST | `/api/logs/quickwit/search` | generic Quickwit search |
-| GET | `/api/suppliers` | HBS, EXP, RHK metadata |
+| GET | `/api/suppliers` | HBS, EXP, RHK, CHC, EXT metadata |
+| GET | `/api/scenario-templates` | List custom templates |
+| POST | `/api/scenario-templates` | Create template |
+| PUT | `/api/scenario-templates/{id}` | Edit template |
+| DELETE | `/api/scenario-templates/{id}` | Delete template |
 
 ### Quickwit (runtime logs)
 
