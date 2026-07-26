@@ -26,6 +26,8 @@ class LinkageValidator:
             self._validate_rhk(expectations_by_type, spec)
         elif supplier_code == "CHC":
             self._validate_chc(expectations_by_type, spec)
+        elif supplier_code == "EXT":
+            self._validate_ext(expectations_by_type, spec)
         else:
             raise LinkageError(f"Unsupported supplier for linkage validation: {supplier_code}")
 
@@ -146,11 +148,47 @@ class LinkageValidator:
             if meal and meal != expected_meals[index]:
                 raise LinkageError("CHC package mealPlan does not match requested room_basis")
 
+    def _validate_ext(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
+        packages = expectations_by_type.get("Packages")
+        if packages is None:
+            raise LinkageError("EXT Packages template missing")
+
+        rates = _ext_package_rates(packages)
+        if len(rates) < spec.count:
+            raise LinkageError(
+                f"EXT package rate count {len(rates)} < requested {spec.count}"
+            )
+
+        expected_meals = normalized_room_basis(spec)
+        for index, rate in enumerate(rates[: spec.count]):
+            meal = rate.get("mealPlan")
+            if meal and meal != expected_meals[index]:
+                raise LinkageError("EXT package mealPlan does not match requested room_basis")
+
 
 def _chc_package_rates(packages: dict) -> list[dict]:
     body = packages.get("httpResponse", {}).get("body", {})
     rates = body.get("roomRates") if isinstance(body, dict) else None
     return [rate for rate in rates if isinstance(rate, dict)] if isinstance(rates, list) else []
+
+
+def _ext_package_rates(packages: dict) -> list[dict]:
+    """Extract rates from EXT Packages response (roomRates or rooms structure)."""
+    body = packages.get("httpResponse", {}).get("body", {})
+    if not isinstance(body, dict):
+        return []
+
+    # Try roomRates (CHC-style)
+    room_rates = body.get("roomRates")
+    if isinstance(room_rates, list):
+        return [rate for rate in room_rates if isinstance(rate, dict)]
+
+    # Try rooms structure (hotel-level rooms)
+    rooms = body.get("rooms")
+    if isinstance(rooms, list):
+        return [room for room in rooms if isinstance(room, dict)]
+
+    return []
 
 
 def _rhk_meal_for_basis(room_basis: str) -> str:
