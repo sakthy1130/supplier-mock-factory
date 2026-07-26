@@ -106,18 +106,21 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
     EXP: initialTemplate?.contractCurrencies?.EXP ?? 'USD',
     RHK: initialTemplate?.contractCurrencies?.RHK ?? 'USD',
     CHC: initialTemplate?.contractCurrencies?.CHC ?? 'USD',
+    EXT: initialTemplate?.contractCurrencies?.EXT ?? 'USD',
   }))
   const [supplierPackages, setSupplierPackages] = useState<Record<SupplierCode, PackageRow[]>>(() => ({
     HBS: initialTemplate?.packages?.HBS ?? defaultPackageRows(3),
     EXP: initialTemplate?.packages?.EXP ?? defaultPackageRows(3),
     RHK: initialTemplate?.packages?.RHK ?? defaultPackageRows(3),
     CHC: initialTemplate?.packages?.CHC ?? defaultPackageRows(3),
+    EXT: initialTemplate?.packages?.EXT ?? defaultPackageRows(3),
   }))
   const [enabledSuppliers, setEnabledSuppliers] = useState<Record<SupplierCode, boolean>>(() => ({
     HBS: initialTemplate?.enabledSuppliers?.HBS ?? true,
     EXP: initialTemplate?.enabledSuppliers?.EXP ?? true,
     RHK: initialTemplate?.enabledSuppliers?.RHK ?? false,
     CHC: initialTemplate?.enabledSuppliers?.CHC ?? false,
+    EXT: initialTemplate?.enabledSuppliers?.EXT ?? false,
   }))
   const [assignToBr, setAssignToBr] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
