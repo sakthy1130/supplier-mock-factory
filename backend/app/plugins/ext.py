@@ -92,6 +92,7 @@ class ExtMockPlugin(SupplierMockPlugin):
         prices = _normalized_prices(spec)
         refundable = _normalized_refundable(spec)
         meals = [_meal_for_basis(basis) for basis in normalized_room_basis(spec)]
+        room_names = list(spec.room_names)
 
         # Calculate nights
         from datetime import datetime
@@ -118,6 +119,7 @@ class ExtMockPlugin(SupplierMockPlugin):
             if isinstance(distributions, list) and distributions:
                 template_dist = deep_copy(distributions[0])
                 template_dist["board"] = meals[index]
+                template_dist["roomName"] = room_names[index]
 
                 # Update price details
                 price_details = template_dist.get("priceDetails", {})
