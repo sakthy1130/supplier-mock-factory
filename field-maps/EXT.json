@@ -1,0 +1,43 @@
+{
+  "supplier": "EXT",
+  "log_types": [
+    "Search",
+    "Packages",
+    "Booking",
+    "GetOrder",
+    "CancelOrder"
+  ],
+  "paths": {
+    "check_in": [
+      "httpResponse.body.checkin",
+      "httpResponse.body.reservations[0].checkin",
+      "httpResponse.body.stayRange.checkin"
+    ],
+    "check_out": [
+      "httpResponse.body.checkout",
+      "httpResponse.body.reservations[0].checkout",
+      "httpResponse.body.stayRange.checkout"
+    ],
+    "booking_id": [
+      "httpResponse.body.bookingId",
+      "httpResponse.body.reservationId",
+      "httpResponse.body.reservations[0].reservationId",
+      "httpResponse.body.reservations[0].bookingId"
+    ],
+    "hotel_id": [
+      "httpResponse.body.hotelId",
+      "httpResponse.body.reservations[0].hotelId"
+    ],
+    "price": [
+      "httpResponse.body.roomRates[0].price",
+      "httpResponse.body.roomRates[0].total",
+      "httpResponse.body.rooms[0].price",
+      "httpResponse.body.rooms[0].total"
+    ],
+    "package_id": [
+      "httpResponse.body.roomRates[0].rateId",
+      "httpResponse.body.roomRates[0].roomId",
+      "httpResponse.body.rooms[0].roomId"
+    ]
+  }
+}

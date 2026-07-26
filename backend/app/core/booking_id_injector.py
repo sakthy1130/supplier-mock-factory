@@ -94,6 +94,20 @@ class BookingIdInjector:
             if partner_order_id:
                 return str(partner_order_id)
 
+        if supplier_code == "EXT":
+            # Try bookingId first, then fall back to reservationId
+            booking_id = booking_expectation.get("httpResponse", {}).get("body", {}).get("bookingId")
+            if booking_id:
+                return str(booking_id)
+            reservation_id = (
+                booking_expectation.get("httpResponse", {})
+                .get("body", {})
+                .get("reservations", [{}])[0]
+                .get("bookingId")
+            )
+            if reservation_id:
+                return str(reservation_id)
+
         raise ValueError(f"Could not extract booking id for supplier {supplier_code}")
 
     def generate_booking_id(self, supplier_code: str, sample_id: str) -> str:

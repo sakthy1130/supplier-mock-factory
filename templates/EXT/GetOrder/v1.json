@@ -12,7 +12,7 @@
       "reservations": [
         {
           "reservationId": "res_001",
-          "bookingId": "booking_12345",
+          "bookingId": "EXT-BK-220924-X7LaiK4d4dgrJk3",
           "status": "Confirmed",
           "result": "Successful",
           "hotelId": "100000",

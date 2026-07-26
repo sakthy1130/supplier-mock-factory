@@ -9,13 +9,14 @@
       "Content-Type": ["application/json"]
     },
     "body": {
-      "bookingId": "booking_12345",
+      "bookingId": "EXT-BK-220924-X7LaiK4d4dgrJk3",
       "hotelId": "100000",
       "checkin": "2026-09-01",
       "checkout": "2026-09-03",
       "reservations": [
         {
           "reservationId": "res_001",
+          "bookingId": "EXT-BK-220924-X7LaiK4d4dgrJk3",
           "status": "Confirmed",
           "result": "Successful",
           "roomRates": [
