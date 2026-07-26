@@ -173,22 +173,27 @@ def _chc_package_rates(packages: dict) -> list[dict]:
 
 
 def _ext_package_rates(packages: dict) -> list[dict]:
-    """Extract rates from EXT Packages response (roomRates or rooms structure)."""
+    """Extract distributions from EXT Packages response (accommodations with distributions)."""
     body = packages.get("httpResponse", {}).get("body", {})
     if not isinstance(body, dict):
         return []
 
-    # Try roomRates (CHC-style)
-    room_rates = body.get("roomRates")
-    if isinstance(room_rates, list):
-        return [rate for rate in room_rates if isinstance(rate, dict)]
+    # EXT structure: body.body[].accommodations[].distributions[]
+    body_list = body.get("body")
+    if not isinstance(body_list, list) or not body_list:
+        return []
 
-    # Try rooms structure (hotel-level rooms)
-    rooms = body.get("rooms")
-    if isinstance(rooms, list):
-        return [room for room in rooms if isinstance(room, dict)]
+    hotel = body_list[0]
+    if not isinstance(hotel, dict):
+        return []
 
-    return []
+    accommodations = hotel.get("accommodations")
+    if not isinstance(accommodations, list) or not accommodations:
+        return []
+
+    # Collect all distributions from first accommodation as "rates"
+    distributions = accommodations[0].get("distributions", [])
+    return [dist for dist in distributions if isinstance(dist, dict)]
 
 
 def _rhk_meal_for_basis(room_basis: str) -> str:

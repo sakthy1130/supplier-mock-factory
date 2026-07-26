@@ -9,30 +9,23 @@
       "Content-Type": ["application/json"]
     },
     "body": {
+      "message": "OK",
       "bookingId": "EXT-BK-220924-X7LaiK4d4dgrJk3",
+      "status": "CONFIRMED",
       "hotelId": "100000",
-      "checkin": "2026-09-01",
-      "checkout": "2026-09-03",
-      "reservations": [
-        {
-          "reservationId": "res_001",
-          "bookingId": "EXT-BK-220924-X7LaiK4d4dgrJk3",
-          "status": "Confirmed",
-          "result": "Successful",
-          "roomRates": [
-            {
-              "roomId": "1001",
-              "roomName": "Double Room",
-              "rateId": "rate_001",
-              "board": "RO",
-              "mealPlan": "RO",
-              "price": 100.0,
-              "total": 100.0,
-              "currency": "USD"
-            }
-          ]
-        }
-      ]
+      "checkInDate": "2026-09-01",
+      "checkOutDate": "2026-09-03",
+      "nights": 2,
+      "totalPrice": 1000,
+      "currency": "AED",
+      "roomName": "Business Room",
+      "board": "BB",
+      "roomCriteria": {
+        "adults": 2,
+        "children": 0
+      },
+      "confirmationNumber": "EXT123456789",
+      "guestName": "Guest User"
     }
   }
 }

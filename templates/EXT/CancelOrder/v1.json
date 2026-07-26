@@ -9,14 +9,15 @@
       "Content-Type": ["application/json"]
     },
     "body": {
-      "cancellationId": "cancel_67890",
-      "reservationId": "res_001",
+      "message": "OK",
       "bookingId": "EXT-BK-220924-X7LaiK4d4dgrJk3",
-      "status": "Cancelled",
-      "result": "Successful",
-      "hotelId": "100000",
-      "refundAmount": 100.0,
-      "currency": "USD"
+      "confirmationNumber": "EXT123456789",
+      "status": "CANCELLED",
+      "cancellationId": "CANCEL-EXT-20260726-001",
+      "refundAmount": 1000,
+      "currency": "AED",
+      "cancellationDate": "2026-07-26",
+      "reason": "User requested"
     }
   }
 }

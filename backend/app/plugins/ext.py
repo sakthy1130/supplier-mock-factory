@@ -1,11 +1,10 @@
-"""EXT (Extranet) supplier plugin. NET supplier with per-room dynamic pricing."""
+"""EXT (Extranet) supplier plugin. NET supplier with distribution-based pricing."""
 
 from __future__ import annotations
 
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
 from app.plugins.room_names import normalized_room_basis
-from app.plugins.supplier_currency import apply_chc_supplier_currency
 from app.plugins.json_utils import deep_copy, update_fields_recursive
 
 LOG_TYPES = [
@@ -16,30 +15,26 @@ LOG_TYPES = [
     "CancelOrder",
 ]
 
-VALID_MEAL_PLANS = {"RO", "BB", "HB", "FB", "AI"}
+VALID_MEAL_PLANS = {"RO", "BB", "HB", "FB", "AI", "IF", "SR", "IR"}
 
 
 class ExtMockPlugin(SupplierMockPlugin):
     code = "EXT"
 
     def matches_adapter_source(self, source: str) -> bool:
-        """Match e.g. extranet-adapter or similar."""
+        """Match e.g. extranet-adapter, hotels-extranet-search, etc."""
         s = source.lower()
-        return "extranet" in s and "adapter" in s
+        return "extranet" in s
 
     def mutate_dates(self, expectation: dict, check_in: str, check_out: str) -> dict:
         result = deep_copy(expectation)
         update_fields_recursive(
             result,
             {
+                "checkInDate": lambda _value: check_in,
+                "checkOutDate": lambda _value: check_out,
                 "checkin": lambda _value: check_in,
                 "checkout": lambda _value: check_out,
-                "checkIn": lambda _value: check_in,
-                "checkOut": lambda _value: check_out,
-                "checkin_at": lambda _value: check_in,
-                "checkout_at": lambda _value: check_out,
-                "arrival_date": lambda _value: check_in,
-                "departure_date": lambda _value: check_out,
             },
         )
         return result
@@ -54,140 +49,100 @@ class ExtMockPlugin(SupplierMockPlugin):
         log_type: str,
     ) -> dict:
         result = self.mutate_dates(expectation, check_in, check_out)
-        prices = _normalized_prices(spec)
-        refundable = _normalized_refundable(spec)
-        meals = [_meal_for_basis(basis) for basis in normalized_room_basis(spec)]
 
         body = result.get("httpResponse", {}).get("body")
         if not isinstance(body, dict):
             return result
 
-        if log_type == "GetOrder":
-            _force_confirmed_get_order(body)
-            return result
+        # Handle Search and Packages: body.body[].accommodations[].distributions[]
+        if log_type in ("Search", "Packages"):
+            body_list = body.get("body")
+            if isinstance(body_list, list) and body_list:
+                hotel = body_list[0]
+                if isinstance(hotel, dict):
+                    if hotel_id:
+                        hotel["hotelId"] = hotel_id
+                    self._mutate_accommodations(hotel, spec, check_in, check_out)
 
-        # Handle Search specially — hotelId is nested in hotels array
-        if log_type == "Search":
-            hotels = body.get("hotels")
-            if isinstance(hotels, list) and hotels and isinstance(hotels[0], dict):
-                if hotel_id:
-                    hotels[0]["hotelId"] = hotel_id
-                self._apply_package_mutations(hotels[0], spec, prices, refundable, meals)
-                apply_chc_supplier_currency(result, spec.supplier_currency)
-                return result
-
-        # For Packages/Booking/CancelOrder: hotelId at top level
-        if hotel_id and "hotelId" in body:
-            body["hotelId"] = hotel_id
-
-        # Apply prices and room basis to rates/rooms structure
-        self._apply_package_mutations(body, spec, prices, refundable, meals)
-
-        apply_chc_supplier_currency(result, spec.supplier_currency)
         return result
 
     def propagate_package_linkage(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
-        """Propagate Search primary rate identifiers to downstream responses if needed.
-
-        EXT's Search response should be aligned with Packages/Booking for consistent pricing.
-        """
-        # For now, minimal propagation. Can be expanded if EXT templates require linkage
-        # similar to HBS/CHC (e.g., syncing rate IDs or pricing structures).
+        """Propagate searchId and accommodation data across log types."""
+        # EXT doesn't require explicit linkage synchronization in the same way
+        # as HBS/CHC — the structure is more flexible
         pass
 
-    def _apply_package_mutations(self, body: dict, spec: PackageSpec, prices: list[float], refundable: list[bool], meals: list[str]) -> None:
-        """Apply price, meal plan, and refundability mutations to rate structures.
-
-        EXT can structure rates in multiple ways; this handles common patterns:
-        - body.rooms[] (hotel-level rooms)
-        - body.rates[] (direct rate array)
-        - body.roomRates[] (CHC-style)
-        """
-        # Try hotel-level rooms
-        rooms = body.get("rooms")
-        if isinstance(rooms, list) and rooms:
-            self._apply_rooms_mutations(rooms, spec, prices, refundable, meals)
+    def _mutate_accommodations(
+        self,
+        hotel: dict,
+        spec: PackageSpec,
+        check_in: str,
+        check_out: str,
+    ) -> None:
+        """Mutate accommodations array to match requested packages."""
+        accommodations = hotel.get("accommodations")
+        if not isinstance(accommodations, list) or not accommodations:
             return
 
-        # Try direct rates array
-        rates = body.get("rates")
-        if isinstance(rates, list) and rates:
-            self._apply_rates_mutations(rates, spec, prices, refundable, meals)
-            return
+        template_accommodation = deep_copy(accommodations[0])
+        new_accommodations = []
 
-        # Try CHC-style roomRates
-        room_rates = body.get("roomRates")
-        if isinstance(room_rates, list) and room_rates:
-            self._apply_rates_mutations(room_rates, spec, prices, refundable, meals)
-            return
+        prices = _normalized_prices(spec)
+        refundable = _normalized_refundable(spec)
+        meals = [_meal_for_basis(basis) for basis in normalized_room_basis(spec)]
 
-    def _apply_rooms_mutations(self, rooms: list, spec: PackageSpec, prices: list[float], refundable: list[bool], meals: list[str]) -> None:
-        """Apply mutations to body.rooms[] structure (e.g., hotel → rooms → rates)."""
-        if not rooms or not isinstance(rooms[0], dict):
-            return
-        template_room = deep_copy(rooms[0])
-        new_rooms = []
+        # Calculate nights
+        from datetime import datetime
+        check_in_dt = datetime.strptime(check_in, "%Y-%m-%d")
+        check_out_dt = datetime.strptime(check_out, "%Y-%m-%d")
+        nights = (check_out_dt - check_in_dt).days
+
         for index in range(spec.count):
-            room = deep_copy(template_room)
-            price = prices[index]
-            room["price"] = price
-            room["total"] = price
-            room["board"] = meals[index]
-            room["mealPlan"] = meals[index]
-            _apply_cancel_policy(room, refundable[index])
-            new_rooms.append(room)
-        rooms[:] = new_rooms
+            accommodation = deep_copy(template_accommodation)
+            accommodation["checkInDate"] = check_in
+            accommodation["checkOutDate"] = check_out
+            accommodation["nights"] = nights
 
-    def _apply_rates_mutations(self, rates: list, spec: PackageSpec, prices: list[float], refundable: list[bool], meals: list[str]) -> None:
-        """Apply mutations to rates[] or roomRates[] structures."""
-        if not rates or not isinstance(rates[0], dict):
-            return
-        template_rate = deep_copy(rates[0])
-        new_rates = []
-        for index in range(spec.count):
-            rate = deep_copy(template_rate)
+            # Update price fields
             price = prices[index]
-            # Try common price field names
-            rate["price"] = price
-            rate["total"] = price
-            rate["amount"] = price
-            rate["amountBeforeTax"] = [price]
-            rate["amountAfterTax"] = [price]
-            rate["board"] = meals[index]
-            rate["mealPlan"] = meals[index]
-            _apply_cancel_policy(rate, refundable[index])
-            new_rates.append(rate)
-        rates[:] = new_rates
+            accommodation["initialPrice"] = price * nights
+            accommodation["totalPrice"] = price * nights
+            accommodation["netPrice"] = price * nights
+            accommodation["noRefundable"] = not refundable[index]
+
+            # Update distributions (rooms in EXT terminology)
+            distributions = accommodation.get("distributions", [])
+            if isinstance(distributions, list) and distributions:
+                template_dist = deep_copy(distributions[0])
+                template_dist["board"] = meals[index]
+
+                # Update price details
+                price_details = template_dist.get("priceDetails", {})
+                if isinstance(price_details, dict):
+                    price_details["initialPrice"] = price * nights
+                    price_details["netPrice"] = price * nights
+                    price_details["totalPrice"] = price * nights
+
+                # Update per-night prices
+                per_night_prices = {}
+                total_per_night_prices = {}
+                for i in range(nights):
+                    night_date = (check_in_dt.replace(day=check_in_dt.day + i)).strftime("%Y-%m-%d") if i == 0 else (check_in_dt + __import__('datetime').timedelta(days=i)).strftime("%Y-%m-%d")
+                    per_night_prices[night_date] = price
+                    total_per_night_prices[night_date] = price
+
+                template_dist["netPricePerNight"] = per_night_prices
+                template_dist["totalPricePerNight"] = total_per_night_prices
+
+                accommodation["distributions"] = [template_dist]
+
+            new_accommodations.append(accommodation)
+
+        hotel["accommodations"] = new_accommodations
 
     @property
     def log_types(self) -> list[str]:
         return LOG_TYPES
-
-
-def _apply_cancel_policy(obj: dict, is_refundable: bool) -> None:
-    """Normalize cancellation policy on rate payloads."""
-    policy = obj.get("cancelPolicy")
-    if not isinstance(policy, dict):
-        return
-    penalties = policy.get("cancelPenalties")
-    if not isinstance(penalties, list):
-        return
-    for penalty in penalties:
-        if isinstance(penalty, dict):
-            charge = penalty.get("penaltyCharge")
-            if isinstance(charge, dict):
-                charge["percent"] = 0 if is_refundable else 100
-
-
-def _force_confirmed_get_order(body: dict) -> None:
-    """Normalize GetOrder so the booked order reads as confirmed."""
-    reservations = body.get("reservations")
-    if not isinstance(reservations, list):
-        return
-    for reservation in reservations:
-        if isinstance(reservation, dict):
-            reservation["status"] = "Confirmed"
-            reservation["result"] = "Successful"
 
 
 def _meal_for_basis(room_basis: str) -> str:

@@ -9,37 +9,65 @@
       "Content-Type": ["application/json"]
     },
     "body": {
-      "hotels": [
+      "message": "OK",
+      "body": [
         {
           "hotelId": "100000",
-          "checkin": "2026-09-01",
-          "checkout": "2026-09-03",
-          "rooms": [
+          "accommodations": [
             {
-              "roomId": "1001",
-              "roomName": "Double Room",
-              "board": "RO",
-              "mealPlan": "RO",
-              "price": 100.0,
-              "total": 100.0,
-              "currency": "USD",
-              "cancelPolicy": {
-                "code": "AD0_0",
-                "cancelPenalties": [
-                  {
-                    "noShow": false,
-                    "cancellable": true,
-                    "cancelDeadline": {
-                      "offsetTimeUnit": "D",
-                      "offsetTimeValue": 1,
-                      "deadline": "4PM"
-                    },
-                    "penaltyCharge": {
-                      "percent": 0
-                    }
-                  }
-                ]
-              }
+              "checkInDate": "2026-09-01",
+              "checkOutDate": "2026-09-03",
+              "nights": 2,
+              "initialPrice": 1000,
+              "totalPrice": 1000,
+              "netPrice": 1000,
+              "currency": "AED",
+              "noRefundable": false,
+              "distributions": [
+                {
+                  "priceDetails": {
+                    "initialPrice": 1000,
+                    "netPrice": 1000,
+                    "totalPrice": 1000
+                  },
+                  "roomName": "Business Room",
+                  "ratePlanId": "25338",
+                  "roomId": "206849",
+                  "board": "BB",
+                  "rateType": "ROOM",
+                  "isNet": true,
+                  "roomCriteria": {
+                    "adults": 2,
+                    "firstGroupChildren": 0,
+                    "secondGroupChildren": 0,
+                    "thirdGroupChildren": 0,
+                    "infants": 0,
+                    "extraBed": 0
+                  },
+                  "promotions": [],
+                  "numberRooms": 1,
+                  "requestedNumberAdults": 2,
+                  "requestedChildrenAges": [],
+                  "supplierName": "extranetTest",
+                  "supplierId": 1001818,
+                  "roomCode": "---:BUS:ROM:---:1G4:---:---:---",
+                  "roomTemplateName": "Business Room",
+                  "isVCC": false,
+                  "isBookingNetPrice": true,
+                  "ratePlanName": "Standard Rate Plan",
+                  "netPricePerNight": {
+                    "2026-09-01": 500,
+                    "2026-09-02": 500
+                  },
+                  "totalPricePerNight": {
+                    "2026-09-01": 500,
+                    "2026-09-02": 500
+                  },
+                  "roomChannelId": "1121",
+                  "hotelTimeZoneId": "Asia/Dubai"
+                }
+              ],
+              "searchId": "019ac499-defd-746f-aea6-3523ed00009d"
             }
           ]
         }

@@ -9,36 +9,78 @@
       "Content-Type": ["application/json"]
     },
     "body": {
-      "hotelId": "100000",
-      "checkin": "2026-09-01",
-      "checkout": "2026-09-03",
-      "roomRates": [
+      "message": "OK",
+      "body": [
         {
-          "roomId": "1001",
-          "roomName": "Double Room",
-          "rateId": "rate_001",
-          "board": "RO",
-          "mealPlan": "RO",
-          "price": 100.0,
-          "total": 100.0,
-          "currency": "USD",
-          "cancelPolicy": {
-            "code": "AD0_0",
-            "cancelPenalties": [
-              {
-                "noShow": false,
-                "cancellable": true,
-                "cancelDeadline": {
-                  "offsetTimeUnit": "D",
-                  "offsetTimeValue": 1,
-                  "deadline": "4PM"
-                },
-                "penaltyCharge": {
-                  "percent": 0
+          "hotelId": "100000",
+          "accommodations": [
+            {
+              "checkInDate": "2026-09-01",
+              "checkOutDate": "2026-09-03",
+              "nights": 2,
+              "initialPrice": 1000,
+              "totalPrice": 1000,
+              "netPrice": 1000,
+              "currency": "AED",
+              "noRefundable": false,
+              "distributions": [
+                {
+                  "priceDetails": {
+                    "initialPrice": 1000,
+                    "netPrice": 1000,
+                    "totalPrice": 1000
+                  },
+                  "roomName": "Business Room",
+                  "ratePlanId": "25338",
+                  "roomId": "206849",
+                  "board": "BB",
+                  "rateType": "ROOM",
+                  "isNet": true,
+                  "roomCriteria": {
+                    "adults": 2,
+                    "firstGroupChildren": 0,
+                    "secondGroupChildren": 0,
+                    "thirdGroupChildren": 0,
+                    "infants": 0,
+                    "extraBed": 0
+                  },
+                  "promotions": [],
+                  "numberRooms": 1,
+                  "conditions": [
+                    {
+                      "stayPeriods": [
+                        {
+                          "from": "2026-01-01",
+                          "to": "2026-12-31"
+                        }
+                      ],
+                      "penalties": [
+                        {
+                          "deductionType": "PERCENTAGE",
+                          "daysBeforeArrival": 2,
+                          "deductingAmount": 0
+                        }
+                      ],
+                      "isMerged": false
+                    }
+                  ],
+                  "roomCode": "---:BUS:ROM:---:1G4:---:---:---",
+                  "roomTemplateName": "Business Room",
+                  "isBookingNetPrice": true,
+                  "ratePlanName": "Standard Rate Plan",
+                  "netPricePerNight": {
+                    "2026-09-01": 500,
+                    "2026-09-02": 500
+                  },
+                  "totalPricePerNight": {
+                    "2026-09-01": 500,
+                    "2026-09-02": 500
+                  }
                 }
-              }
-            ]
-          }
+              ],
+              "searchId": "019ac499-defd-746f-aea6-3523ed00009d"
+            }
+          ]
         }
       ]
     }
