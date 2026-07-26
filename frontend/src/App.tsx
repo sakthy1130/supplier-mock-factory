@@ -53,7 +53,7 @@ interface ImportSupplierBlock {
 }
 
 function nextUnusedSupplier(used: SupplierCode[]): SupplierCode {
-  const all: SupplierCode[] = ['HBS', 'EXP', 'RHK', 'CHC']
+  const all: SupplierCode[] = ['HBS', 'EXP', 'RHK', 'CHC', 'EXT']
   return all.find((code) => !used.includes(code)) ?? 'HBS'
 }
 
@@ -81,7 +81,6 @@ function App() {
   const [importBusy, setImportBusy] = useState(false)
   const [env, setEnv] = useState<SmfEnv>(getActiveEnv())
   const [healthOk, setHealthOk] = useState(true)
-  const [healthPhase, setHealthPhase] = useState('…')
   const [backendError, setBackendError] = useState<string | null>(null)
   const [supplierCount, setSupplierCount] = useState(0)
   const [supplierCodes, setSupplierCodes] = useState<string[]>([])
@@ -130,7 +129,6 @@ function App() {
   useEffect(() => {
     Promise.all([getHealth(), listSuppliers()])
       .then(([h, suppliers]) => {
-        setHealthPhase(h.phase)
         setHealthOk(h.status === 'ok')
         setSupplierCount(suppliers.length)
         setSupplierCodes(suppliers.map((s) => s.code))
@@ -168,7 +166,6 @@ function App() {
     setBackendError(null)
     try {
       const [h, suppliers] = await Promise.all([getHealth(), listSuppliers()])
-      setHealthPhase(h.phase)
       setHealthOk(h.status === 'ok')
       setSupplierCount(suppliers.length)
       setSupplierCodes(suppliers.map((s) => s.code))
@@ -207,7 +204,8 @@ function App() {
   }, [tab, loadCustomTemplates])
 
   const addImportSupplierBlock = () => {
-    setImportSuppliers((prev) => [...prev, { supplier: nextUnusedSupplier(prev.map((b) => b.supplier)), json: '' }])
+    const nextSupplier = nextUnusedSupplier(importSuppliers.map((b) => b.supplier))
+    setImportSuppliers((prev) => [...prev, { supplier: nextSupplier, supplier_currency: 'EUR', contract_currency: 'USD', json: '' }])
   }
 
   const removeImportSupplierBlock = (index: number) => {
@@ -295,7 +293,7 @@ function App() {
 
   const openCustomTemplate = (item: ApiScenarioTemplate) => {
     const packages: Partial<Record<SupplierCode, PackageRow[]>> = {}
-    const enabledSuppliers: Partial<Record<SupplierCode, boolean>> = { HBS: false, EXP: false, RHK: false, CHC: false }
+    const enabledSuppliers: Partial<Record<SupplierCode, boolean>> = { HBS: false, EXP: false, RHK: false, CHC: false, EXT: false }
     const supplierCurrencies: Partial<Record<SupplierCode, string>> = {}
     const contractCurrencies: Partial<Record<SupplierCode, string>> = {}
     for (const entry of item.suppliers) {

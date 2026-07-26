@@ -27,6 +27,7 @@ export const DEFAULT_SUPPLIER_CURRENCIES: Record<SupplierCode, string> = {
   EXP: 'USD',
   RHK: 'USD',
   CHC: 'SAR',
+  EXT: 'EUR',
 }
 
 export interface SupplierScenario {
