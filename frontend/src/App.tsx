@@ -81,6 +81,7 @@ function App() {
   const [importBusy, setImportBusy] = useState(false)
   const [env, setEnv] = useState<SmfEnv>(getActiveEnv())
   const [healthOk, setHealthOk] = useState(true)
+  const [healthDetails, setHealthDetails] = useState<{ status: string; message?: string; checks?: Record<string, { status: string; message: string }> } | null>(null)
   const [backendError, setBackendError] = useState<string | null>(null)
   const [supplierCount, setSupplierCount] = useState(0)
   const [supplierCodes, setSupplierCodes] = useState<string[]>([])
@@ -129,13 +130,15 @@ function App() {
   useEffect(() => {
     Promise.all([getHealth(), listSuppliers()])
       .then(([h, suppliers]) => {
-        setHealthOk(h.status === 'ok')
+        setHealthDetails(h)
+        setHealthOk(h.status === 'ok' || h.status === 'degraded')
         setSupplierCount(suppliers.length)
         setSupplierCodes(suppliers.map((s) => s.code))
         setBackendError(null)
       })
       .catch(() => {
         setHealthOk(false)
+        setHealthDetails(null)
         setBackendError('Cannot reach backend — run: python3 -m uvicorn app.main:app --reload --port 8000')
       })
     loadList()
@@ -166,11 +169,13 @@ function App() {
     setBackendError(null)
     try {
       const [h, suppliers] = await Promise.all([getHealth(), listSuppliers()])
-      setHealthOk(h.status === 'ok')
+      setHealthDetails(h)
+      setHealthOk(h.status === 'ok' || h.status === 'degraded')
       setSupplierCount(suppliers.length)
       setSupplierCodes(suppliers.map((s) => s.code))
     } catch {
       setHealthOk(false)
+      setHealthDetails(null)
       setBackendError('Cannot reach backend — run: python3 -m uvicorn app.main:app --reload --port 8000')
     }
     await loadList()
@@ -1165,6 +1170,38 @@ function App() {
             />
             {healthOk ? 'Connected' : 'Offline'}
           </div>
+          {healthDetails && (
+            <div className="health-checks">
+              {healthDetails.checks && (
+                <div style={{ marginTop: '0.6rem', fontSize: '0.75rem' }}>
+                  {Object.entries(healthDetails.checks).map(([key, check]) => (
+                    <div
+                      key={key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        padding: '0.3rem 0',
+                        color: check.status === 'ok' ? 'var(--success)' : 'var(--danger)',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.6rem' }}>
+                        {check.status === 'ok' ? '✓' : '✗'}
+                      </span>
+                      <span style={{ textTransform: 'capitalize' }}>
+                        {key.replace('_', ' ')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {healthDetails.message && (
+                <div style={{ marginTop: '0.6rem', fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
+                  {healthDetails.message}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </aside>
     </div>
