@@ -150,6 +150,8 @@ class ExpMockPlugin(SupplierMockPlugin):
                 expectation = expectations_by_type.get(log_type)
                 if isinstance(expectation, dict):
                     apply_exp_room_names(expectation, room_names)
+                    # Also apply room names to bed_groups descriptions
+                    _apply_room_names_to_bed_groups(expectation, room_names)
         packages = expectations_by_type.get("Packages")
         prebook = expectations_by_type.get("PreBooking")
         if not packages or not prebook:
@@ -318,9 +320,45 @@ def _trim_bed_groups(rate: dict) -> None:
         return
     first_key = next(iter(bed_groups))
     kept = bed_groups[first_key]
-    if isinstance(kept, dict):
-        kept["description"] = "1 Bed"
+    # Keep original description from template instead of hardcoding "1 Bed"
+    # Room names are applied separately via propagate_package_linkage
     rate["bed_groups"] = {first_key: kept}
+
+
+def _apply_room_names_to_bed_groups(expectation: dict, room_names: list[str]) -> None:
+    """Apply room names from UI to bed_groups descriptions in Packages/Search.
+
+    Each room's bed_groups description should match the room name passed by the user,
+    not the hardcoded "1 Bed" default.
+    """
+    properties = _exp_property_entries(expectation)
+    for property_entry in properties:
+        rooms = property_entry.get("rooms")
+        if not isinstance(rooms, list):
+            continue
+
+        for room_index, room in enumerate(rooms):
+            if not isinstance(room, dict) or room_index >= len(room_names):
+                continue
+
+            rates = room.get("rates")
+            if not isinstance(rates, list):
+                continue
+
+            room_name = room_names[room_index]
+
+            for rate in rates:
+                if not isinstance(rate, dict):
+                    continue
+
+                bed_groups = rate.get("bed_groups")
+                if not isinstance(bed_groups, dict):
+                    continue
+
+                # Update the description in each bed_group to match the room name
+                for bed_group in bed_groups.values():
+                    if isinstance(bed_group, dict):
+                        bed_group["description"] = room_name
 
 
 def _rename_occupancy_key(rate: dict, target_key: str) -> None:
