@@ -526,6 +526,35 @@ function App() {
       </aside>
 
       <div className={`main-panel ${tab === 'home' ? 'main-panel--wide' : ''}`}>
+        {/* Persistent topbar with environment selector and backend status */}
+        <div className="app-topbar">
+          <div className="topbar-left">
+            <div className="env-switcher">
+              <span>Environment</span>
+              <select
+                className={env === 'stg' ? 'env-stg' : 'env-dev'}
+                value={env}
+                onChange={(e) => handleEnvChange(e.target.value as SmfEnv)}
+              >
+                <option value="dev">Dev</option>
+                <option value="stg">Staging</option>
+              </select>
+            </div>
+          </div>
+          <div className="topbar-right">
+            <div className="stat-chip">
+              <span>Backend</span>
+              <strong className="status-value" style={{ color: healthOk ? 'var(--success)' : 'var(--danger)' }}>
+                <span
+                  className={`pulse-dot ${healthOk ? '' : 'pulse-dot--off'}`}
+                  style={{ background: healthOk ? 'var(--success)' : 'var(--danger)' }}
+                />
+                {healthOk ? 'Connected' : 'Offline'}
+              </strong>
+            </div>
+          </div>
+        </div>
+
         {backendError && (
           <div className="banner error">
             <span>⚠</span>
@@ -542,30 +571,6 @@ function App() {
                 Provision supplier mocks, contracts, and apiKeys for HBS, EXP, RHK, and CHC — then run
                 tests and queue scenarios from one place.
               </p>
-
-              <div className="hero-controls">
-                <div className="env-switcher">
-                  <span>Environment</span>
-                  <select
-                    className={env === 'stg' ? 'env-stg' : 'env-dev'}
-                    value={env}
-                    onChange={(e) => handleEnvChange(e.target.value as SmfEnv)}
-                  >
-                    <option value="dev">Dev</option>
-                    <option value="stg">Staging</option>
-                  </select>
-                </div>
-                <div className="stat-chip">
-                  <span>Backend</span>
-                  <strong className="status-value" style={{ color: healthOk ? 'var(--success)' : 'var(--danger)' }}>
-                    <span
-                      className={`pulse-dot ${healthOk ? '' : 'pulse-dot--off'}`}
-                      style={{ background: healthOk ? 'var(--success)' : 'var(--danger)' }}
-                    />
-                    {healthOk ? 'Connected' : 'Offline'}
-                  </strong>
-                </div>
-              </div>
             </section>
 
             <section className="actions-section">
