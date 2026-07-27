@@ -526,41 +526,12 @@ function App() {
       </aside>
 
       <div className={`main-panel ${tab === 'home' ? 'main-panel--wide' : ''}`}>
-        {/* Persistent topbar with environment selector and backend status */}
-        <div className="app-topbar">
-          <div className="topbar-left">
-            <div className="env-switcher">
-              <span>Environment</span>
-              <select
-                className={env === 'stg' ? 'env-stg' : 'env-dev'}
-                value={env}
-                onChange={(e) => handleEnvChange(e.target.value as SmfEnv)}
-              >
-                <option value="dev">Dev</option>
-                <option value="stg">Staging</option>
-              </select>
+          {backendError && (
+            <div className="banner error">
+              <span>⚠</span>
+              <span>{backendError}</span>
             </div>
-          </div>
-          <div className="topbar-right">
-            <div className="stat-chip">
-              <span>Backend</span>
-              <strong className="status-value" style={{ color: healthOk ? 'var(--success)' : 'var(--danger)' }}>
-                <span
-                  className={`pulse-dot ${healthOk ? '' : 'pulse-dot--off'}`}
-                  style={{ background: healthOk ? 'var(--success)' : 'var(--danger)' }}
-                />
-                {healthOk ? 'Connected' : 'Offline'}
-              </strong>
-            </div>
-          </div>
-        </div>
-
-        {backendError && (
-          <div className="banner error">
-            <span>⚠</span>
-            <span>{backendError}</span>
-          </div>
-        )}
+          )}
 
         {tab === 'home' && (
           <>
@@ -1164,6 +1135,38 @@ function App() {
           </>
         )}
       </div>
+
+      {/* Right sidebar with environment and backend status */}
+      <aside className="right-sidebar">
+        <div className="sidebar-section">
+          <label className="sidebar-label">🌐 Environment</label>
+          <select
+            className={`sidebar-select ${env === 'stg' ? 'env-stg' : 'env-dev'}`}
+            value={env}
+            onChange={(e) => handleEnvChange(e.target.value as SmfEnv)}
+          >
+            <option value="dev">Dev</option>
+            <option value="stg">Staging</option>
+          </select>
+        </div>
+
+        <div className="sidebar-section">
+          <label className="sidebar-label">🔗 Backend Status</label>
+          <div className="sidebar-status" style={{ color: healthOk ? 'var(--success)' : 'var(--danger)' }}>
+            <span
+              className="pulse-dot"
+              style={{
+                background: healthOk ? 'var(--success)' : 'var(--danger)',
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                display: 'inline-block',
+              }}
+            />
+            {healthOk ? 'Connected' : 'Offline'}
+          </div>
+        </div>
+      </aside>
     </div>
   )
 }

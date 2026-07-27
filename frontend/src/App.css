@@ -1,7 +1,7 @@
 /* Shell */
 .app-shell {
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-columns: 72px 1fr 280px;
   align-items: start;
   min-height: 100vh;
 }
@@ -242,23 +242,63 @@
   max-width: none;
 }
 
-/* Persistent topbar with environment and backend status */
-.app-topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: -1.75rem -2rem 1.75rem;
-  padding: 1rem 2rem;
-  border-bottom: 1px solid var(--border);
+/* Right sidebar with environment and backend status */
+.right-sidebar {
+  border-left: 1px solid var(--border);
   background: var(--surface);
-  gap: 1rem;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  z-index: 20;
 }
 
-.topbar-left,
-.topbar-right {
+.sidebar-section {
   display: flex;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.sidebar-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.sidebar-select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-strong);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sidebar-select.env-dev {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.sidebar-select.env-stg {
+  border-color: color-mix(in srgb, var(--warning) 55%, transparent);
+}
+
+.sidebar-status {
+  padding: 0.8rem;
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 40%, transparent);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  display: flex;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .page-header {
