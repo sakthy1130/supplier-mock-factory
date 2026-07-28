@@ -241,13 +241,15 @@ async def _teardown_record(session: Session, record: ScenarioRecord) -> None:
     # can't send stg contract/apiKey ids to the dev Backoffice (or vice versa).
     with use_env(record.env):
         orchestrator = SupplierMockScenarioOrchestrator()
+        # Extract supplier codes from suppliers_json (list of objects -> list of codes)
+        supplier_codes = [s.get("supplier") for s in (record.suppliers_json or [])] if record.suppliers_json else None
         bundle = await orchestrator.teardown_scenario(
             record.namespace,
             api_key_id=record.api_key_id,
             api_key=record.api_key,
             br_setup=(record.request_json or {}).get("br_setup"),
             contracts=record.contracts_json or {},
-            suppliers=record.suppliers_json or [],
+            suppliers=supplier_codes,
             sb_config_id=record.sb_config_id,
             sb_group_id=record.sb_group_id,
         )
