@@ -120,19 +120,25 @@ async def run_template_endpoint(
         # Build scenario request from template
         suppliers = []
         for supplier_entry in template.suppliers:
-            supplier_code = supplier_entry.get("supplier")
-            supplier_currency = supplier_entry.get("supplier_currency", "SAR")
-            contract_currency = supplier_entry.get("contract_currency", "USD")
+            # supplier_entry is a SupplierTemplatePackages Pydantic model
+            supplier_code = supplier_entry.supplier
+            supplier_currency = supplier_entry.supplier_currency
+            contract_currency = supplier_entry.contract_currency
+            packages_data = supplier_entry.packages
 
-            packages_data = supplier_entry.get("packages", [])
             if packages_data:
-                first_pkg = packages_data[0]
+                # Convert TemplatePackageRow objects to lists for PackageSpec
+                room_names = [pkg.room_name for pkg in packages_data]
+                room_basis = [pkg.room_basis for pkg in packages_data]
+                prices = [pkg.price for pkg in packages_data]
+                refundable = [pkg.refundable for pkg in packages_data]
+
                 package_spec = PackageSpec(
-                    count=first_pkg.get("count", 1),
-                    room_basis=first_pkg.get("room_basis", ["RO"]),
-                    room_names=first_pkg.get("room_names", ["Room"]),
-                    prices=first_pkg.get("prices", [100.0]),
-                    refundable=first_pkg.get("refundable", [True]),
+                    count=len(packages_data),
+                    room_basis=room_basis,
+                    room_names=room_names,
+                    prices=prices,
+                    refundable=refundable,
                     supplier_currency=supplier_currency,
                 )
                 suppliers.append(
