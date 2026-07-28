@@ -57,6 +57,7 @@ class ScenarioTemplateRecord(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     label: Mapped[str] = mapped_column(String(120))
     description: Mapped[str] = mapped_column(String(500), default="")
+    function: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     atg_hotel_id: Mapped[str] = mapped_column(String(64), default="")
     # Legacy (pre-multi-supplier) columns — kept so templates created before
     # suppliers_json existed still read back correctly; see _record_to_model
