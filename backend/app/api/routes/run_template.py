@@ -18,7 +18,7 @@ from app.services import scenario_template_service
 from app.models.scenario import ScenarioRequest, SupplierCode, SupplierScenario, PackageSpec
 from app.utils.request_tracker import RequestTracker
 
-router = APIRouter(prefix="/api/v1", tags=["run-template"])
+router = APIRouter(prefix="/api/v1")
 
 
 @router.post(
