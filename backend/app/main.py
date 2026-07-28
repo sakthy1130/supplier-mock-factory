@@ -12,6 +12,7 @@ from app.api.routes import (
     health,
     hotels,
     logs,
+    run_template,
     scenario_templates,
     scenarios,
     suppliers,
@@ -68,6 +69,7 @@ async def env_context_middleware(request: Request, call_next):
 
 
 app.include_router(health.router)
+app.include_router(run_template.router)
 app.include_router(env_routes.router, prefix="/api")
 app.include_router(scenarios.router, prefix="/api")
 app.include_router(scenario_templates.router, prefix="/api")
