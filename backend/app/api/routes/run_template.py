@@ -65,7 +65,7 @@ router = APIRouter(prefix="/api/v1")
             "model": RunTemplateResponse,
         },
     },
-    tags=["Automation", "Templates"],
+    tags=["Automation"],
 )
 async def run_template_endpoint(
     template_id: str = ...,
