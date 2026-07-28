@@ -210,10 +210,12 @@ P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from En
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/health` | status, phase |
+| GET | `/health` | status, phase, dependency checks |
+| **POST** | **`/api/v1/run-template/{template_id}`** | **NEW: Automate scenario creation + run** |
 | POST | `/api/scenarios` | create (202, background) |
 | GET | `/api/scenarios` | list |
 | GET | `/api/scenarios/{id}` | bundle + status |
+| POST | `/api/scenarios/{id}/run` | execute scenario against core app |
 | POST | `/api/scenarios/{id}/refresh-booking-ids` | re-inject booking ids |
 | DELETE | `/api/scenarios/{id}` | teardown: mocks + contracts + apiKey |
 | DELETE | `/api/scenarios/all` | clear all active scenarios |
@@ -224,6 +226,50 @@ P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from En
 | POST | `/api/scenario-templates` | Create template |
 | PUT | `/api/scenario-templates/{id}` | Edit template |
 | DELETE | `/api/scenario-templates/{id}` | Delete template |
+
+### Run-Template API (NEW — Automation Focus)
+
+**Purpose:** Create test data by running a saved template. Returns full scenario details + execution tracking.
+
+**Endpoint:** `POST /api/v1/run-template/{template_id}`
+
+**Request:**
+```json
+{
+  "environment": "dev|stg",
+  "check_in": "2026-07-29",           // optional, default: today
+  "check_out": "2026-07-30",          // optional, default: today+1
+  "hotel_id": "123456",                // optional, override template
+  "delete_mock_api_key": true,        // default: true (full cleanup)
+  "assign_api_key_to_br": true,       // default: true
+  "force_cleanup": true,              // default: true (cleanup on error)
+  "timeout_seconds": 300,             // default: 300
+  "include_logs": false               // default: false
+}
+```
+
+**Response (Success):**
+```json
+{
+  "request_id": "req-...",
+  "status": "COMPLETED",
+  "scenario_id": "...",
+  "api_key": "...",
+  "contract_id": "...",
+  "search_id": "...",
+  "package_id": "...",
+  "steps": {...},                     // execution step tracking
+  "summary": {...}                    // timing + overall stats
+}
+```
+
+**Use Cases:**
+- Automation: Java/Python tests need mock data → call API → use api_key in test
+- CI/CD: Pipeline stage for test data provisioning
+- Performance: Generate multiple scenarios in parallel
+- QA: Validate scenario creation + execution
+
+**See:** `API_DOCUMENTATION.md` for full details, examples, error codes, tracing
 
 ### Quickwit (runtime logs)
 
