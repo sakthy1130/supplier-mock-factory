@@ -78,7 +78,10 @@ async def run_template_endpoint(
         request_data = RunTemplateRequest(environment="dev")
 
     tracker = RequestTracker()
-    response = RunTemplateResponse(request_id=tracker.request_id)
+    response = RunTemplateResponse(
+        request_id=tracker.request_id,
+        status="PENDING"  # Initialize with default status
+    )
 
     try:
         # Load template
