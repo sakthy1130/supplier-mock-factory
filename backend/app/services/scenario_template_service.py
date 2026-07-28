@@ -28,7 +28,6 @@ def _record_to_model(record: ScenarioTemplateRecord) -> ScenarioTemplate:
         id=record.id,
         label=record.label,
         description=record.description,
-        function=record.function,
         atg_hotel_id=record.atg_hotel_id,
         suppliers=suppliers,
         created_at=record.created_at,
@@ -46,7 +45,6 @@ def _apply_payload(record: ScenarioTemplateRecord, payload: ScenarioTemplateCrea
     first = payload.suppliers[0]
     record.label = payload.label.strip()
     record.description = payload.description.strip()
-    record.function = payload.function
     record.atg_hotel_id = payload.atg_hotel_id.strip()
     record.supplier = first.supplier.value
     record.packages_json = [row.model_dump() for row in first.packages]

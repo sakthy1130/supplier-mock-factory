@@ -1,6 +1,0 @@
-deluxe double room, ensuite (chambre ) 2 twin beds - deluxe double room, ensuite (chambre ) 1 king bed- deluxe double room, ensuite (chambre ) non smoking 1 king bed
-
-
-1087229
-
-mvn test -Dtest=SimilarPackagesExcelGeneratorCliTest -P hotels-dev -q 2>&1 && tail -50 logs/test.log | grep -E "Found|Looking for|Packages found|SIMILAR"

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -32,7 +31,6 @@ class SupplierTemplatePackages(BaseModel):
 class ScenarioTemplateCreate(BaseModel):
     label: str = Field(min_length=1, max_length=120)
     description: str = ""
-    function: Optional[str] = Field(default=None, max_length=64, description="Template purpose/function (e.g., templateBeddingMock, importTemplate)")
     # Required: an empty hotel id silently falls back to the wizard's generic
     # default when the template is opened, which reads as "the hotel id I gave
     # didn't import" rather than "I never set one" — reject it up front instead.
@@ -60,7 +58,6 @@ class ScenarioTemplate(BaseModel):
     id: str
     label: str
     description: str
-    function: Optional[str] = None
     atg_hotel_id: str
     suppliers: list[SupplierTemplatePackages]
     created_at: datetime
