@@ -7,17 +7,54 @@ from pydantic import BaseModel, Field
 
 
 class RunTemplateRequest(BaseModel):
-    """Request to run a template and create a scenario."""
+    """Request to run a template and create a scenario.
 
-    environment: str = Field(default="dev", description="dev or stg")
-    check_in: Optional[str] = Field(default=None, description="YYYY-MM-DD, defaults to today")
-    check_out: Optional[str] = Field(default=None, description="YYYY-MM-DD, defaults to today+1")
-    hotel_id: Optional[str] = Field(default=None, description="Override template hotel_id")
-    delete_mock_api_key: bool = Field(default=True, description="Delete mocks after run")
-    assign_api_key_to_br: bool = Field(default=True, description="Assign API key to BR")
-    force_cleanup: bool = Field(default=True, description="Cleanup even on error")
-    timeout_seconds: int = Field(default=300, description="Max seconds to wait")
-    include_logs: bool = Field(default=False, description="Include execution logs in response")
+    All fields are optional except template_id (passed in URL path).
+    Defaults are optimized for CI/CD automation testing.
+    """
+
+    environment: str = Field(
+        default="dev",
+        description="Target environment: 'dev' or 'stg'",
+        examples=["dev", "stg"]
+    )
+    check_in: Optional[str] = Field(
+        default=None,
+        description="Check-in date (YYYY-MM-DD). If not provided, uses today's date.",
+        examples=["2026-07-29"]
+    )
+    check_out: Optional[str] = Field(
+        default=None,
+        description="Check-out date (YYYY-MM-DD). If not provided, uses tomorrow's date.",
+        examples=["2026-07-30"]
+    )
+    hotel_id: Optional[str] = Field(
+        default=None,
+        description="Override the hotel ID from template. Uses template default if not provided.",
+        examples=["123456"]
+    )
+    delete_mock_api_key: bool = Field(
+        default=True,
+        description="If true: full cleanup (delete scenario, mocks, contracts, API key). If false: keep scenario running for inspection."
+    )
+    assign_api_key_to_br: bool = Field(
+        default=True,
+        description="If true: assign generated API key to BR. If false: skip BR assignment."
+    )
+    force_cleanup: bool = Field(
+        default=True,
+        description="If true: cleanup even if scenario creation/run fails. If false: skip cleanup on error."
+    )
+    timeout_seconds: int = Field(
+        default=300,
+        description="Maximum seconds to wait for scenario creation and execution. Scenario creation: 10-30s, Scenario run: 10-60s.",
+        ge=30,
+        le=600
+    )
+    include_logs: bool = Field(
+        default=False,
+        description="If true: include full execution logs in response (larger response size). If false: omit logs (smaller response)."
+    )
 
 
 class StepStatus(BaseModel):

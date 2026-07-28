@@ -20,38 +20,59 @@ from app.utils.request_tracker import RequestTracker
 router = APIRouter(prefix="/api/v1", tags=["run-template"])
 
 
-@router.post("/run-template/{template_id}", response_model=RunTemplateResponse)
+@router.post(
+    "/run-template/{template_id}",
+    response_model=RunTemplateResponse,
+    summary="Create and run a scenario from template",
+    description="""
+    Automated scenario creation and execution from a saved template.
+
+    **Workflow:**
+    1. Load template by ID
+    2. Create scenario from template
+    3. Run scenario against core app
+    4. Optionally cleanup (delete mocks, contracts, API key)
+
+    **Returns:**
+    - Complete scenario details (ID, API key, contracts, SID, PID)
+    - Step-by-step execution tracking with timing
+    - Execution summary and metrics
+    - Optional logs for debugging
+    - Request ID for system-wide tracing
+
+    **Use Cases:**
+    - Automation testing: create test data, run test, cleanup
+    - CI/CD pipelines: provision mocks in build step
+    - Performance testing: generate multiple scenarios
+    - QA validation: verify scenario creation and execution
+    """,
+    responses={
+        200: {
+            "description": "Scenario created and executed successfully",
+            "model": RunTemplateResponse,
+        },
+        404: {
+            "description": "Template not found",
+            "model": RunTemplateResponse,
+        },
+        408: {
+            "description": "Scenario creation/execution timed out",
+            "model": RunTemplateResponse,
+        },
+        500: {
+            "description": "Internal server error",
+            "model": RunTemplateResponse,
+        },
+    },
+    tags=["Automation", "Templates"],
+)
 async def run_template_endpoint(
-    template_id: str,
+    template_id: str = ...,
     request_data: Optional[RunTemplateRequest] = None,
     background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db),
 ) -> RunTemplateResponse:
-    """
-    Run a template: create scenario, run it, optionally cleanup.
-
-    Request body:
-    {
-      "environment": "dev|stg",
-      "check_in": "YYYY-MM-DD",  # optional, defaults to today
-      "check_out": "YYYY-MM-DD",  # optional, defaults to today+1
-      "hotel_id": "override_id",  # optional
-      "delete_mock_api_key": true,  # default true
-      "assign_api_key_to_br": true,  # default true
-      "force_cleanup": true,  # default true
-      "timeout_seconds": 300,  # default 300
-      "include_logs": false  # default false
-    }
-
-    Response includes:
-    - request_id: unique request identifier
-    - status: COMPLETED, FAILED, TIMEOUT
-    - scenario_id, api_key, contract_id, search_id, package_id
-    - steps: execution steps with timing
-    - summary: overall execution summary
-    - error: error details if failed
-    - logs: execution logs if requested
-    """
+    """Execute a template as a complete scenario workflow."""
     # Default request if not provided
     if not request_data:
         request_data = RunTemplateRequest(environment="dev")
