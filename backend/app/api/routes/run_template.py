@@ -213,6 +213,13 @@ async def run_template_endpoint(
                 "code": "SCENARIO_CREATION_FAILED",
                 "message": record.error_message or "Unknown error",
             }
+            # Critical: always cleanup mocks when creation fails (mocks were created but contracts/API keys failed)
+            try:
+                tracker.log("Creation failed - cleaning up orphaned mocks")
+                await scenario_service.run_teardown(scenario_id)
+                response.deleted = True
+            except Exception as cleanup_err:
+                tracker.log(f"Cleanup during creation failure: {cleanup_err}")
             return response
 
         tracker.log(f"Scenario ready: {record.status}")
