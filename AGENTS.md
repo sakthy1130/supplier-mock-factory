@@ -211,7 +211,6 @@ P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from En
 | Method | Path | Notes |
 |--------|------|-------|
 | GET | `/health` | status, phase, dependency checks |
-| **POST** | **`/api/v1/run-template/{template_id}`** | **NEW: Automate scenario creation + run** |
 | POST | `/api/scenarios` | create (202, background) |
 | GET | `/api/scenarios` | list |
 | GET | `/api/scenarios/{id}` | bundle + status |

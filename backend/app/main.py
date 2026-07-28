@@ -1,6 +1,9 @@
 """FastAPI application entry point."""
 
+import logging
+import logging.handlers
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +26,37 @@ from app.db.database import init_db
 from app.env_context import get_current_env, reset_current_env, set_current_env
 
 settings = get_settings()
+
+# Configure logging
+LOG_DIR = Path(__file__).parent.parent / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+logger = logging.getLogger("app")
+logger.setLevel(logging.DEBUG)
+
+# File handler - all logs
+file_handler = logging.handlers.RotatingFileHandler(
+    LOG_DIR / "app.log",
+    maxBytes=10_000_000,  # 10MB
+    backupCount=5
+)
+file_handler.setLevel(logging.DEBUG)
+
+# Console handler - info and above
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+# Formatter
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Add handlers
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 
 @asynccontextmanager

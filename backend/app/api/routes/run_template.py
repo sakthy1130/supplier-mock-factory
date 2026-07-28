@@ -6,10 +6,11 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.db.models import ScenarioRecord
 from app.env_context import get_current_env, use_env
 from app.models.run_template import RunTemplateRequest, RunTemplateResponse
 from app.services import scenario_service
@@ -69,7 +70,6 @@ router = APIRouter(prefix="/api/v1", tags=["run-template"])
 async def run_template_endpoint(
     template_id: str = ...,
     request_data: Optional[RunTemplateRequest] = None,
-    background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db),
 ) -> RunTemplateResponse:
     """Execute a template as a complete scenario workflow."""
@@ -158,6 +158,12 @@ async def run_template_endpoint(
             assign_to_br=request_data.assign_api_key_to_br,
         )
 
+        # Resolve ATG hotel ID to supplier-specific hotel IDs via mapping API
+        tracker.log(f"Resolving hotel mapping for ATG hotel: {hotel_id}")
+        from app.services.hotel_mapping_service import resolve_scenario_hotel_ids
+        scenario_request = await resolve_scenario_hotel_ids(scenario_request)
+        tracker.log(f"Hotel mapping resolved: {scenario_request.supplier_hotel_ids}")
+
         # Create scenario
         tracker.log(f"Creating scenario: {namespace}")
         env = request_data.environment or get_current_env()
@@ -165,19 +171,31 @@ async def run_template_endpoint(
         scenario_id = record.id
         tracker.log(f"Scenario created: {scenario_id}")
 
-        # Run scenario in background but wait for it
+        # Run scenario (async call)
         tracker.log(f"Running scenario: {scenario_id}")
-        background_tasks.add_task(scenario_service.run_create_scenario, scenario_id)
+        try:
+            await scenario_service.run_create_scenario(scenario_id)
+            tracker.log(f"Scenario async function completed")
+        except Exception as e:
+            tracker.log(f"Scenario run error: {e}")
 
-        # Wait for scenario to be ready (with timeout)
-        import time
+        # Refresh database session to see updates from the standalone session
+        db.expire_all()
 
-        start = time.time()
-        while (time.time() - start) < request_data.timeout_seconds:
-            record = scenario_service.get_record(db, scenario_id)
-            if record.status != "PENDING":
-                break
-            time.sleep(0.5)
+        # Re-fetch the full record object with fresh data
+        record = db.query(ScenarioRecord).filter(ScenarioRecord.id == scenario_id).first()
+
+        if not record:
+            tracker.log(f"Scenario record not found after creation")
+            tracker.end_step("scenario_creation", success=False, error="Scenario not found")
+            response.status = "FAILED"
+            response.error = {
+                "code": "SCENARIO_NOT_FOUND",
+                "message": "Scenario was not found after creation",
+            }
+            return response
+
+        tracker.log(f"Scenario status: {record.status}")
 
         if record.status == "PENDING":
             tracker.end_step("scenario_creation", success=False, error="Scenario creation timed out")
@@ -200,43 +218,54 @@ async def run_template_endpoint(
         tracker.log(f"Scenario ready: {record.status}")
         tracker.end_step("scenario_creation")
 
-        bundle = scenario_service.record_to_bundle(record)
+        # Populate response from record
         response.scenario_id = scenario_id
-        response.api_key = bundle.api_key
-        response.api_key_id = bundle.api_key_id
+        response.api_key = record.api_key
+        response.api_key_id = record.api_key_id
         response.check_in = check_in
         response.check_out = check_out
         response.hotel_id = hotel_id
 
-        # Extract contract/SID/PID
-        if bundle.contracts_json and len(bundle.contracts_json) > 0:
-            response.contract_id = bundle.contracts_json[0].get("id")
-        if bundle.suppliers_json and len(bundle.suppliers_json) > 0:
-            first_supplier = bundle.suppliers_json[0]
-            response.search_id = first_supplier.get("search_id")
-            response.package_id = first_supplier.get("package_id")
+        # Extract contract/SID/PID from record
+        if record.contracts_json and isinstance(record.contracts_json, dict):
+            # contracts_json is a dict, get the first value
+            response.contract_id = next(iter(record.contracts_json.values())) if record.contracts_json else None
+
+        # suppliers_json contains search_id and package_id
+        if record.suppliers_json and isinstance(record.suppliers_json, list) and len(record.suppliers_json) > 0:
+            first_supplier = record.suppliers_json[0]
+            if isinstance(first_supplier, dict):
+                response.search_id = first_supplier.get("search_id")
+                response.package_id = first_supplier.get("package_id")
 
         # Run scenario with core app
         tracker.start_step("scenario_run")
         try:
-            from app.services.crawla_service import CoreAppClient
+            from app.integrations.core_app import CoreAppClient
 
             with use_env(record.env):
                 async with CoreAppClient() as client:
                     result = await client.run_search_and_packages(
-                        api_key=bundle.api_key,
-                        check_in=bundle.check_in,
-                        check_out=bundle.check_out,
-                        hotel_id=bundle.atg_hotel_id,
+                        api_key=record.api_key,
+                        check_in=record.check_in,
+                        check_out=record.check_out,
+                        hotel_id=record.hotel_id,
                     )
             tracker.log(f"Scenario run completed: {result}")
+
+            # Capture search_id and package_id from result
+            if result.search_s_id:
+                response.search_id = result.search_s_id
+            if result.package_p_id:
+                response.package_id = result.package_p_id
+
             tracker.end_step("scenario_run")
         except Exception as e:
             tracker.end_step("scenario_run", success=False, error=str(e))
             if request_data.force_cleanup:
                 tracker.log("Cleanup enabled on error, tearing down scenario")
                 try:
-                    scenario_service.queue_teardown_all(db, env=env)
+                    await scenario_service.run_teardown(scenario_id)
                     response.deleted = True
                 except Exception as cleanup_err:
                     tracker.log(f"Cleanup failed: {cleanup_err}")
@@ -253,7 +282,7 @@ async def run_template_endpoint(
         if request_data.delete_mock_api_key:
             tracker.start_step("cleanup")
             try:
-                scenario_service.queue_teardown_all(db, env=env)
+                await scenario_service.run_teardown(scenario_id)
                 response.deleted = True
                 tracker.log("Scenario cleaned up")
                 tracker.end_step("cleanup")
