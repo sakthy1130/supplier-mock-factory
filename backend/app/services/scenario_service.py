@@ -275,13 +275,15 @@ async def run_teardown(scenario_id: str) -> None:
             return
         try:
             await _teardown_record(session, record)
-            session.delete(record)
-            session.commit()
         except Exception as exc:
-            logger.exception("Teardown failed id=%s", scenario_id)
+            logger.exception("Teardown failed id=%s (will still delete from DB)", scenario_id)
             record.error_message = str(exc)
             record.updated_at = _utcnow()
-            session.commit()
+
+        # Always delete from DB, even if teardown fails
+        # Backoffice errors shouldn't block database cleanup
+        session.delete(record)
+        session.commit()
     finally:
         session.close()
 
@@ -301,13 +303,15 @@ async def run_teardown_all(env: str | None = None) -> None:
             try:
                 await _teardown_record(session, record)
                 torn_down_envs.add(record.env)
-                session.delete(record)
-                session.commit()
             except Exception as exc:
-                logger.exception("Teardown failed id=%s namespace=%s", record.id, record.namespace)
+                logger.exception("Teardown failed id=%s namespace=%s (will still delete from DB)", record.id, record.namespace)
                 record.error_message = str(exc)
                 record.updated_at = _utcnow()
-                session.commit()
+
+            # Always delete from DB, even if teardown fails
+            # Backoffice errors shouldn't block database cleanup
+            session.delete(record)
+            session.commit()
         for torn_env in torn_down_envs:
             with use_env(torn_env):
                 async with MockServerClient() as client:
