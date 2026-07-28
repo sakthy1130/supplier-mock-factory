@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SMF Home — Redesign Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --font-sans: 'DM Sans', system-ui, sans-serif;
+        --font-serif: 'Source Serif 4', Georgia, serif;
+        --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+        --bg: #edefef;
+        --bg-elevated: #f6f7f6;
+        --surface: #ffffff;
+        --surface-hover: #eef1f0;
+        --border: #d7dbda;
+        --border-strong: #c3cac8;
+
+        --text: #445056;
+        --text-strong: #17262b;
+        --text-muted: #5c6b6e;
+
+        --accent: #0f5c57;
+        --accent-dim: rgba(15, 92, 87, 0.08);
+        --accent-glow: rgba(15, 92, 87, 0.25);
+        --success: #1f8a5f;
+        --success-dim: rgba(31, 138, 95, 0.1);
+        --warning: #b8860b;
+        --danger: #b03a2e;
+        --danger-dim: rgba(176, 58, 46, 0.08);
+
+        --hbs: #5b63c9;
+        --exp: #b23e73;
+        --rhk: #c1652f;
+        --chc: #7d4f85;
+
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+
+        --shadow-sm: 0 1px 2px rgba(23, 38, 43, 0.06);
+        --shadow-md: 0 8px 24px rgba(23, 38, 43, 0.08);
+        --shadow-lg: 0 20px 50px rgba(23, 38, 43, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        font-size: 15px;
+        line-height: 1.5;
+        color: var(--text);
+        background: var(--bg);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1, h2 { font-family: var(--font-serif); margin: 0; }
+
+      .preview-banner {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: #17262b;
+        color: #c8d4d6;
+        padding: 0.55rem 1.25rem;
+        font-size: 0.78rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        border-bottom: 1px solid #2a3d44;
+      }
+
+      .preview-banner strong { color: #fff; }
+
+      .app-shell {
+        display: grid;
+        grid-template-columns: 72px 1fr;
+        min-height: calc(100vh - 36px);
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--border);
+        background: var(--surface);
+        padding: 1.25rem 0.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.1rem;
+      }
+
+      .brand-mark {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: 1.5px solid var(--accent);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 0.75rem;
+        color: var(--accent);
+      }
+
+      .nav-item {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-md);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text);
+        display: grid;
+        place-items: center;
+        font-size: 1rem;
+        cursor: default;
+      }
+
+      .nav-item.active {
+        background: var(--accent-dim);
+        border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+        color: var(--accent);
+      }
+
+      .side-spacer { flex: 1; }
+
+      .icon-action {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-md);
+        border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+        background: var(--danger-dim);
+        color: var(--danger);
+        display: grid;
+        place-items: center;
+      }
+
+      .main-panel {
+        padding: 1.75rem 2rem 3rem;
+      }
+
+      /* ── Hero ── */
+      .hero {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--radius-xl);
+        border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+        background:
+          radial-gradient(ellipse 80% 120% at 0% 0%, rgba(15, 92, 87, 0.14), transparent 55%),
+          radial-gradient(ellipse 60% 80% at 100% 0%, rgba(91, 99, 201, 0.08), transparent 50%),
+          linear-gradient(180deg, #f8faf9 0%, var(--surface) 100%);
+        padding: 1.75rem 1.75rem 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .hero::after {
+        content: '';
+        position: absolute;
+        right: -40px;
+        top: -40px;
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: color-mix(in srgb, var(--accent) 6%, transparent);
+        pointer-events: none;
+      }
+
+      .page-eyebrow {
+        display: inline-block;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--accent);
+        margin-bottom: 0.55rem;
+      }
+
+      .hero h1 {
+        font-size: 2.15rem;
+        font-weight: 600;
+        color: var(--text-strong);
+        letter-spacing: -0.02em;
+        margin-bottom: 0.45rem;
+      }
+
+      .hero-sub {
+        color: var(--text-muted);
+        font-size: 1rem;
+        max-width: 58ch;
+        margin-bottom: 1.25rem;
+      }
+
+      .hero-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: stretch;
+      }
+
+      .env-switcher, .stat-chip {
+        padding: 0.65rem 0.85rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(8px);
+        box-shadow: var(--shadow-sm);
+        min-width: 130px;
+      }
+
+      .env-switcher span, .stat-chip span {
+        display: block;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        margin-bottom: 0.2rem;
+      }
+
+      .env-switcher select {
+        width: 100%;
+        border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+        border-radius: var(--radius-sm);
+        padding: 0.45rem 0.55rem;
+        font-weight: 600;
+        color: var(--text-strong);
+        background: var(--bg-elevated);
+        font-family: inherit;
+      }
+
+      .stat-chip strong {
+        color: var(--text-strong);
+        font-size: 0.92rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--success);
+        animation: pulse 1.5s ease infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(0.85); }
+      }
+
+      /* ── Quick stats strip ── */
+      .stats-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.75rem;
+      }
+
+      .mini-stat {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 0.9rem 1rem;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .mini-stat .label {
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        margin-bottom: 0.25rem;
+      }
+
+      .mini-stat .value {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--text-strong);
+        line-height: 1.1;
+      }
+
+      .mini-stat .hint {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.2rem;
+      }
+
+      /* ── Actions section ── */
+      .actions-section {
+        margin-bottom: 1.75rem;
+      }
+
+      .actions-heading h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-strong);
+        margin-bottom: 0.25rem;
+      }
+
+      .actions-heading p {
+        color: var(--text-muted);
+        font-size: 0.88rem;
+        margin-bottom: 1.1rem;
+      }
+
+      .home-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.85rem;
+      }
+
+      .home-grid-secondary {
+        display: contents;
+      }
+
+      .home-tile {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.9rem;
+        text-align: left;
+        padding: 1.25rem;
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--border);
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+        cursor: pointer;
+        overflow: hidden;
+        transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+        font-family: inherit;
+        color: inherit;
+      }
+
+      .home-tile::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: var(--tile-accent, var(--accent));
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+
+      .home-tile:hover {
+        border-color: color-mix(in srgb, var(--tile-accent, var(--accent)) 45%, var(--border));
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md), 0 10px 24px color-mix(in srgb, var(--tile-accent, var(--accent)) 18%, transparent);
+      }
+
+      .home-tile:hover::before { opacity: 1; }
+
+      .home-tile.featured {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1.25rem;
+        background: var(--surface);
+        border-color: var(--border);
+      }
+
+      .home-tile.featured::before { opacity: 0; }
+      .home-tile.featured:hover::before { opacity: 1; }
+
+      .home-tile.featured .tile-body {
+        flex: 1;
+        display: block;
+        width: 100%;
+      }
+
+      .home-tile-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-md);
+        display: grid;
+        place-items: center;
+        font-size: 1.2rem;
+        color: var(--tile-accent, var(--accent));
+        background: color-mix(in srgb, var(--tile-accent, var(--accent)) 12%, transparent);
+        flex-shrink: 0;
+      }
+
+      .home-tile strong {
+        display: block;
+        color: var(--text-strong);
+        font-size: 1rem;
+        margin-bottom: 0.3rem;
+      }
+
+      .home-tile p {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        line-height: 1.45;
+      }
+
+      .home-tile .tile-body {
+        min-width: 0;
+      }
+
+      .tile-create { --tile-accent: var(--accent); }
+      .tile-browse { --tile-accent: var(--hbs); }
+      .tile-crawla { --tile-accent: var(--rhk); }
+      .tile-queue  { --tile-accent: var(--chc); }
+      .tile-test   { --tile-accent: var(--exp); }
+
+      /* ── Recent scenarios ── */
+      .recent-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 1.25rem 1.35rem;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .recent-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.85rem;
+      }
+
+      .recent-header h2 {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--text-strong);
+      }
+
+      .link-btn {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--accent);
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      .scenario-rows { display: flex; flex-direction: column; gap: 0.5rem; }
+
+      .scenario-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.75rem 0.85rem;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: var(--bg-elevated);
+        transition: background 0.15s, border-color 0.15s;
+        cursor: pointer;
+      }
+
+      .scenario-row:hover {
+        background: var(--surface-hover);
+        border-color: var(--border-strong);
+      }
+
+      .scenario-row .ns {
+        font-weight: 600;
+        color: var(--text-strong);
+        font-size: 0.9rem;
+      }
+
+      .scenario-row .meta {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.15rem;
+      }
+
+      .env-badge {
+        font-size: 0.62rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.2rem 0.45rem;
+        border-radius: 999px;
+        border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+      }
+
+      .status-pill {
+        font-size: 0.62rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.2rem 0.45rem;
+        border-radius: 999px;
+        background: var(--success-dim);
+        color: var(--success);
+      }
+
+      .status-pill.pending {
+        background: var(--accent-dim);
+        color: var(--accent);
+      }
+
+      @media (max-width: 1200px) {
+        .home-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      }
+
+      @media (max-width: 1100px) {
+        .stats-strip { grid-template-columns: repeat(2, 1fr); }
+      }
+
+      @media (max-width: 800px) {
+        .home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+
+      @media (max-width: 700px) {
+        .app-shell { grid-template-columns: 1fr; }
+        .sidebar { display: none; }
+        .home-grid { grid-template-columns: 1fr; }
+        .scenario-row { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="preview-banner">
+      <span><strong>Preview only</strong> — proposed SMF home redesign (not wired to the app)</span>
+      <span>Open: <code>frontend/mockups/home-redesign-preview.html</code></span>
+    </div>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-mark">SMF</div>
+        <div class="nav-item active" title="Home">⌂</div>
+        <div class="nav-item" title="New scenario">✦</div>
+        <div class="nav-item" title="Scenarios">☰</div>
+        <div class="nav-item" title="Crawla">◌</div>
+        <div class="nav-item" title="Queue">⏵</div>
+        <div class="nav-item" title="Test runs">⬡</div>
+        <div class="side-spacer"></div>
+        <div class="icon-action" title="Clear all">🗑</div>
+      </aside>
+
+      <main class="main-panel">
+        <!-- Hero -->
+        <section class="hero">
+          <span class="page-eyebrow">Enigma Core</span>
+          <h1>Supplier Mock Factory</h1>
+          <p class="hero-sub">
+            Provision supplier mocks, contracts, and apiKeys for HBS, EXP, and Crawla — then run Smart Booking and queue tests from one place.
+          </p>
+
+          <div class="hero-controls">
+            <div class="env-switcher">
+              <span>Environment</span>
+              <select><option>Dev</option><option>Staging</option></select>
+            </div>
+            <div class="stat-chip">
+              <span>Backend</span>
+              <strong><span class="pulse-dot"></span> Connected</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- Action tiles -->
+        <section class="actions-section">
+          <div class="actions-heading">
+            <h2>What do you want to do?</h2>
+            <p>Pick a workflow to provision mocks, run tests, or inspect existing scenarios.</p>
+          </div>
+
+          <div class="home-grid">
+            <button type="button" class="home-tile tile-create featured">
+              <div class="home-tile-icon">✦</div>
+              <div class="tile-body">
+                <strong>New scenario</strong>
+                <p>Configure HBS + EXP packages, then provision mocks, contracts, and apiKey in one guided flow.</p>
+              </div>
+            </button>
+
+            <button type="button" class="home-tile tile-browse">
+              <div class="home-tile-icon">☰</div>
+              <div class="tile-body">
+                <strong>Scenarios (3)</strong>
+                <p>Browse persisted scenarios and inspect details.</p>
+              </div>
+            </button>
+
+            <button type="button" class="home-tile tile-crawla">
+              <div class="home-tile-icon">◌</div>
+              <div class="tile-body">
+                <strong>Crawla Mocks</strong>
+                <p>Fetch live Crawla anchors and provision a scenario export.</p>
+              </div>
+            </button>
+
+            <button type="button" class="home-tile tile-queue">
+              <div class="home-tile-icon">⏵</div>
+              <div class="tile-body">
+                <strong>Queue Runner</strong>
+                <p>Run all five Crawla bucket scenarios sequentially.</p>
+              </div>
+            </button>
+
+            <button type="button" class="home-tile tile-test">
+              <div class="home-tile-icon">⬡</div>
+              <div class="tile-body">
+                <strong>Test Runs</strong>
+                <p>Live dashboard for Smart Booking and Crawla results.</p>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        <!-- Quick stats -->
+        <div class="stats-strip">
+          <div class="mini-stat">
+            <div class="label">Suppliers</div>
+            <div class="value">4</div>
+            <div class="hint">HBS · EXP · RHK · CHC</div>
+          </div>
+          <div class="mini-stat">
+            <div class="label">Scenarios</div>
+            <div class="value">3</div>
+            <div class="hint">2 active · 1 torn down</div>
+          </div>
+          <div class="mini-stat">
+            <div class="label">Last test run</div>
+            <div class="value" style="font-size:1rem;">12 min ago</div>
+            <div class="hint">Smart Booking · passed</div>
+          </div>
+          <div class="mini-stat">
+            <div class="label">Queue status</div>
+            <div class="value" style="font-size:1rem; color: var(--text-muted);">Idle</div>
+            <div class="hint">5 bucket scenarios ready</div>
+          </div>
+        </div>
+
+        <!-- Recent scenarios -->
+        <section class="recent-panel">
+          <div class="recent-header">
+            <h2>Recent scenarios</h2>
+            <button type="button" class="link-btn">View all →</button>
+          </div>
+          <div class="scenario-rows">
+            <div class="scenario-row">
+              <div>
+                <div class="ns">smf-hbs-exp-dubai-001</div>
+                <div class="meta">Created 2h ago · HBS + EXP</div>
+              </div>
+              <span class="env-badge">dev</span>
+              <span class="status-pill">ready</span>
+            </div>
+            <div class="scenario-row">
+              <div>
+                <div class="ns">crawla-bucket-lower-042</div>
+                <div class="meta">Created yesterday · Crawla export</div>
+              </div>
+              <span class="env-badge">dev</span>
+              <span class="status-pill pending">building</span>
+            </div>
+            <div class="scenario-row">
+              <div>
+                <div class="ns">smf-stg-smoke-007</div>
+                <div class="meta">Created 3 days ago · HBS only</div>
+              </div>
+              <span class="env-badge" style="color:var(--warning); border-color:color-mix(in srgb,var(--warning) 55%,transparent); background:color-mix(in srgb,var(--warning) 10%,transparent);">stg</span>
+              <span class="status-pill">ready</span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
