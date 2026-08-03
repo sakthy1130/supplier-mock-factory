@@ -97,6 +97,10 @@ async def run_scenario(
     if not bundle.api_key:
         raise HTTPException(status_code=409, detail="Scenario has no apiKey")
 
+    # When the scenario picked a package for the booking flow, drive core all the
+    # way through book → getOrder and verify the retrieved order matches it.
+    booking_selection = _booking_selection(bundle.request)
+
     # Pin to the scenario's own env — its apiKey/contracts only exist there,
     # regardless of what env is currently selected in the UI.
     with use_env(record.env):
@@ -106,10 +110,43 @@ async def run_scenario(
                 check_in=bundle.check_in,
                 check_out=bundle.check_out,
                 hotel_id=bundle.atg_hotel_id,
+                booking_selection=booking_selection,
             )
 
     result.scenario_id = scenario_id
+    if booking_selection is None:
+        result.booking_message = (
+            "No package was selected for the booking flow when this scenario was "
+            "created, so only search + packages ran (no Booking/GetOrder mocks exist). "
+            "Re-create the scenario and pick a 'Book' package to exercise the booking flow."
+        )
     return result
+
+
+def _booking_selection(request: Optional[dict]) -> Optional[dict]:
+    """Derive the booking-flow package (price/board/room) to verify against, from
+    the first supplier in the stored request that has a selected package."""
+    if not isinstance(request, dict):
+        return None
+    for supplier in request.get("suppliers", []) or []:
+        if not isinstance(supplier, dict):
+            continue
+        packages = supplier.get("packages")
+        if not isinstance(packages, dict):
+            continue
+        idx = packages.get("booking_package_index")
+        if idx is None:
+            continue
+        prices = packages.get("prices") or []
+        room_basis = packages.get("room_basis") or []
+        room_names = packages.get("room_names") or []
+        return {
+            "supplier": supplier.get("code"),
+            "price": prices[idx] if idx < len(prices) else None,
+            "board": room_basis[idx] if idx < len(room_basis) else None,
+            "room_name": room_names[idx] if idx < len(room_names) else None,
+        }
+    return None
 
 
 @router.post("/{scenario_id}/refresh-booking-ids", response_model=ScenarioBundle, status_code=202)

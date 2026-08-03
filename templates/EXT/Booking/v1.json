@@ -10,22 +10,22 @@
     },
     "body": {
       "message": "OK",
-      "bookingId": "EXT-BK-220924-X7LaiK4d4dgrJk3",
-      "status": "CONFIRMED",
-      "hotelId": "100000",
-      "checkInDate": "2026-09-01",
-      "checkOutDate": "2026-09-03",
-      "nights": 2,
-      "totalPrice": 1000,
-      "currency": "AED",
-      "roomName": "Business Room",
-      "board": "BB",
-      "roomCriteria": {
-        "adults": 2,
-        "children": 0
-      },
-      "confirmationNumber": "EXT123456789",
-      "guestName": "Guest User"
+      "body": {
+        "bookingId": "EXT-BK-220924-X7LaiK4d4dgrJk3",
+        "atgId": "100000",
+        "searchCode": "smf-search-code",
+        "status": "BOOKED",
+        "totalPrice": 1000,
+        "netPrice": 1000,
+        "userName": "StagingTest",
+        "checkInDate": "2026-09-01",
+        "checkOutDate": "2026-09-03",
+        "bookingDate": "2026-09-01",
+        "currency": "AED",
+        "supplierId": 145,
+        "supplierName": "DirectStatic",
+        "leadCustomer": "Guest User"
+      }
     }
   }
 }

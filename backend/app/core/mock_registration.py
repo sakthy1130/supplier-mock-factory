@@ -93,6 +93,12 @@ async def _inject_and_register_supplier(
 ) -> str:
     field_map = _load_field_map(supplier_code)
     by_type = {item.log_type: item.expectation for item in items}
+    # No Booking expectation means this supplier's booking flow was intentionally
+    # not built (no package selected) — register the search/package mocks as-is
+    # and skip booking-id injection, which requires a Booking expectation.
+    if "Booking" not in by_type:
+        await client.register_expectations([item.expectation for item in items])
+        return ""
     new_id = injector.inject(by_type, supplier_code, field_map, booking_id=booking_id)
     await client.register_expectations([item.expectation for item in items])
     return new_id

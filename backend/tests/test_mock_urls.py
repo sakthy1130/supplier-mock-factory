@@ -21,24 +21,46 @@ def test_extract_paths_from_built():
 
 
 def test_build_mock_opt_urls_maps_log_types_for_hbs():
+    # HBS flows through the same generic branch as RHK/CHC/EXT — opt URLs are built
+    # from whatever path was actually registered (already namespace-prefixed in
+    # production), not reconstructed independently from the canonical roots.
     opt = build_mock_opt_urls(
         "http://mockserver-staging.tajawal.io",
         {
-            "Search": "/hotel-api/1.2/hotels",
-            "Packages": "/hotel-api/1.2/hotels",
-            "Booking": "/hotel-api/1.2/bookings",
-            "GetOrder": "/hotel-api/1.2/bookings/123",
-            "CancelOrder": "/hotel-api/1.2/bookings/123",
+            "Search": "/qa-001/hotel-api/1.0/hotels/search",
+            "Packages": "/qa-001/hotel-api/1.0/hotels/package/availability",
+            "Booking": "/qa-001/hotel-api/1.2/bookings/booking",
+            "GetOrder": "/qa-001/hotel-api/1.2/bookings/GetOrderBooking",
+            "CancelOrder": "/qa-001/hotel-api/1.2/bookings/cancelBooking",
         },
         supplier_code="HBS",
     )
     base = "http://mockserver-staging.tajawal.io"
-    assert opt["searchUrl"] == f"{base}/hotel-api/1.0/hotels/search"
-    assert opt["availabilityUrl"] == f"{base}/hotel-api/1.0/hotels/package/availability"
-    assert opt["prebookingUrl"] == f"{base}/hotel-api/1.0/checkrates/preBooking"
-    assert opt["bookingUrl"] == f"{base}/hotel-api/1.2/bookings/booking"
-    assert opt["orderUrl"] == f"{base}/hotel-api/1.2/bookings/GetOrderBooking"
-    assert opt["cancelBookingUrl"] == f"{base}/hotel-api/1.2/bookings/cancelBooking"
+    assert opt["searchUrl"] == f"{base}/qa-001/hotel-api/1.0/hotels/search"
+    assert opt["availabilityUrl"] == f"{base}/qa-001/hotel-api/1.0/hotels/package/availability"
+    assert opt["bookingUrl"] == f"{base}/qa-001/hotel-api/1.2/bookings/booking"
+    assert opt["orderUrl"] == f"{base}/qa-001/hotel-api/1.2/bookings/GetOrderBooking"
+    assert opt["cancelBookingUrl"] == f"{base}/qa-001/hotel-api/1.2/bookings/cancelBooking"
+
+
+def test_hbs_order_url_strips_booking_id_suffix():
+    # After booking-id injection the GetOrder mock path carries the id
+    # (.../GetOrderBooking/<id>). The contract orderUrl must be the base
+    # (.../GetOrderBooking) because the HBS adapter appends the id itself —
+    # otherwise the id doubles and getOrder 404s (E1011.1).
+    opt = build_mock_opt_urls(
+        "http://mockserver-staging.tajawal.io",
+        {
+            "Booking": "/qa-001/hotel-api/1.2/bookings/booking",
+            "GetOrder": "/qa-001/hotel-api/1.2/bookings/GetOrderBooking/148-4285117",
+            "CancelOrder": "/qa-001/hotel-api/1.2/bookings/cancelBooking",
+        },
+        supplier_code="HBS",
+    )
+    base = "http://mockserver-staging.tajawal.io"
+    assert opt["orderUrl"] == f"{base}/qa-001/hotel-api/1.2/bookings/GetOrderBooking"
+    # cancel/booking must be untouched
+    assert opt["cancelBookingUrl"] == f"{base}/qa-001/hotel-api/1.2/bookings/cancelBooking"
 
 
 def test_build_exp_override_opt_urls():
@@ -58,7 +80,11 @@ def test_build_exp_override_opt_urls():
     assert opt["overrideBookingUrl"] == f"{base}/v3/itineraries"
     assert opt["overrideRetrieveBookingUrl"] == f"{base}/v3/itineraries/7556800480832"
     assert opt["overrideCancelBookingUrl"] == f"{base}/v3/itineraries/7556800480832/rooms/1"
-    assert "searchUrl" not in opt
+    # Standard fields are ALSO set (pointed at the mock) so core's "Booking url is
+    # blocked" (E2002) check — which reads bookingUrl, not overrideBookingUrl —
+    # doesn't reject the cloned reference's real-Expedia URL.
+    assert opt["bookingUrl"] == f"{base}/v3/itineraries"
+    assert opt["searchUrl"] == f"{base}/v3/properties/availability"
 
 
 def test_build_mock_opt_urls_exp_uses_overrides():
@@ -71,4 +97,6 @@ def test_build_mock_opt_urls_exp_uses_overrides():
     }
     opt = build_mock_opt_urls("http://mock.example", paths, supplier_code="EXP")
     assert "overrideSearchUrl" in opt
-    assert "searchUrl" not in opt
+    # Standard bookingUrl must also point at the mock (E2002 block check).
+    assert opt["bookingUrl"] == "http://mock.example/v3/itineraries"
+    assert opt["searchUrl"] == "http://mock.example/v3/properties/availability"

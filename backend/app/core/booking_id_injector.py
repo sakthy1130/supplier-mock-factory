@@ -150,6 +150,8 @@ class BookingIdInjector:
 
     @staticmethod
     def _apply_hbs_get_order_path(expectation: dict, booking_id: str) -> None:
+        """Append the booking id after the GetOrderBooking segment, regardless of
+        whatever namespace prefix precedes it (e.g. /{namespace}/hotel-api/1.2/bookings/GetOrderBooking)."""
         http_request = expectation.get("httpRequest")
         if not isinstance(http_request, dict):
             return
@@ -158,10 +160,13 @@ class BookingIdInjector:
         if not isinstance(path, str) or not path:
             return
 
-        base = "/hotel-api/1.2/bookings/GetOrderBooking"
-        if path == base or path.endswith("/GetOrderBooking"):
-            http_request["path"] = f"{base}/{booking_id}"
+        suffix = "/GetOrderBooking"
+        if path.endswith(suffix):
+            http_request["path"] = f"{path}/{booking_id}"
             return
 
-        if path.startswith(base + "/"):
+        marker = suffix + "/"
+        idx = path.find(marker)
+        if idx != -1:
+            base = path[: idx + len(suffix)]
             http_request["path"] = f"{base}/{booking_id}"

@@ -55,6 +55,9 @@ def _run_migrations(engine) -> None:
         # supplier/packages_json columns — service layer falls back to those
         # when suppliers_json is NULL.
         ("scenario_templates", "suppliers_json", "JSON"),
+        # Per-supplier assignment_target rides inside suppliers_json (no column);
+        # only the template-level SmartBooking flag needs a new column.
+        ("scenario_templates", "sb_enabled", "BOOLEAN DEFAULT 0"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in migrations:

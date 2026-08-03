@@ -17,6 +17,9 @@ export interface PackageSpec {
   supplier_currency: string
   prices: number[]
   refundable: boolean[]
+  // 0-based index of the package the Booking/GetOrder flow is built for.
+  // null/undefined means no booking flow (only search + package mocks).
+  booking_package_index?: number | null
 }
 
 export const DEFAULT_ROOM_NAME = '1 Double Bed, Nonsmoking'
@@ -30,10 +33,14 @@ export const DEFAULT_SUPPLIER_CURRENCIES: Record<SupplierCode, string> = {
   EXT: 'EUR',
 }
 
+export type AssignmentTarget = 'apikey' | 'sbgroup' | 'both'
+
 export interface SupplierScenario {
   code: SupplierCode
   contract_currency: string
   packages: PackageSpec
+  // Where this supplier's contract attaches when SmartBooking is on. Default apikey.
+  assignment_target?: AssignmentTarget
 }
 
 export interface ScenarioRequest {
@@ -44,6 +51,9 @@ export interface ScenarioRequest {
   supplier_hotel_ids?: Record<string, string>
   suppliers: SupplierScenario[]
   assign_to_br?: boolean
+  // Create the apiKey with SmartBooking enabled (backend fills default SB config).
+  sb_enabled?: boolean
+  template_id?: string
 }
 
 export interface ScenarioBundle {

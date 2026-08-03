@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import DateTime, Integer, JSON, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, JSON, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -65,6 +65,9 @@ class ScenarioTemplateRecord(Base):
     # here too, for anything that might still read the old shape.
     supplier: Mapped[str] = mapped_column(String(8))
     packages_json: Mapped[list] = mapped_column(JSON)
-    # Full multi-supplier payload: [{"supplier": "HBS", "packages": [...]}, ...]
+    # Full multi-supplier payload: [{"supplier": "HBS", "packages": [...],
+    # "assignment_target": "apikey"}, ...]
     suppliers_json: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    # Create the apiKey with SmartBooking enabled when this template is used.
+    sb_enabled: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

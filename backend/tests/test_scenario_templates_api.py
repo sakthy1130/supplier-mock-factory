@@ -34,6 +34,26 @@ class TestScenarioTemplatesApi:
         assert len(items) == 1
         assert items[0]["id"] == created["id"]
 
+    def test_sb_fields_round_trip(self, api_client):
+        payload = _template_payload("SbTemplate")
+        payload["sb_enabled"] = True
+        payload["suppliers"][0]["assignment_target"] = "both"
+        payload["suppliers"][1]["assignment_target"] = "sbgroup"
+        created = api_client.post("/api/scenario-templates", json=payload).json()
+        assert created["sb_enabled"] is True
+        assert created["suppliers"][0]["assignment_target"] == "both"
+        assert created["suppliers"][1]["assignment_target"] == "sbgroup"
+
+        fetched = api_client.get("/api/scenario-templates").json()
+        row = next(t for t in fetched if t["id"] == created["id"])
+        assert row["sb_enabled"] is True
+        assert row["suppliers"][0]["assignment_target"] == "both"
+
+    def test_sb_defaults_when_absent(self, api_client):
+        created = api_client.post("/api/scenario-templates", json=_template_payload("Plain")).json()
+        assert created["sb_enabled"] is False
+        assert created["suppliers"][0]["assignment_target"] == "apikey"
+
     def test_create_rejects_empty_packages(self, api_client):
         payload = _template_payload()
         payload["suppliers"][0]["packages"] = []

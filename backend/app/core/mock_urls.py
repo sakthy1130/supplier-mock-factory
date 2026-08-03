@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from app.core.hbs_paths import build_hbs_contract_opt_urls
 from app.core.scenario_engine import BuiltExpectation
 
 LOG_TYPE_TO_OPT_FIELD: dict[str, str] = {
@@ -39,8 +38,6 @@ def build_mock_opt_urls(
     paths_by_log_type: dict[str, str],
     supplier_code: str | None = None,
 ) -> dict[str, str]:
-    if supplier_code == "HBS":
-        return build_hbs_contract_opt_urls(mock_base_url)
     if supplier_code == "EXP":
         return build_exp_override_opt_urls(mock_base_url, paths_by_log_type)
 
@@ -50,23 +47,49 @@ def build_mock_opt_urls(
         field = LOG_TYPE_TO_OPT_FIELD.get(log_type)
         if not field or not path.startswith("/"):
             continue
-        opt[field] = f"{base}{path}"
+        url_path = path
+        if supplier_code == "HBS" and log_type == "GetOrder":
+            # The HBS GetOrder mock path carries the booking id
+            # (.../GetOrderBooking/<id>) so the expectation matches the request the
+            # adapter actually sends. But the adapter treats the contract orderUrl
+            # as a BASE and appends the id itself, so the contract must stop at
+            # /GetOrderBooking — otherwise the id is doubled (.../<id>/<id>) → 404.
+            url_path = _hbs_get_order_base_path(path)
+        opt[field] = f"{base}{url_path}"
     _apply_opt_fallbacks(opt, base, paths_by_log_type)
     return opt
+
+
+def _hbs_get_order_base_path(path: str) -> str:
+    marker = "/GetOrderBooking"
+    idx = path.find(marker)
+    if idx != -1:
+        return path[: idx + len(marker)]
+    return path
 
 
 def build_exp_override_opt_urls(
     mock_base_url: str,
     paths_by_log_type: dict[str, str],
 ) -> dict[str, str]:
-    """EXP uses override*Url fields in contract opt (not searchUrl/bookingUrl)."""
+    """EXP routes via override*Url fields in contract opt. But the EXP contract is
+    cloned from a real Expedia reference whose standard bookingUrl/orderUrl/etc.
+    point at api.ean.com — and core's E2002 "Booking url is blocked" check reads
+    those standard fields, not the overrides. So set BOTH: the override*Url for
+    routing AND the standard *Url pointed at the mock so the block check passes."""
     base = mock_base_url.rstrip("/")
     opt: dict[str, str] = {}
     for log_type, path in paths_by_log_type.items():
-        field = EXP_LOG_TYPE_TO_OVERRIDE_FIELD.get(log_type)
-        if not field or not path.startswith("/"):
+        if not path.startswith("/"):
             continue
-        opt[field] = f"{base}{path}"
+        override_field = EXP_LOG_TYPE_TO_OVERRIDE_FIELD.get(log_type)
+        if override_field:
+            opt[override_field] = f"{base}{path}"
+        # Also overwrite the standard field so the cloned reference's real-Expedia
+        # URL (which the block check inspects) no longer points at a blocked host.
+        standard_field = LOG_TYPE_TO_OPT_FIELD.get(log_type)
+        if standard_field:
+            opt[standard_field] = f"{base}{path}"
 
     search = paths_by_log_type.get("Search")
     packages = paths_by_log_type.get("Packages")

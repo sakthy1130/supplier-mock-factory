@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { resolveHotelMapping } from '../api/hotels'
-import type { ScenarioRequest, SupplierCode } from '../types/scenario'
+import type { AssignmentTarget, ScenarioRequest, SupplierCode } from '../types/scenario'
 import { DEFAULT_ROOM_BASIS, DEFAULT_ROOM_NAME, DEFAULT_SUPPLIER_CURRENCIES } from '../types/scenario'
 
 function defaultNamespace() {
@@ -81,6 +81,8 @@ export interface ScenarioWizardTemplate {
   packages?: Partial<Record<SupplierCode, PackageRow[]>>
   supplierCurrencies?: Partial<Record<SupplierCode, string>>
   contractCurrencies?: Partial<Record<SupplierCode, string>>
+  sbEnabled?: boolean
+  assignmentTargets?: Partial<Record<SupplierCode, AssignmentTarget>>
 }
 
 interface Props {
@@ -122,7 +124,26 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
     CHC: initialTemplate?.enabledSuppliers?.CHC ?? false,
     EXT: initialTemplate?.enabledSuppliers?.EXT ?? false,
   }))
+  // Which package row (per supplier) the Booking/GetOrder flow is built for.
+  // null = no booking flow (only search + package mocks created).
+  const [bookingRow, setBookingRow] = useState<Record<SupplierCode, number | null>>(() => ({
+    HBS: null,
+    EXP: null,
+    RHK: null,
+    CHC: null,
+    EXT: null,
+  }))
   const [assignToBr, setAssignToBr] = useState(true)
+  // SmartBooking: create the apiKey with SB enabled, and per-supplier route each
+  // contract to the apiKey, the SB group, or both (default apikey).
+  const [sbEnabled, setSbEnabled] = useState(() => initialTemplate?.sbEnabled ?? false)
+  const [assignmentTargets, setAssignmentTargets] = useState<Record<SupplierCode, AssignmentTarget>>(() => ({
+    HBS: initialTemplate?.assignmentTargets?.HBS ?? 'apikey',
+    EXP: initialTemplate?.assignmentTargets?.EXP ?? 'apikey',
+    RHK: initialTemplate?.assignmentTargets?.RHK ?? 'apikey',
+    CHC: initialTemplate?.assignmentTargets?.CHC ?? 'apikey',
+    EXT: initialTemplate?.assignmentTargets?.EXT ?? 'apikey',
+  }))
   const [formError, setFormError] = useState<string | null>(null)
 
   const suppliers = useMemo(
@@ -178,6 +199,10 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
     setContractCurrencies((prev) => ({ ...prev, [code]: value.toUpperCase().slice(0, 3) }))
   }
 
+  const updateAssignmentTarget = (code: SupplierCode, value: AssignmentTarget) => {
+    setAssignmentTargets((prev) => ({ ...prev, [code]: value }))
+  }
+
   const updateRow = (code: SupplierCode, index: number, patch: Partial<PackageRow>) => {
     setSupplierPackages((prev) => {
       const rows = prev[code].map((row, i) => (i === index ? { ...row, ...patch } : row))
@@ -199,6 +224,20 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
       if (rows.length <= 1) return prev
       return { ...prev, [code]: rows.filter((_, i) => i !== index) }
     })
+    // Keep the booking selection pointing at the same row after removal.
+    setBookingRow((prev) => {
+      const selected = prev[code]
+      if (selected === null) return prev
+      if (selected === index) return { ...prev, [code]: null }
+      if (selected > index) return { ...prev, [code]: selected - 1 }
+      return prev
+    })
+  }
+
+  // Radio-style selection: picking a row sets it; clicking the selected row
+  // again clears it (so "no booking flow" stays reachable).
+  const toggleBookingRow = (code: SupplierCode, index: number) => {
+    setBookingRow((prev) => ({ ...prev, [code]: prev[code] === index ? null : index }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -206,6 +245,12 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
     setFormError(null)
     if (suppliers.length === 0) {
       setFormError('Select at least one supplier')
+      return
+    }
+    // SmartBooking needs at least one supplier feeding the SB group, else the
+    // group would be created empty (mirrors the backend guard).
+    if (sbEnabled && !suppliers.some((code) => assignmentTargets[code] !== 'apikey')) {
+      setFormError('SmartBooking is on — set at least one supplier to SbGroup or Both')
       return
     }
     try {
@@ -221,6 +266,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
           return {
             code,
             contract_currency: contractCurrencies[code] || 'USD',
+            assignment_target: assignmentTargets[code],
             packages: {
               count: rows.length,
               room_basis: parsed.room_basis,
@@ -228,10 +274,12 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
               supplier_currency: supplierCurrencies[code] || DEFAULT_SUPPLIER_CURRENCIES[code],
               prices: parsed.prices,
               refundable: parsed.refundable,
+              booking_package_index: bookingRow[code],
             },
           }
         }),
         assign_to_br: assignToBr,
+        sb_enabled: sbEnabled,
       }
       await onSubmit(request)
     } catch (err) {
@@ -349,8 +397,23 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
                       </select>
                     </label>
 
+                    {sbEnabled && (
+                      <label className="supplier-tile-field" style={{ maxWidth: '160px' }}>
+                        Contract goes to
+                        <select
+                          value={assignmentTargets[meta.code]}
+                          onChange={(e) => updateAssignmentTarget(meta.code, e.target.value as AssignmentTarget)}
+                        >
+                          <option value="apikey">ApiKey</option>
+                          <option value="sbgroup">SB Group</option>
+                          <option value="both">Both</option>
+                        </select>
+                      </label>
+                    )}
+
                     <div className="package-rows">
                       <div className="package-row package-row-head">
+                        <span title="Build the Booking/GetOrder flow for this package">Book</span>
                         <span>Room basis</span>
                         <span>Room name</span>
                         <span>Price</span>
@@ -359,6 +422,16 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
                       </div>
                       {rows.map((row, index) => (
                         <div key={index} className="package-row">
+                          <input
+                            type="radio"
+                            name={`booking-${meta.code}`}
+                            checked={bookingRow[meta.code] === index}
+                            // Toggle on click (clears when the selected row is re-clicked);
+                            // onChange is a no-op required for a controlled radio.
+                            onChange={() => {}}
+                            onClick={() => toggleBookingRow(meta.code, index)}
+                            title="Select this package for the Booking/GetOrder flow (click again to clear)"
+                          />
                           <input
                             value={row.roomBasis}
                             onChange={(e) => updateRow(meta.code, index, { roomBasis: e.target.value.toUpperCase() })}
@@ -411,13 +484,35 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
         <p className="hint" style={{ marginTop: '0.35rem' }}>
           On by default. Cleaned up automatically on teardown. Uncheck to skip BR assignment for this scenario.
         </p>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}>
+          <input type="checkbox" checked={sbEnabled} onChange={(e) => setSbEnabled(e.target.checked)} />
+          Create apiKey with SmartBooking (creates an SB group)
+        </label>
+        <p className="hint" style={{ marginTop: '0.35rem' }}>
+          {sbEnabled
+            ? 'An SB group is created first, then attached to the apiKey. Choose per supplier (above) whether its contract goes to the ApiKey, the SB Group, or Both — at least one must be SB Group or Both.'
+            : 'Off by default. When on, each supplier can route its contract to the apiKey, the SB group, or both.'}
+        </p>
       </div>
 
       <div className="form-footer">
         <p className="hint">
-          {suppliers.length > 0
-            ? `Will create mocks for ${suppliers.join(' + ')}`
-            : 'Select at least one supplier'}
+          {suppliers.length > 0 ? (
+            <>
+              Will create mocks for {suppliers.join(' + ')}.{' '}
+              {(() => {
+                const withBooking = suppliers.filter((code) => bookingRow[code] !== null)
+                return withBooking.length > 0
+                  ? `Booking flow: ${withBooking.join(', ')} (package #${withBooking
+                      .map((code) => (bookingRow[code] ?? 0) + 1)
+                      .join(', #')}).`
+                  : 'No booking flow — search + package mocks only. Pick a "Book" package to add it.'
+              })()}
+            </>
+          ) : (
+            'Select at least one supplier'
+          )}
         </p>
         <button type="submit" className="btn primary" disabled={busy || suppliers.length === 0}>
           {busy ? 'Provisioning…' : 'Create scenario →'}

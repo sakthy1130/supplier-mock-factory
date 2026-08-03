@@ -6,6 +6,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Any
 
+from app.core.cancel_policy import PENALTY_ALWAYS_FROM, format_cancel_from, free_cancel_deadline
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
 from app.plugins.room_names import apply_hbs_room_names, normalized_room_basis, normalized_room_names
@@ -42,6 +43,20 @@ def _update_rate_key_dates(rate_key: str, check_in: str, check_out: str) -> str:
 
 def _with_unique_rate_key_suffix(rate_key: str, index: int) -> str:
     return f"{rate_key}~SMF{index + 1}"
+
+
+def _rewrite_rate_key_hotel_id(rate_key: str, new_code: Any) -> str:
+    """Rewrite the hotel-code field in an HBS rateKey to the scenario's resolved
+    supplier hotel id. Format: checkIn|checkOut|W|<dest>|<hotelCode>|<roomCode>|…
+    (the 5th pipe field is the hotel code). Leaves the key unchanged if the shape
+    doesn't match, so a non-standard rateKey is never corrupted."""
+    if not isinstance(rate_key, str):
+        return rate_key
+    parts = rate_key.split("|")
+    if len(parts) > 4 and parts[4].isdigit():
+        parts[4] = str(new_code)
+        return "|".join(parts)
+    return rate_key
 
 
 class HbsMockPlugin(SupplierMockPlugin):
@@ -142,7 +157,9 @@ class HbsMockPlugin(SupplierMockPlugin):
         room_basis_list = normalized_room_basis(spec)
         new_rates = []
         for index in range(spec.count):
-            rate = deep_copy(rates[index % len(rates)])
+            source_rate = rates[index % len(rates)]
+            original_basis = source_rate.get("boardCode") if isinstance(source_rate, dict) else None
+            rate = deep_copy(source_rate)
             price = prices[index]
             is_refundable = refundable[index]
             basis = room_basis_list[index]
@@ -151,9 +168,19 @@ class HbsMockPlugin(SupplierMockPlugin):
             rate["boardName"] = _board_name(basis)
             _apply_hbs_rate_refundability(rate, price, is_refundable, check_in, check_out)
             if isinstance(rate.get("rateKey"), str):
-                rate["rateKey"] = rate["rateKey"].replace(" RO|", f" {basis}|")
+                # The rateKey embeds the board token from whichever raw template rate
+                # we cycled to (rates may not all share the same original board code) —
+                # replace THAT token, not a hardcoded "RO", or the rateKey silently
+                # keeps stale board info out of sync with the boardCode field above.
+                token = original_basis if isinstance(original_basis, str) and original_basis else "RO"
+                rate["rateKey"] = rate["rateKey"].replace(f" {token}|", f" {basis}|")
                 if index >= len(rates):
                     rate["rateKey"] = _with_unique_rate_key_suffix(rate["rateKey"], index)
+                # The rateKey embeds the hotel code (…|<dest>|<hotelCode>|<roomCode>|…);
+                # the template's is baked to the default hotel, so rewrite it to the
+                # scenario's resolved supplier hotel id or checkrate/booking references
+                # the wrong hotel.
+                rate["rateKey"] = _rewrite_rate_key_hotel_id(rate["rateKey"], hotel_id)
             new_rates.append(rate)
 
         room_names = normalized_room_names(spec)
@@ -234,6 +261,8 @@ class HbsMockPlugin(SupplierMockPlugin):
         if room_names:
             self._apply_room_names(expectations_by_type, room_names)
 
+        self._link_booking_flow(expectations_by_type, spec)
+
         packages = expectations_by_type.get("Packages")
         prebook = expectations_by_type.get("PreBooking")
         if not packages or not prebook:
@@ -260,9 +289,16 @@ class HbsMockPlugin(SupplierMockPlugin):
         if not pkg_rates:
             return
 
-        primary_rate = pkg_rates[0]
+        # Link PreBooking to the SELECTED package (not always index 0), so the
+        # prebooking rate/CP matches the package that actually gets booked.
+        idx = spec.booking_package_index
+        if idx is not None and 0 <= idx < len(pkg_rates):
+            primary_rate = pkg_rates[idx]
+        else:
+            primary_rate = pkg_rates[0]
         primary_rate_key = primary_rate.get("rateKey")
         primary_net = str(primary_rate.get("net", ""))
+        primary_cps = primary_rate.get("cancellationPolicies")
         if not primary_rate_key:
             return
 
@@ -298,13 +334,15 @@ class HbsMockPlugin(SupplierMockPlugin):
                 rate["net"] = primary_net
             if primary_rate.get("boardCode"):
                 rate["boardCode"] = primary_rate["boardCode"]
+                rate["boardName"] = _board_name(primary_rate["boardCode"])
             if primary_rate.get("rateClass"):
                 rate["rateClass"] = primary_rate["rateClass"]
-            policies = rate.get("cancellationPolicies")
-            if isinstance(policies, list) and primary_net:
-                for policy in policies:
-                    if isinstance(policy, dict):
-                        policy["amount"] = primary_net
+            # Copy the selected package's cancellation policy verbatim so the HBS
+            # adapter's prebooking-vs-packages CP check sees zero drift. The
+            # contract sets prebookingMaximumCPChangePercentage=0, so ANY
+            # difference in amount/from is rejected as E3021.4.
+            if isinstance(primary_cps, list):
+                rate["cancellationPolicies"] = deep_copy(primary_cps)
 
         if template_old_net and primary_net and template_old_net != primary_net:
             serialized = json.dumps(prebook)
@@ -326,6 +364,97 @@ class HbsMockPlugin(SupplierMockPlugin):
         if not isinstance(search_rooms, list) or not search_rooms:
             return
         search_hotels[0]["rooms"] = deep_copy(pkg_rooms)
+
+    def _link_booking_flow(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
+        """Sync the selected package's rate into Booking/GetOrder/CancelOrder.
+
+        Without this the booking-flow mocks ship their static template rate, so a
+        booking retrieved via the core service never matches the package the user
+        picked in search. Booking + GetOrder are forced to CONFIRMED with the
+        selected net price; CancelOrder keeps its cancelled (net 0.00) semantics
+        but still reflects the selected board/room/rateClass.
+        """
+        idx = spec.booking_package_index
+        if idx is None:
+            return
+        packages = expectations_by_type.get("Packages")
+        if not isinstance(packages, dict):
+            return
+        pkg_rates = _hbs_package_rates(packages)
+        if not pkg_rates or idx >= len(pkg_rates):
+            return
+        sel = pkg_rates[idx]
+        if not isinstance(sel, dict):
+            return
+
+        room_names = normalized_room_names(spec)
+        if idx < len(room_names):
+            room_name = room_names[idx]
+        elif room_names:
+            room_name = room_names[0]
+        else:
+            room_name = None
+
+        net = str(sel.get("net", "")) or None
+        board = sel.get("boardCode")
+        rate_class = sel.get("rateClass")
+        cancellation_policies = sel.get("cancellationPolicies")
+
+        for log_type in ("Booking", "GetOrder", "CancelOrder"):
+            expectation = expectations_by_type.get(log_type)
+            if not isinstance(expectation, dict):
+                continue
+            confirmed = log_type in ("Booking", "GetOrder")
+            if log_type == "GetOrder":
+                self._force_confirmed_get_order(expectation)
+            self._apply_hbs_booking_rate(
+                expectation, net, board, rate_class, room_name, cancellation_policies, confirmed
+            )
+
+    @staticmethod
+    def _apply_hbs_booking_rate(
+        expectation: dict,
+        net: str | None,
+        board: Any,
+        rate_class: Any,
+        room_name: str | None,
+        cancellation_policies: Any,
+        confirmed: bool,
+    ) -> None:
+        booking = expectation.get("httpResponse", {}).get("body", {}).get("booking")
+        if not isinstance(booking, dict):
+            return
+        hotel = booking.get("hotel")
+        if not isinstance(hotel, dict):
+            return
+        rooms = hotel.get("rooms")
+        if isinstance(rooms, list) and rooms and isinstance(rooms[0], dict):
+            room = rooms[0]
+            if room_name:
+                room["name"] = room_name
+            rates = room.get("rates")
+            if isinstance(rates, list) and rates and isinstance(rates[0], dict):
+                rate = rates[0]
+                if isinstance(board, str) and board:
+                    rate["boardCode"] = board
+                    rate["boardName"] = _board_name(board)
+                if isinstance(rate_class, str) and rate_class:
+                    rate["rateClass"] = rate_class
+                # Keep the booking-flow CP identical to the selected package's CP
+                # so no downstream CP comparison drifts.
+                if isinstance(cancellation_policies, list):
+                    rate["cancellationPolicies"] = deep_copy(cancellation_policies)
+                if confirmed and net:
+                    rate["net"] = net
+        if confirmed and net:
+            hotel["totalNet"] = net
+            try:
+                numeric = float(net)
+            except (TypeError, ValueError):
+                numeric = None
+            if numeric is not None:
+                booking["totalNet"] = numeric
+                booking["pendingAmount"] = numeric
 
     def _apply_room_names(self, expectations_by_type: dict[str, dict], room_names: list[str]) -> None:
         for log_type in ("Search", "Packages", "PreBooking"):
@@ -389,15 +518,38 @@ def _apply_hbs_rate_refundability(
         rate["cancellationPolicies"] = policies
     if not policies:
         policies.append({})
+    deadline = free_cancel_deadline(check_in)
     for policy in policies:
         if not isinstance(policy, dict):
             continue
         if is_refundable:
+            # Free to cancel until the deadline (2 days before check-in); the HBS
+            # adapter reads a future `from` as the free-cancel window.
             policy["amount"] = "0"
-            policy["from"] = f"{check_out}T00:00:00+04:00"
+            policy["from"] = format_cancel_from(deadline)
         else:
             policy["amount"] = str(price)
-            policy["from"] = "2000-01-01T00:00:00+00:00"
+            policy["from"] = format_cancel_from(PENALTY_ALWAYS_FROM)
+
+
+def _hbs_package_rates(packages: dict) -> list[dict]:
+    """Flatten every rate across the Packages response's rooms, in package order."""
+    hotels = (
+        packages.get("httpResponse", {})
+        .get("body", {})
+        .get("hotels", {})
+        .get("hotels", [])
+    )
+    if not isinstance(hotels, list) or not hotels or not isinstance(hotels[0], dict):
+        return []
+    rooms = hotels[0].get("rooms")
+    if not isinstance(rooms, list):
+        return []
+    rates: list[dict] = []
+    for room in rooms:
+        if isinstance(room, dict) and isinstance(room.get("rates"), list):
+            rates.extend(rate for rate in room["rates"] if isinstance(rate, dict))
+    return rates
 
 
 def _board_name(room_basis: str) -> str:
@@ -427,8 +579,13 @@ def _rewrite_hotel_code_in_rates(hotel: dict, new_code: int, old_code: Any) -> N
             if not isinstance(rate, dict):
                 continue
             rate_key = rate.get("rateKey")
-            if isinstance(rate_key, str) and old and old != new:
-                rate["rateKey"] = rate_key.replace(old, new)
+            if isinstance(rate_key, str):
+                if old and old != new:
+                    rate_key = rate_key.replace(old, new)
+                # Also rewrite the hotel-code field embedded in the rateKey, which
+                # the template bakes to the default hotel and the code-replace above
+                # misses (rateKey hotel id != hotel.code field).
+                rate["rateKey"] = _rewrite_rate_key_hotel_id(rate_key, new)
 
 
 def _normalized_refundable(spec: PackageSpec) -> list[bool]:

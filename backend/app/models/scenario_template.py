@@ -7,7 +7,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.models.scenario import SupplierCode
+from app.models.scenario import AssignmentTarget, SupplierCode
 
 
 class TemplatePackageRow(BaseModel):
@@ -27,6 +27,7 @@ class SupplierTemplatePackages(BaseModel):
     supplier_currency: str = Field(default="SAR", min_length=3, max_length=3)
     contract_currency: str = Field(default="USD", min_length=3, max_length=3)
     packages: list[TemplatePackageRow] = Field(min_length=1)
+    assignment_target: AssignmentTarget = AssignmentTarget.apikey
 
 
 class ScenarioTemplateCreate(BaseModel):
@@ -38,6 +39,7 @@ class ScenarioTemplateCreate(BaseModel):
     # didn't import" rather than "I never set one" — reject it up front instead.
     atg_hotel_id: str = Field(min_length=1)
     suppliers: list[SupplierTemplatePackages] = Field(min_length=1)
+    sb_enabled: bool = False
 
     @field_validator("atg_hotel_id")
     @classmethod
@@ -63,4 +65,9 @@ class ScenarioTemplate(BaseModel):
     function: Optional[str] = None
     atg_hotel_id: str
     suppliers: list[SupplierTemplatePackages]
+    sb_enabled: bool = False
     created_at: datetime
+    has_br_child_condition: bool = Field(
+        default=False,
+        description="True if this template has a per-template child BR condition configured for the current env.",
+    )

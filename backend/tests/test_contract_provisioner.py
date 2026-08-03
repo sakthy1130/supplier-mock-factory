@@ -36,10 +36,22 @@ async def test_create_contracts_uses_minimal_body_when_no_reference():
 
     # Asserted supplierId/autoId below are stg's HBS supplier record — pin the env
     # explicitly so this doesn't silently start reading dev's (different) values.
+    # Paths reflect what the finalized (namespace-prefixed) expectations would
+    # actually carry — HBS contract opt URLs are now built from these, not
+    # reconstructed independently from the canonical roots.
     with use_env("stg"):
         contract_ids = await provisioner.create_contracts(
             _request(),
-            {"HBS": {"Search": "/hotel-api/1.2/hotels", "Booking": "/hotel-api/1.2/bookings"}},
+            {
+                "HBS": {
+                    "Search": "/qa-p4-001/hotel-api/1.0/hotels/search",
+                    "Packages": "/qa-p4-001/hotel-api/1.0/hotels/package/availability",
+                    "PreBooking": "/qa-p4-001/hotel-api/1.0/checkrates/preBooking",
+                    "Booking": "/qa-p4-001/hotel-api/1.2/bookings/booking",
+                    "GetOrder": "/qa-p4-001/hotel-api/1.2/bookings/GetOrderBooking",
+                    "CancelOrder": "/qa-p4-001/hotel-api/1.2/bookings/cancelBooking",
+                }
+            },
             "http://mockserver-staging.tajawal.io",
         )
 
@@ -47,12 +59,12 @@ async def test_create_contracts_uses_minimal_body_when_no_reference():
     body = backoffice.create_contract.await_args.args[0]
     assert body["supplierId"] == "5fd5fefb1a4e866f7b3cea44"
     assert body["dynamicMarketType"] == "DynamicMarkupTarget"
-    assert body["opt"]["searchUrl"].endswith("/hotel-api/1.0/hotels/search")
-    assert body["opt"]["availabilityUrl"].endswith("/hotel-api/1.0/hotels/package/availability")
-    assert body["opt"]["prebookingUrl"].endswith("/hotel-api/1.0/checkrates/preBooking")
-    assert body["opt"]["bookingUrl"].endswith("/hotel-api/1.2/bookings/booking")
-    assert body["opt"]["orderUrl"].endswith("/hotel-api/1.2/bookings/GetOrderBooking")
-    assert body["opt"]["cancelBookingUrl"].endswith("/hotel-api/1.2/bookings/cancelBooking")
+    assert body["opt"]["searchUrl"].endswith("/qa-p4-001/hotel-api/1.0/hotels/search")
+    assert body["opt"]["availabilityUrl"].endswith("/qa-p4-001/hotel-api/1.0/hotels/package/availability")
+    assert body["opt"]["prebookingUrl"].endswith("/qa-p4-001/hotel-api/1.0/checkrates/preBooking")
+    assert body["opt"]["bookingUrl"].endswith("/qa-p4-001/hotel-api/1.2/bookings/booking")
+    assert body["opt"]["orderUrl"].endswith("/qa-p4-001/hotel-api/1.2/bookings/GetOrderBooking")
+    assert body["opt"]["cancelBookingUrl"].endswith("/qa-p4-001/hotel-api/1.2/bookings/cancelBooking")
     assert body["opt"]["availabilityTimeoutSeconds"] == "50"
     assert body["supplierAutoId"] == "100004"
 
@@ -78,7 +90,7 @@ async def test_create_contracts_clones_reference_contract():
 
     contract_ids = await provisioner.create_contracts(
         _request(),
-        {"HBS": {"Search": "/hotel-api/1.2/hotels"}},
+        {"HBS": {"Search": "/qa-p4-001/hotel-api/1.0/hotels/search"}},
         "http://mockserver-staging.tajawal.io",
     )
 
@@ -88,7 +100,7 @@ async def test_create_contracts_clones_reference_contract():
     assert body["uid"] == "smf-qa-p4-001-hbs"
     assert body["dynamicMarketType"] == "DynamicMarkupTarget"
     assert body["opt"]["searchUrl"] == (
-        "http://mockserver-staging.tajawal.io/hotel-api/1.0/hotels/search"
+        "http://mockserver-staging.tajawal.io/qa-p4-001/hotel-api/1.0/hotels/search"
     )
     assert body["opt"]["availabilityTimeoutSeconds"] == "50"
 
@@ -224,7 +236,11 @@ async def test_create_contracts_exp_uses_override_urls():
     assert body["opt"]["overrideBookingUrl"].endswith("/v3/itineraries")
     assert body["opt"]["overrideRetrieveBookingUrl"].endswith("/v3/itineraries/1")
     assert body["opt"]["overrideCancelBookingUrl"].endswith("/v3/itineraries/1/rooms/1")
-    assert "searchUrl" not in body["opt"]
+    # Standard fields are also set (pointed at the mock) so core's E2002
+    # "Booking url is blocked" check — which reads bookingUrl, not the override —
+    # doesn't reject a real-Expedia URL carried over from the reference contract.
+    assert body["opt"]["bookingUrl"].endswith("/v3/itineraries")
+    assert body["opt"]["searchUrl"].endswith("/v3/properties/availability")
 
 
 @pytest.mark.asyncio

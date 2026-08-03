@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 
+from app.core.cancel_policy import FREE_CANCEL_DAYS_BEFORE_CHECKIN
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
 from app.plugins.room_names import normalized_room_basis
@@ -70,10 +71,64 @@ class ExtMockPlugin(SupplierMockPlugin):
         return result
 
     def propagate_package_linkage(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
-        """Propagate searchId and accommodation data across log types."""
-        # EXT doesn't require explicit linkage synchronization in the same way
-        # as HBS/CHC — the structure is more flexible
-        pass
+        """Sync the selected package's price/board/room into the Booking and
+        GetOrder mocks so a retrieved order matches the picked package.
+
+        The EXT booking-flow request matchers are path+method only and the
+        accommodation id is never echoed, so only the response values need
+        aligning (no id reuse required).
+        """
+        idx = spec.booking_package_index
+        if idx is None:
+            return
+
+        packages = expectations_by_type.get("Packages")
+        if not isinstance(packages, dict):
+            return
+        hotel = _ext_packages_hotel(packages)
+        if not isinstance(hotel, dict):
+            return
+        accommodations = hotel.get("accommodations")
+        if not isinstance(accommodations, list) or idx >= len(accommodations):
+            return
+        acc = accommodations[idx]
+        if not isinstance(acc, dict):
+            return
+        distributions = acc.get("distributions")
+        dist = distributions[0] if isinstance(distributions, list) and distributions else {}
+        if not isinstance(dist, dict):
+            dist = {}
+
+        total_price = acc.get("totalPrice")
+        net_price = acc.get("netPrice", total_price)
+        currency = acc.get("currency")
+        room_name = dist.get("roomName")
+        board = dist.get("board")
+        hotel_id = hotel.get("hotelId")
+
+        # _ext_apply_values only overwrites keys already present on the target, so
+        # confirm (body.body: totalPrice/netPrice/currency) and getOrder
+        # (reservations[0]: totalPrice/roomName/board/hotelId) each take what fits.
+        values = {
+            "totalPrice": total_price,
+            "netPrice": net_price,
+            "currency": currency,
+            "roomName": room_name,
+            "board": board,
+            "hotelId": hotel_id,
+        }
+
+        # Both Booking (confirm) and GetOrder wrap the booking under body.body
+        # (real EXT shape). The adapter reads body.body.bookingId — a flat or
+        # reservations[] body yields an empty bId / NullPointerException
+        # (E3025.2 / E9999.1).
+        for log_type in ("Booking", "GetOrder"):
+            expectation = expectations_by_type.get(log_type)
+            if not isinstance(expectation, dict):
+                continue
+            inner = expectation.get("httpResponse", {}).get("body", {}).get("body")
+            if isinstance(inner, dict):
+                _ext_apply_values(inner, values)
 
     def _update_currency(self, hotel: dict, currency: str) -> None:
         """Update currency in all accommodations and distributions."""
@@ -168,17 +223,17 @@ class ExtMockPlugin(SupplierMockPlugin):
                 template_dist["netPricePerNight"] = per_night_prices
                 template_dist["totalPricePerNight"] = total_per_night_prices
 
-                # Update conditions (two objects required for EXT API)
-                conditions = template_dist.get("conditions", [])
-                if isinstance(conditions, list):
-                    # First condition with penalties
-                    if len(conditions) > 0 and isinstance(conditions[0], dict):
-                        if "penalties" in conditions[0]:
-                            conditions[0]["penalties"] = [{
-                                "deductionType": "PERCENTAGE",
-                                "daysBeforeArrival": 2,
-                                "deductingAmount": 100 if refundable[index] else 0
-                            }]
+                # Refundability follows the real EXT convention:
+                #   refundable     -> noRefundable:false + a conditions[] cancellation
+                #                     policy (stayPeriods + penalties)
+                #   non-refundable -> noRefundable:true  + NO conditions key at all
+                # The template ships without conditions, so we must BUILD them for
+                # refundable rates (editing-in-place was a no-op → every package
+                # looked refundable) and strip them for non-refundable ones.
+                if refundable[index]:
+                    template_dist["conditions"] = _ext_refundable_conditions(check_in, check_out)
+                else:
+                    template_dist.pop("conditions", None)
 
                 accommodation["distributions"] = [template_dist]
 
@@ -189,6 +244,51 @@ class ExtMockPlugin(SupplierMockPlugin):
     @property
     def log_types(self) -> list[str]:
         return LOG_TYPES
+
+
+def _ext_refundable_conditions(check_in: str, check_out: str) -> list[dict]:
+    """A refundable EXT rate carries a cancellation policy under distributions[].
+    conditions (mirrors the real supplier shape). A non-refundable rate has no
+    conditions key at all; the adapter uses this presence to classify the rate.
+
+    stayPeriods track the scenario's stay. A SINGLE penalty tier at
+    daysBeforeArrival = FREE_CANCEL_DAYS_BEFORE_CHECKIN is deliberate: the adapter
+    derives the cancellation `dateFrom` from the *widest* (earliest) tier, so a
+    multi-tier 2/3/4 policy would anchor at check-in − 4 and diverge from HBS/EXP
+    (check-in − 2). A rebooker compares these dates across suppliers and skips a
+    package whose deadline differs, so all suppliers must land on the same
+    free-cancel deadline."""
+    return [
+        {
+            "stayPeriods": [{"from": check_in, "to": check_out}],
+            "penalties": [
+                {
+                    "deductionType": "PERCENTAGE",
+                    "daysBeforeArrival": FREE_CANCEL_DAYS_BEFORE_CHECKIN,
+                    "deductingAmount": 100,
+                },
+            ],
+            "isMerged": False,
+        }
+    ]
+
+
+def _ext_packages_hotel(packages: dict) -> dict | None:
+    body = packages.get("httpResponse", {}).get("body")
+    if not isinstance(body, dict):
+        return None
+    body_list = body.get("body")
+    if isinstance(body_list, list) and body_list and isinstance(body_list[0], dict):
+        return body_list[0]
+    return None
+
+
+def _ext_apply_values(target: dict, values: dict) -> None:
+    """Overwrite only the keys already present on the booking-flow node, and only
+    with non-None source values."""
+    for key, value in values.items():
+        if value is not None and key in target:
+            target[key] = value
 
 
 def _meal_for_basis(room_basis: str) -> str:

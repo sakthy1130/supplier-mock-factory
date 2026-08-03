@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { createCrawlaScenario, runCrawlaScenario } from './api/crawla'
 import { getActiveEnv, setActiveEnv, type SmfEnv } from './api/base'
@@ -50,6 +50,7 @@ interface ImportSupplierBlock {
   supplier_currency: string
   contract_currency: string
   json: string
+  assignment_target: 'apikey' | 'sbgroup' | 'both'
 }
 
 function nextUnusedSupplier(used: SupplierCode[]): SupplierCode {
@@ -62,12 +63,42 @@ interface ScenarioTemplate {
   label: string
   description: string
   template?: ScenarioWizardTemplate
+  templateId?: string
+}
+
+function scLabelSortKey(label: string): number {
+  const match = label.match(/^SC\s*(\d+)/i)
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER
+}
+
+function CopyId({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(value)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div className="copy-row">
+      <span className="copy-label">ID</span>
+      <code className="copy-value">{value}</code>
+      <button type="button" className="btn tiny ghost" onClick={copy}>
+        {copied ? '✓' : 'Copy'}
+      </button>
+    </div>
+  )
 }
 
 function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [activeTemplate, setActiveTemplate] = useState<ScenarioTemplate | undefined>(undefined)
   const [customTemplates, setCustomTemplates] = useState<ApiScenarioTemplate[]>([])
+  const sortedCustomTemplates = useMemo(
+    () => [...customTemplates].sort((a, b) => scLabelSortKey(a.label) - scLabelSortKey(b.label)),
+    [customTemplates],
+  )
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [showImportForm, setShowImportForm] = useState(false)
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
@@ -75,8 +106,9 @@ function App() {
   const [importDescription, setImportDescription] = useState('')
   const [importHotelId, setImportHotelId] = useState('')
   const [importSuppliers, setImportSuppliers] = useState<ImportSupplierBlock[]>([
-    { supplier: 'HBS', supplier_currency: 'EUR', contract_currency: 'USD', json: '' },
+    { supplier: 'HBS', supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey' },
   ])
+  const [importSbEnabled, setImportSbEnabled] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importBusy, setImportBusy] = useState(false)
   const [env, setEnv] = useState<SmfEnv>(getActiveEnv())
@@ -210,7 +242,7 @@ function App() {
 
   const addImportSupplierBlock = () => {
     const nextSupplier = nextUnusedSupplier(importSuppliers.map((b) => b.supplier))
-    setImportSuppliers((prev) => [...prev, { supplier: nextSupplier, supplier_currency: 'EUR', contract_currency: 'USD', json: '' }])
+    setImportSuppliers((prev) => [...prev, { supplier: nextSupplier, supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey' }])
   }
 
   const removeImportSupplierBlock = (index: number) => {
@@ -225,7 +257,8 @@ function App() {
     setImportLabel('')
     setImportDescription('')
     setImportHotelId('')
-    setImportSuppliers([{ supplier: 'HBS', supplier_currency: 'EUR', contract_currency: 'USD', json: '' }])
+    setImportSuppliers([{ supplier: 'HBS', supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey' }])
+    setImportSbEnabled(false)
     setEditingTemplateId(null)
     setImportError(null)
     setShowImportForm(false)
@@ -246,12 +279,17 @@ function App() {
         supplier_currency: block.supplier_currency.toUpperCase().slice(0, 3),
         contract_currency: block.contract_currency.toUpperCase().slice(0, 3),
         packages: parseTemplatePackagesJson(block.json),
+        assignment_target: block.assignment_target,
       }))
+      if (importSbEnabled && !suppliers.some((s) => s.assignment_target !== 'apikey')) {
+        throw new Error('SmartBooking is on — set at least one supplier to SbGroup or Both')
+      }
       const payload = {
         label: importLabel.trim(),
         description: importDescription.trim(),
         atg_hotel_id: importHotelId.trim(),
         suppliers,
+        sb_enabled: importSbEnabled,
       }
       if (editingTemplateId) {
         await updateScenarioTemplate(editingTemplateId, payload)
@@ -267,6 +305,8 @@ function App() {
     }
   }
 
+  const editFormRef = useRef<HTMLFormElement>(null)
+
   const handleEditTemplate = (item: ApiScenarioTemplate) => {
     setEditingTemplateId(item.id)
     setImportLabel(item.label)
@@ -278,11 +318,22 @@ function App() {
         supplier_currency: entry.supplier_currency,
         contract_currency: entry.contract_currency,
         json: JSON.stringify(entry.packages, null, 2),
+        assignment_target: entry.assignment_target ?? 'apikey',
       })),
     )
+    setImportSbEnabled(item.sb_enabled ?? false)
     setImportError(null)
     setShowImportForm(true)
   }
+
+  // The edit form renders above the template list, so opening it while scrolled
+  // down (e.g. clicking Edit on a row near the bottom) would leave it off-screen
+  // above the viewport — scroll it into view right after it mounts/re-populates.
+  useEffect(() => {
+    if (editingTemplateId) {
+      editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [editingTemplateId])
 
   const handleDeleteTemplate = async (item: ApiScenarioTemplate) => {
     const confirmed = window.confirm(`Delete template "${item.label}"? This cannot be undone.`)
@@ -301,6 +352,7 @@ function App() {
     const enabledSuppliers: Partial<Record<SupplierCode, boolean>> = { HBS: false, EXP: false, RHK: false, CHC: false, EXT: false }
     const supplierCurrencies: Partial<Record<SupplierCode, string>> = {}
     const contractCurrencies: Partial<Record<SupplierCode, string>> = {}
+    const assignmentTargets: Partial<Record<SupplierCode, 'apikey' | 'sbgroup' | 'both'>> = {}
     for (const entry of item.suppliers) {
       const code = entry.supplier as SupplierCode
       packages[code] = entry.packages.map((p) => ({
@@ -312,17 +364,21 @@ function App() {
       enabledSuppliers[code] = true
       supplierCurrencies[code] = entry.supplier_currency
       contractCurrencies[code] = entry.contract_currency
+      assignmentTargets[code] = entry.assignment_target ?? 'apikey'
     }
     openCreate({
       id: `custom-${item.id}`,
       label: item.label,
       description: item.description,
+      templateId: item.id,
       template: {
         atgHotelId: item.atg_hotel_id || undefined,
         enabledSuppliers,
         packages,
         supplierCurrencies,
         contractCurrencies,
+        sbEnabled: item.sb_enabled ?? false,
+        assignmentTargets,
       },
     })
   }
@@ -331,7 +387,10 @@ function App() {
     setCreating(true)
     setBackendError(null)
     try {
-      const created = await createScenario(request)
+      const enrichedRequest: ScenarioRequest = activeTemplate?.templateId
+        ? { ...request, template_id: activeTemplate.templateId }
+        : request
+      const created = await createScenario(enrichedRequest)
       if (!created.id) throw new Error('Create response missing id')
       setActiveScenarioId(created.id)
       setTab('create')
@@ -882,7 +941,12 @@ function App() {
               </div>
 
               {showImportForm && (
-                <form className="wizard-section" onSubmit={handleImportTemplate} style={{ marginBottom: '1rem' }}>
+                <form
+                  ref={editFormRef}
+                  className="wizard-section"
+                  onSubmit={handleImportTemplate}
+                  style={{ marginBottom: '1rem' }}
+                >
                   <div className="wizard-section-title">
                     {editingTemplateId ? 'Edit template' : 'New template'}
                   </div>
@@ -988,6 +1052,25 @@ function App() {
                             </select>
                           </label>
                         </div>
+                        {importSbEnabled && (
+                          <div className="field" style={{ maxWidth: '150px' }}>
+                            <label>
+                              Contract goes to
+                              <select
+                                value={block.assignment_target}
+                                onChange={(e) =>
+                                  updateImportSupplierBlock(index, {
+                                    assignment_target: e.target.value as 'apikey' | 'sbgroup' | 'both',
+                                  })
+                                }
+                              >
+                                <option value="apikey">ApiKey</option>
+                                <option value="sbgroup">SB Group</option>
+                                <option value="both">Both</option>
+                              </select>
+                            </label>
+                          </div>
+                        )}
                       </div>
                       <div className="field field-wide">
                         <label>
@@ -1009,6 +1092,15 @@ function App() {
                     + Add supplier
                   </button>
 
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={importSbEnabled}
+                      onChange={(e) => setImportSbEnabled(e.target.checked)}
+                    />
+                    Create apiKey with SmartBooking (per-supplier routing above)
+                  </label>
+
                   {importError && <p className="error-text">{importError}</p>}
                   <div className="form-footer">
                     <p className="hint">Accepts roomName/room_name, price, roomBasis/room_basis, refundable — any casing.</p>
@@ -1028,7 +1120,7 @@ function App() {
                 </div>
               ) : (
                 <div className="scenario-rows">
-                  {customTemplates.map((item) => (
+                  {sortedCustomTemplates.map((item) => (
                     <div key={item.id} className="scenario-row">
                       <button type="button" className="list-item" onClick={() => openCustomTemplate(item)}>
                         <div className="ns">{item.label}</div>
@@ -1040,6 +1132,19 @@ function App() {
                         </div>
                       </button>
                       <span style={{ display: 'flex', gap: '0.3rem' }}>
+                        {item.has_br_child_condition && (
+                          <span
+                            className="env-badge"
+                            title="This template creates an extra child BR condition under DynamicMarkup on scenario creation"
+                            style={{
+                              color: 'var(--accent)',
+                              borderColor: 'color-mix(in srgb, var(--accent) 55%, transparent)',
+                              background: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+                            }}
+                          >
+                            BR Child Condition
+                          </span>
+                        )}
                         {item.suppliers.map((s) => (
                           <span
                             key={s.supplier}
@@ -1062,6 +1167,9 @@ function App() {
                           Delete
                         </button>
                       </span>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <CopyId value={item.id} />
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -33,6 +33,29 @@ class RunTemplateRequest(BaseModel):
         description="Override the hotel ID from template. Uses template default if not provided.",
         examples=["123456"]
     )
+    booking_package_index: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Opt into the booking flow. When set, the run drives core through "
+            "book -> poll -> getOrder for the package at this 0-based index (and "
+            "the Booking/GetOrder mocks are created for it). Omit (null) to run "
+            "search + packages only, exactly like the UI when no package is picked "
+            "to book. The index is per supplier's package list; the first supplier "
+            "whose list contains it is booked."
+        ),
+        examples=[0],
+    )
+    sb_enabled: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Override the template's SmartBooking setting. null (default) uses the "
+            "template's saved sb_enabled; true/false forces it on/off for this run. "
+            "When on, an SB group is created and each supplier's contract is routed "
+            "per its template assignment_target (apikey / sbgroup / both). At least "
+            "one supplier must target sbgroup/both, or the run fails validation."
+        ),
+    )
     delete_mock_api_key: bool = Field(
         default=True,
         description="If true: full cleanup (delete scenario, mocks, contracts, API key). If false: keep scenario running for inspection."
@@ -93,10 +116,31 @@ class RunTemplateResponse(BaseModel):
     contract_id: Optional[str] = None
     search_id: Optional[str] = None
     package_id: Optional[str] = None
+    # Core poll statuses so a caller can see how far the run got.
+    search_status: Optional[str] = None
+    package_status: Optional[str] = None
 
     check_in: Optional[str] = None
     check_out: Optional[str] = None
     hotel_id: Optional[str] = None
+    # The per-supplier hotel ids resolved from the mapping service and baked into
+    # the mocks. Surfaced so a caller can confirm the mock's hotel id matches the
+    # core HMS mapping (a stale/wrong id here == 0 search results downstream).
+    supplier_hotel_ids: Optional[dict] = None
+
+    # Booking-flow outcome (populated when the template selected a package for
+    # booking, i.e. the run drove core through book -> poll -> getOrder).
+    booking_id: Optional[str] = None
+    booking_status: Optional[str] = None
+    order_status: Optional[str] = None
+    booking_match: Optional[bool] = None
+    booking_message: Optional[str] = None
+
+    # SmartBooking outcome: whether SB was on for this run, the created SB group
+    # id (if any), and where each supplier's contract was attached.
+    sb_enabled: bool = False
+    sb_group_id: Optional[str] = None
+    contract_assignment: Optional[dict] = None  # {"apikey": [...codes], "sbgroup": [...codes]}
 
     deleted: bool = False
     assigned_to_br: bool = False

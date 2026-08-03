@@ -836,7 +836,7 @@
 
 .package-row {
   display: grid;
-  grid-template-columns: 0.6fr 2fr 0.7fr 0.6fr auto;
+  grid-template-columns: 0.45fr 0.6fr 2fr 0.7fr 0.6fr auto;
   gap: 0.5rem;
   align-items: center;
 }
@@ -859,7 +859,8 @@
   font-size: 0.85rem;
 }
 
-.package-row input[type='checkbox'] {
+.package-row input[type='checkbox'],
+.package-row input[type='radio'] {
   justify-self: center;
   width: 16px;
   height: 16px;
@@ -874,6 +875,25 @@
 .package-row-remove:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.badge-ok {
+  background: rgba(34, 197, 94, 0.18);
+  color: #16a34a;
+}
+
+.badge-fail {
+  background: rgba(239, 68, 68, 0.18);
+  color: #dc2626;
 }
 
 .supplier-tile.hbs { --tile-color: var(--hbs); }

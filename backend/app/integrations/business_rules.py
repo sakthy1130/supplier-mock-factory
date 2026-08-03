@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -10,6 +12,9 @@ import httpx
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+BR_CHILD_CONDITIONS_PATH = REPO_ROOT / "field-maps" / "br_child_conditions.json"
 
 
 STATIC_MARKUP_RULE_ID = 3
@@ -106,6 +111,20 @@ class BusinessRulesClient:
             )
         return _json_or_empty(response)
 
+    async def create_condition_raw(self, body: dict[str, Any]) -> dict[str, Any]:
+        """POST an arbitrary rule-value-mapping body verbatim (e.g. per-template child
+        BR conditions, whose field shape doesn't match create_condition's fixed signature)."""
+        response = await self._get_client().post(
+            f"{self.base_url}/rulevaluemappings",
+            json=body,
+            headers=self._headers(),
+        )
+        if response.status_code not in (200, 201):
+            raise BusinessRulesError(
+                f"BR create condition (raw) failed status={response.status_code} body={response.text}"
+            )
+        return _json_or_empty(response)
+
     async def get_rule_configs(self, rule_id: int) -> list[dict[str, Any]]:
         response = await self._get_client().get(
             f"{self.base_url}/v1/ruleconfigs/rule/{rule_id}",
@@ -154,7 +173,7 @@ class CrawlaBusinessRulesProvisioner:
     def __init__(self, client: BusinessRulesClient | None = None) -> None:
         self.client = client or BusinessRulesClient()
 
-    async def provision(self, api_key: str) -> dict[str, Any]:
+    async def provision(self, api_key: str, template_id: str | None = None) -> dict[str, Any]:
         setup: dict[str, Any] = {
             "enabled": True,
             "status": "SUCCESS",
@@ -185,11 +204,44 @@ class CrawlaBusinessRulesProvisioner:
                 api_key,
                 "15%-25%",
             )
+            if template_id:
+                dynamic_parent_id = _rule_data(setup, DYNAMIC_MARKUP_RULE_ID).get("condition_id")
+                if dynamic_parent_id:
+                    await self._run_step(
+                        setup,
+                        "template_child_conditions",
+                        self._create_template_child_conditions,
+                        template_id,
+                        dynamic_parent_id,
+                    )
+                else:
+                    setup["errors"].append({
+                        "step": "template_child_conditions",
+                        "message": "dynamic parent condition id missing — cannot create child condition",
+                    })
             await self._run_step(setup, "refresh", self.client.refresh)
         if setup["errors"]:
             setup["status"] = "FAILED"
             setup["warning"] = "BR setup failed"
         return setup
+
+    async def _create_template_child_conditions(
+        self,
+        template_id: str,
+        parent_condition_id: str,
+    ) -> dict[str, Any]:
+        """Create per-template child BR conditions under the DynamicMarkup rule,
+        using THIS scenario's own freshly-created dynamic-markup condition as the
+        parent (parentRuleValueMappingId is always the live id, never a stored one)."""
+        payloads = _load_template_child_conditions().get(self.client.settings.env, {}).get(template_id, [])
+        created: list[dict[str, Any]] = []
+        for payload in payloads:
+            body = {**payload, "parentRuleValueMappingId": int(parent_condition_id)}
+            response = await self.client.create_condition_raw(body)
+            child_id = _extract_id(response)
+            if child_id:
+                created.append(child_id)
+        return {"rule_id": DYNAMIC_MARKUP_RULE_ID, "template_child_condition_ids": created}
 
     async def cleanup(self, setup: dict[str, Any] | None, api_key: str | None) -> dict[str, Any]:
         if not setup and not api_key:
@@ -197,6 +249,16 @@ class CrawlaBusinessRulesProvisioner:
         api_key = api_key or str((setup or {}).get("api_key") or "")
         result: dict[str, Any] = {"enabled": True, "status": "SUCCESS", "errors": []}
         async with self.client:
+            # Child conditions reference the parent via parentRuleValueMappingId — the
+            # BR service won't let a parent be deleted while a child still points at
+            # it, so children must always be deleted first.
+            for rule_id in (STATIC_MARKUP_RULE_ID, DYNAMIC_MARKUP_RULE_ID):
+                rule_data = _rule_data(setup, rule_id)
+                for child_id in rule_data.get("template_child_condition_ids") or []:
+                    await self._cleanup_step(
+                        result, "delete_template_child_condition", self.client.delete_condition, str(child_id)
+                    )
+
             for rule_id in (STATIC_MARKUP_RULE_ID, DYNAMIC_MARKUP_RULE_ID):
                 rule_data = _rule_data(setup, rule_id)
                 condition_id = rule_data.get("condition_id")
@@ -282,6 +344,21 @@ class CrawlaBusinessRulesProvisioner:
         except Exception as exc:  # noqa: BLE001 - teardown must continue best-effort
             logger.exception("Crawla BR cleanup step failed step=%s", step)
             result["errors"].append({"step": step, "message": str(exc)})
+
+
+def _load_template_child_conditions() -> dict[str, dict[str, list[dict[str, Any]]]]:
+    """{env: {template_id: [condition_payload, ...]}} — read fresh each call, same
+    no-caching style as scenario_engine's template loading, so edits to the JSON
+    file take effect without a restart."""
+    if not BR_CHILD_CONDITIONS_PATH.exists():
+        return {}
+    return json.loads(BR_CHILD_CONDITIONS_PATH.read_text(encoding="utf-8"))
+
+
+def has_template_child_condition(template_id: str, env: str) -> bool:
+    """Public helper for surfacing configured template ids to the UI (e.g. a badge
+    on the template list), without exposing the raw condition payloads."""
+    return bool(_load_template_child_conditions().get(env, {}).get(template_id))
 
 
 def _json_or_empty(response: httpx.Response) -> dict[str, Any]:

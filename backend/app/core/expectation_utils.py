@@ -6,7 +6,7 @@ from typing import Any
 
 from app.core.exp_paths import apply_exp_mock_path
 from app.core.hbs_paths import apply_hbs_mock_path
-from app.core.namespace import apply_namespace
+from app.core.namespace import apply_namespace, safe_namespace_path_segment
 
 
 def strip_http_request_matchers(expectation: dict[str, Any]) -> dict[str, Any]:
@@ -44,18 +44,33 @@ def strip_response_framing_headers(expectation: dict[str, Any]) -> dict[str, Any
     return expectation
 
 
+def apply_namespace_path_prefix(expectation: dict[str, Any], namespace: str) -> dict[str, Any]:
+    """Prefix httpRequest.path with the namespace so every supplier's mock path is
+    unique per scenario, e.g. /hotel-api/1.0/hotels/search -> /{namespace}/hotel-api/1.0/hotels/search.
+    """
+    http_request = expectation.get("httpRequest")
+    if isinstance(http_request, dict):
+        path = http_request.get("path")
+        if isinstance(path, str) and path:
+            safe = safe_namespace_path_segment(namespace)
+            http_request["path"] = f"/{safe}/{path.lstrip('/')}"
+    return expectation
+
+
 def finalize_expectation_for_register(
     expectation: dict[str, Any],
     namespace: str,
     supplier_code: str,
     log_type: str,
 ) -> dict[str, Any]:
-    """Apply namespace id and strip request body/header matchers before MockServer register."""
+    """Apply namespace id, prefix the path with the namespace, and strip request
+    body/header matchers before MockServer register."""
     apply_namespace(expectation, namespace, supplier_code, log_type)
     if supplier_code == "HBS":
         apply_hbs_mock_path(expectation, log_type)
     elif supplier_code == "EXP":
-        apply_exp_mock_path(expectation, namespace, log_type)
+        apply_exp_mock_path(expectation, log_type)
+    apply_namespace_path_prefix(expectation, namespace)
     strip_response_framing_headers(expectation)
     return strip_http_request_matchers(expectation)
 

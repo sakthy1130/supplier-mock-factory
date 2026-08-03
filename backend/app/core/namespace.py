@@ -17,6 +17,11 @@ ALL_SCENARIO_LOG_TYPES = [
 SCENARIO_SUPPLIER_CODES = ("HBS", "EXP", "RHK", "CHC")
 
 
+def safe_namespace_path_segment(namespace: str) -> str:
+    """Normalize a namespace for use as a URL path segment (no case-folding)."""
+    return namespace.strip().replace(" ", "-")
+
+
 def build_expectation_id(namespace: str, supplier_code: str, log_type: str) -> str:
     safe = namespace.lower().replace(" ", "-")
     return f"smf-{safe}-{supplier_code}-{log_type}".lower()
