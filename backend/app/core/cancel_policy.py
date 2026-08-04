@@ -12,7 +12,17 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 
 # Refundable rates are free to cancel until this many days before check-in.
-FREE_CANCEL_DAYS_BEFORE_CHECKIN = 2
+#
+# 0 = free right up to check-in. This is deliberate: a refundable rate must keep
+# reading as refundable regardless of how close check-in is. With a >0 buffer the
+# free-cancel deadline (check-in - N) lands at/near "now" for near-term stays, and
+# the core then treats the window as expired and flips the rate to NON-refundable
+# — overriding the user's Refundable choice. It also has to stay <= check-in
+# because EXT is search-anchored (adapter computes checkIn - daysBeforeArrival,
+# which can't be negative), so check-in is the latest deadline HBS and EXT can
+# both hit and still match. Raise this only if you exclusively test far-future
+# stays and want a visible free-cancel window before arrival.
+FREE_CANCEL_DAYS_BEFORE_CHECKIN = 0
 
 # Non-refundable rates must have their penalty active before any possible booking
 # date, so this stays a fixed far-past sentinel by design — deriving it from

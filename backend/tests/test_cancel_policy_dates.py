@@ -1,20 +1,23 @@
 """Cancellation-policy dates derive from the scenario's check-in/check-out for
-HBS/EXP/EXT: refundable = free until 2 days before check-in, non-refundable =
-penalty from the start. Refundability itself still follows the per-package flag."""
+HBS/EXP/EXT: refundable = free until the deadline (check-in − FREE_CANCEL_DAYS,
+currently check-in itself so near-term stays still read refundable),
+non-refundable = penalty from the start. Refundability itself still follows the
+per-package flag."""
 
 from __future__ import annotations
 
 import pytest
 
-from app.core.cancel_policy import free_cancel_deadline
+from app.core.cancel_policy import FREE_CANCEL_DAYS_BEFORE_CHECKIN, free_cancel_deadline
 from app.core.scenario_engine import ScenarioEngine, TEMPLATES_DIR
 from app.models.scenario import PackageSpec, ScenarioRequest, SupplierCode, SupplierScenario
 
 CHECK_IN = "2026-09-10"
 CHECK_OUT = "2026-09-14"
-DEADLINE = "2026-09-08"  # check-in - 2 days
+# Deadline = check-in − FREE_CANCEL_DAYS_BEFORE_CHECKIN (0 today => check-in).
+DEADLINE = "2026-09-10"
 # Shared instant every supplier must emit so a rebooker sees identical dateFrom.
-DEADLINE_TS = "2026-09-08T00:00:00.000+05:30"
+DEADLINE_TS = "2026-09-10T00:00:00.000+05:30"
 
 pytestmark = pytest.mark.skipif(
     not (TEMPLATES_DIR / "HBS" / "Search" / "v1.json").exists(),
@@ -39,7 +42,12 @@ def _built(code: str, refundable: bool) -> dict:
     return {b.log_type: b.expectation for b in ScenarioEngine().build_expectations(req) if b.supplier_code == code}
 
 
-def test_free_cancel_deadline_is_two_days_before_checkin():
+def test_free_cancel_deadline_matches_configured_offset():
+    from datetime import datetime, timedelta
+
+    expected = (datetime.strptime(CHECK_IN, "%Y-%m-%d").date()
+                - timedelta(days=FREE_CANCEL_DAYS_BEFORE_CHECKIN))
+    assert free_cancel_deadline(CHECK_IN) == expected
     assert free_cancel_deadline(CHECK_IN).isoformat() == DEADLINE
 
 
@@ -55,10 +63,10 @@ def test_ext_stay_periods_derive_from_stay():
     dist = _built("EXT", True)["Search"]["httpResponse"]["body"]["body"][0]["accommodations"][0]["distributions"][0]
     cond = dist["conditions"][0]
     assert cond["stayPeriods"][0] == {"from": CHECK_IN, "to": CHECK_OUT}
-    # A single penalty tier at the shared 2-day deadline so the adapter-derived
-    # dateFrom matches HBS/EXP (the rebooker skips packages whose CP dates differ).
+    # A single penalty tier at the shared deadline so the adapter-derived dateFrom
+    # matches HBS/EXP (the rebooker skips packages whose CP dates differ).
     assert len(cond["penalties"]) == 1
-    assert cond["penalties"][0]["daysBeforeArrival"] == 2
+    assert cond["penalties"][0]["daysBeforeArrival"] == FREE_CANCEL_DAYS_BEFORE_CHECKIN
     nrf = _built("EXT", False)["Search"]["httpResponse"]["body"]["body"][0]["accommodations"][0]["distributions"][0]
     assert "conditions" not in nrf
 
