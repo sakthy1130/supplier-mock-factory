@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 from typing import Any
 
 from app.config import get_settings
@@ -52,6 +53,21 @@ class ContractProvisioner:
         if reference_id:
             reference = await self.backoffice.get_contract(reference_id)
             return _clone_contract(reference, supplier_code, namespace, opt_urls, contract_currency)
+        # No reference id configured for this supplier — the minimal synthesized
+        # body carries a wrong supplier_id, so connectivity-core rejects it with
+        # "Cannot find Supplier of id" and search comes back empty (the recurring
+        # EXT-contract bug when {SUPPLIER}_REFERENCE_CONTRACT_ID is missing from
+        # this machine's .env). Warn loudly so the misconfig is obvious instead of
+        # silently producing a broken contract.
+        logging.getLogger(__name__).warning(
+            "No %s_REFERENCE_CONTRACT_ID set for env=%s — falling back to a minimal "
+            "contract body, which connectivity-core will likely reject (empty search). "
+            "Set %s_REFERENCE_CONTRACT_ID in backend/.env.%s.",
+            supplier_code,
+            getattr(self.settings, "env", "?"),
+            supplier_code,
+            getattr(self.settings, "env", "?") or "<env>",
+        )
         return _minimal_contract_body(
             supplier_code, namespace, opt_urls, self.settings.mock_server_url, contract_currency
         )
