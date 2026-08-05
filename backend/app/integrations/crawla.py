@@ -88,7 +88,9 @@ class CrawlaClient:
         }
         data = await self._post_json("/hotelPage", payload)
         hotels = [_normalize_hotel_item(item) for item in _as_list(data.get("hotels"))]
-        _filter_prepay_offers(hotels)
+        # Show all offers, including pay-at-property (PostPay). We no longer drop
+        # them here — pay_at_property is still surfaced per offer so the UI can
+        # label/decide, rather than the fetch silently hiding them.
         return CrawlaAnchorPackagesResponse(hotels=hotels)
 
     async def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -157,28 +159,6 @@ def _normalize_hotel_item(item: Any) -> CrawlaHotelAnchorItem:
         status=_as_str(item.get("status")),
         data=offers,
     )
-
-
-def _is_postpay(offer: CrawlaHotelOffer) -> bool:
-    """Crawla marks pay-at-property (PostPay) offers with pay_at_property == 'Yes'."""
-    return (offer.pay_at_property or "").strip().lower() == "yes"
-
-
-def _filter_prepay_offers(hotels: list[CrawlaHotelAnchorItem]) -> None:
-    """Keep only PrePay offers (pay_at_property != 'Yes') for the next process.
-
-    HBS packages are PrePay, so a PostPay (pay-at-property) Crawla offer can never
-    pair with HBS in PACKAGES_INITIATIVES. Drop PostPay offers; if *every* offer is
-    PostPay, raise so the UI tells the user to pick different data.
-    """
-    all_offers = [offer for hotel in hotels for offer in hotel.data]
-    if all_offers and all(_is_postpay(offer) for offer in all_offers):
-        raise CrawlaApiError(
-            "All Crawla packages are PostPay (pay-at-property) only. "
-            "HBS is PrePay, so no package can pair for markup — try other hotel/dates."
-        )
-    for hotel in hotels:
-        hotel.data = [offer for offer in hotel.data if not _is_postpay(offer)]
 
 
 def _compose_room_name(room_name: Optional[str], bed_type: Optional[str]) -> str:
