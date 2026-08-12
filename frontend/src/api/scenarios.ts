@@ -1,7 +1,7 @@
 import type { ScenarioBundle, ScenarioListItem, ScenarioRequest } from '../types/scenario'
 import type { CrawlaScenarioRunResult } from '../types/crawla'
 import type { QuickwitSearchResponse } from '../types/quickwit'
-import { API_BASE } from './base'
+import { API_BASE, envHeaders } from './base'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -9,6 +9,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: {
       'Content-Type': 'application/json',
       ...init?.headers,
+      ...envHeaders(),
     },
   })
   if (!response.ok) {

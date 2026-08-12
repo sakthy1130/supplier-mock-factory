@@ -70,6 +70,20 @@ class SupplierMockScenarioOrchestrator:
         )
         plog.append(f"[contracts] Created: { {k: v for k, v in bundle.contracts.items()} }")
 
+        # Per-supplier routing: with SB on, the apiKey and SB group each get only
+        # the contracts of suppliers targeted to them (default apikey). With SB
+        # off, apikey_contracts is every supplier (unchanged behavior).
+        apikey_contracts = {
+            code: cid
+            for code, cid in bundle.contracts.items()
+            if code in request.apikey_contract_codes()
+        }
+        sbgroup_contract_ids = [
+            bundle.contracts[code]
+            for code in request.sbgroup_contract_codes()
+            if code in bundle.contracts
+        ]
+
         # Step 3a: Create SB group BEFORE SB configuration and apiKey
         sb_config_data: dict | None = None
         sb_group_data: dict | None = None
@@ -78,14 +92,14 @@ class SupplierMockScenarioOrchestrator:
             logger.info("Creating SB group for namespace=%s", request.namespace)
             sb_group_data = await self.sb_group_provisioner.create_group(
                 namespace=request.namespace,
-                contract_ids=list(bundle.contracts.values()),
+                contract_ids=sbgroup_contract_ids,
             )
             bundle.sb_group_id = sb_group_data["_id"]
             bundle.sb_group_name = sb_group_data["name"]
             plog.append(
                 f"[sb_group] POST /api/dynamic-forms/smart_booking_group → "
                 f"_id={sb_group_data['_id']} name={sb_group_data['name']} "
-                f"contracts={list(bundle.contracts.values())}"
+                f"contracts={sbgroup_contract_ids}"
             )
             logger.info("SB group created: _id=%s", sb_group_data["_id"])
 
@@ -107,7 +121,7 @@ class SupplierMockScenarioOrchestrator:
         # Step 4: Create apiKey and attach contracts (cache cleared inside provisioner)
         bundle.status = ScenarioStatus.CREATING_API_KEY
         api_key, api_key_id = await self.apikey_provisioner.create_api_key(
-            bundle.contracts,
+            apikey_contracts,
             request.namespace,
             sb_config_data=sb_config_data,
             sb_group_data=sb_group_data,
@@ -135,10 +149,11 @@ class SupplierMockScenarioOrchestrator:
                 f"group={sb_group_data['_id']} (no post-create PUT)"
             )
 
-        # Step 6: BR provisioning — for crawla_export AND for all SB scenarios
-        if request.crawla_export or request.sb_config is not None:
+        # Step 6: BR provisioning — for crawla_export, all SB scenarios, and plain
+        # scenarios that opted in via assign_to_br (default True; UI checkbox).
+        if request.crawla_export or request.sb_config is not None or request.assign_to_br:
             logger.info("Provisioning Business Rules for api_key=%s", api_key)
-            br_setup = await self.br_provisioner.provision(api_key)
+            br_setup = await self.br_provisioner.provision(api_key, template_id=request.template_id)
             bundle.br_setup = br_setup
             br_status = br_setup.get("status", "?")
             br_errors = br_setup.get("errors", [])

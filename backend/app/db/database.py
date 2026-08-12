@@ -47,6 +47,17 @@ def _run_migrations(engine) -> None:
     log = logging.getLogger(__name__)
     migrations = [
         ("scenarios", "sb_config_id", "VARCHAR(64)"),
+        # Existing rows predate multi-env support and were all created against
+        # staging — backfill them as 'stg' so their lifecycle (teardown/refresh)
+        # keeps resolving to the staging settings they were actually built with.
+        ("scenarios", "env", "VARCHAR(16) DEFAULT 'stg'"),
+        # Templates created before multi-supplier support only have the legacy
+        # supplier/packages_json columns — service layer falls back to those
+        # when suppliers_json is NULL.
+        ("scenario_templates", "suppliers_json", "JSON"),
+        # Per-supplier assignment_target rides inside suppliers_json (no column);
+        # only the template-level SmartBooking flag needs a new column.
+        ("scenario_templates", "sb_enabled", "BOOLEAN DEFAULT 0"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in migrations:

@@ -86,6 +86,32 @@ class TestScenariosApi:
         assert detail["api_key"] == "smf-test-key"
         assert detail["booking_ids"] == {"HBS": "148-1111111"}
 
+    def test_get_scenario_includes_original_request(self, api_client, monkeypatch):
+        async def fake_create(self, request):
+            bundle = _ready_bundle(request.namespace)
+            bundle.br_setup = {"enabled": True, "status": "SUCCESS", "errors": []}
+            return bundle
+
+        monkeypatch.setattr(
+            "app.services.scenario_service.SupplierMockScenarioOrchestrator.create_scenario",
+            fake_create,
+        )
+
+        payload = _request_payload("request-echo-test")
+        created = api_client.post("/api/scenarios", json=payload).json()
+        scenario_id = created["id"]
+
+        detail = api_client.get(f"/api/scenarios/{scenario_id}").json()
+        assert detail["request"]["namespace"] == "request-echo-test"
+        assert detail["request"]["check_in"] == "2026-09-01"
+        assert detail["request"]["suppliers"][0]["code"] == "HBS"
+        assert detail["request"]["suppliers"][0]["packages"]["count"] == 1
+        assert detail["request"]["suppliers"][0]["packages"]["room_basis"] == ["RO"]
+        # br_setup is appended to request_json post-create but must not leak into
+        # `request` — it's already surfaced separately as detail["br_setup"].
+        assert "br_setup" not in detail["request"]
+        assert detail["br_setup"]["status"] == "SUCCESS"
+
     def test_create_duplicate_namespace_409(self, api_client):
         api_client.post("/api/scenarios", json=_request_payload("dup-ns"))
         response = api_client.post("/api/scenarios", json=_request_payload("dup-ns"))

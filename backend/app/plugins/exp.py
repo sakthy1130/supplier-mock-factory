@@ -5,10 +5,20 @@ from __future__ import annotations
 import re
 from datetime import datetime, timedelta
 
+from app.core.cancel_policy import (
+    PENALTY_ALWAYS_FROM,
+    format_cancel_from,
+    free_cancel_deadline,
+)
 from app.core.exp_paths import build_exp_price_check_href, extract_price_check_token
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
-from app.plugins.room_names import apply_exp_room_names, normalized_room_names
+from app.plugins.room_names import (
+    apply_exp_board_basis_to_rate,
+    apply_exp_room_names,
+    normalized_room_basis,
+    normalized_room_names,
+)
 from app.plugins.supplier_currency import apply_exp_supplier_currency
 from app.plugins.json_utils import (
     deep_copy,
@@ -91,11 +101,14 @@ class ExpMockPlugin(SupplierMockPlugin):
                 continue
 
             template_rate = deep_copy(rates[0])
+            room_basis_list = normalized_room_basis(spec)
             new_rates = []
             for index in range(spec.count):
                 rate = deep_copy(template_rate)
                 price = prices[index]
                 rate["refundable"] = refundable[index]
+                _apply_exp_cancel_penalty(rate, refundable[index], check_in, check_out)
+                apply_exp_board_basis_to_rate(rate, room_basis_list[index])
                 _ensure_distribution(rate)
                 _apply_exp_prices(rate, check_in, check_out, price)
                 _rename_occupancy_key(rate, "2")
@@ -150,6 +163,10 @@ class ExpMockPlugin(SupplierMockPlugin):
                 expectation = expectations_by_type.get(log_type)
                 if isinstance(expectation, dict):
                     apply_exp_room_names(expectation, room_names)
+                    # Also apply room names to bed_groups descriptions
+                    _apply_room_names_to_bed_groups(expectation, room_names)
+
+        self._link_booking_flow(expectations_by_type, spec)
         packages = expectations_by_type.get("Packages")
         prebook = expectations_by_type.get("PreBooking")
         if not packages or not prebook:
@@ -171,9 +188,97 @@ class ExpMockPlugin(SupplierMockPlugin):
                 if log_type == "Search":
                     _align_search_room_rate_ids(expectation, room_id, rate_id)
 
+    def _link_booking_flow(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
+        """Sync the selected package's property/room/rate ids and total price into
+        the EXP GetOrder mock so a retrieved order matches the picked package.
+
+        EXP Booking carries only itinerary_id/href (handled by the booking-id
+        injector), so there is nothing package-specific to link there.
+        """
+        idx = spec.booking_package_index
+        if idx is None:
+            return
+        get_order = expectations_by_type.get("GetOrder")
+        packages = expectations_by_type.get("Packages")
+        if not isinstance(get_order, dict) or not isinstance(packages, dict):
+            return
+        selected = _exp_selected_package(packages, idx)
+        if selected is None:
+            return
+        property_id, room_id, rate_id = selected
+
+        body = get_order.get("httpResponse", {}).get("body")
+        if not isinstance(body, dict):
+            return
+        if property_id:
+            body["property_id"] = property_id
+        rooms = body.get("rooms")
+        if not isinstance(rooms, list) or not rooms or not isinstance(rooms[0], dict):
+            return
+        room = rooms[0]
+        if room_id:
+            room["id"] = room_id
+        rate = room.get("rate")
+        if not isinstance(rate, dict):
+            return
+        if rate_id:
+            rate["id"] = rate_id
+        refundable = _normalized_refundable(spec)
+        if idx < len(refundable):
+            rate["refundable"] = refundable[idx]
+        prices = _normalized_prices(spec)
+        if idx < len(prices):
+            _scale_exp_get_order_pricing(rate.get("pricing"), prices[idx])
+
     @property
     def log_types(self) -> list[str]:
         return LOG_TYPES
+
+
+def _exp_selected_package(packages: dict, idx: int) -> tuple[str | None, str | None, str | None] | None:
+    """Return (property_id, room_id, rate_id) for the idx-th package in the
+    Packages response, flattening rooms→rates in package order."""
+    properties = _exp_property_entries(packages)
+    if not properties:
+        return None
+    property_entry = properties[0]
+    property_id = str(property_entry.get("property_id", "")) or None
+    rooms = property_entry.get("rooms")
+    if not isinstance(rooms, list):
+        return None
+    pairs: list[tuple[dict, dict]] = []
+    for room in rooms:
+        if not isinstance(room, dict):
+            continue
+        rates = room.get("rates")
+        if isinstance(rates, list):
+            for rate in rates:
+                if isinstance(rate, dict):
+                    pairs.append((room, rate))
+    if idx >= len(pairs):
+        return None
+    room, rate = pairs[idx]
+    return property_id, str(room.get("id", "")) or None, str(rate.get("id", "")) or None
+
+
+def _scale_exp_get_order_pricing(pricing: object, total_price: float) -> None:
+    """Scale every money value under a GetOrder rate.pricing so the inclusive
+    total equals the selected package total. Uses the billable_currency total
+    (GetOrder shape) rather than request_currency (Packages shape)."""
+    if not isinstance(pricing, dict):
+        return
+    totals = pricing.get("totals")
+    if not isinstance(totals, dict):
+        return
+    inclusive = totals.get("inclusive")
+    old = None
+    if isinstance(inclusive, dict):
+        billable = inclusive.get("billable_currency")
+        if isinstance(billable, dict):
+            old = _parse_money(billable.get("value"))
+    if old is None or old <= 0:
+        return
+    _scale_exp_money_fields(pricing, total_price / old)
 
 
 def _exp_property_entries(expectation: dict) -> list[dict]:
@@ -199,6 +304,27 @@ def _ensure_distribution(rate: dict) -> None:
     sale_scenario = rate.setdefault("sale_scenario", {})
     if isinstance(sale_scenario, dict):
         sale_scenario["distribution"] = True
+
+
+def _apply_exp_cancel_penalty(rate: dict, is_refundable: bool, check_in: str, check_out: str) -> None:
+    """Derive the EXP cancel_penalties window from the stay: a refundable rate is
+    free until 2 days before check-in (penalty from that date); a non-refundable
+    rate is penalized from the start. Refundability itself is set separately via
+    rate["refundable"]."""
+    start = free_cancel_deadline(check_in) if is_refundable else PENALTY_ALWAYS_FROM
+    existing = rate.get("cancel_penalties")
+    currency = "AED"
+    if isinstance(existing, list) and existing and isinstance(existing[0], dict):
+        currency = existing[0].get("currency", currency)
+    end = datetime.strptime(check_out, "%Y-%m-%d").date()
+    rate["cancel_penalties"] = [
+        {
+            "start": format_cancel_from(start),
+            "end": format_cancel_from(end),
+            "percent": "100%",
+            "currency": currency,
+        }
+    ]
 
 
 def _apply_exp_prices(node: dict, check_in: str, check_out: str, total_price: float) -> None:
@@ -318,9 +444,45 @@ def _trim_bed_groups(rate: dict) -> None:
         return
     first_key = next(iter(bed_groups))
     kept = bed_groups[first_key]
-    if isinstance(kept, dict):
-        kept["description"] = "1 Bed"
+    # Keep original description from template instead of hardcoding "1 Bed"
+    # Room names are applied separately via propagate_package_linkage
     rate["bed_groups"] = {first_key: kept}
+
+
+def _apply_room_names_to_bed_groups(expectation: dict, room_names: list[str]) -> None:
+    """Apply room names from UI to bed_groups descriptions in Packages/Search.
+
+    Each room's bed_groups description should match the room name passed by the user,
+    not the hardcoded "1 Bed" default.
+    """
+    properties = _exp_property_entries(expectation)
+    for property_entry in properties:
+        rooms = property_entry.get("rooms")
+        if not isinstance(rooms, list):
+            continue
+
+        for room_index, room in enumerate(rooms):
+            if not isinstance(room, dict) or room_index >= len(room_names):
+                continue
+
+            rates = room.get("rates")
+            if not isinstance(rates, list):
+                continue
+
+            room_name = room_names[room_index]
+
+            for rate in rates:
+                if not isinstance(rate, dict):
+                    continue
+
+                bed_groups = rate.get("bed_groups")
+                if not isinstance(bed_groups, dict):
+                    continue
+
+                # Update the description in each bed_group to match the room name
+                for bed_group in bed_groups.values():
+                    if isinstance(bed_group, dict):
+                        bed_group["description"] = room_name
 
 
 def _rename_occupancy_key(rate: dict, target_key: str) -> None:

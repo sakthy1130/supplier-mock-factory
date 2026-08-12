@@ -1,5 +1,5 @@
 from app.core.expectation_utils import finalize_expectation_for_register
-from app.core.hbs_paths import build_hbs_contract_opt_urls, build_hbs_mock_path
+from app.core.hbs_paths import build_hbs_mock_path
 from app.core.mock_urls import build_mock_opt_urls
 
 
@@ -12,32 +12,20 @@ def test_build_hbs_mock_paths_use_canonical_roots_and_suffixes():
     assert build_hbs_mock_path("CancelOrder") == "/hotel-api/1.2/bookings/cancelBooking"
 
 
-def test_build_hbs_contract_opt_urls():
-    base = "http://mockserver-staging.tajawal.io"
-    opt = build_hbs_contract_opt_urls(base)
-    assert opt["searchUrl"] == f"{base}/hotel-api/1.0/hotels/search"
-    assert opt["availabilityUrl"] == f"{base}/hotel-api/1.0/hotels/package/availability"
-    assert opt["prebookingUrl"] == f"{base}/hotel-api/1.0/checkrates/preBooking"
-    assert opt["bookingUrl"] == f"{base}/hotel-api/1.2/bookings/booking"
-    assert opt["orderUrl"] == f"{base}/hotel-api/1.2/bookings/GetOrderBooking"
-    assert opt["cancelBookingUrl"] == f"{base}/hotel-api/1.2/bookings/cancelBooking"
-    assert opt["availabilityTimeoutSeconds"] == "50"
-    assert opt["paymentType"] == "AT_WEB"
-    assert opt["packagingEnabled"] is False
-    assert opt["mockServerUrl"] == f"{base}/"
-
-
-def test_build_mock_opt_urls_hbs_ignores_extracted_paths():
+def test_build_mock_opt_urls_hbs_uses_extracted_paths():
+    # HBS now flows through the same generic branch as RHK/CHC/EXT — contract opt
+    # URLs are built from whatever path was actually registered (already namespaced),
+    # not reconstructed independently from the canonical roots.
     opt = build_mock_opt_urls(
         "http://mock.example",
-        {"Search": "/hotel-api/1.2/hotels", "Booking": "/hotel-api/1.2/bookings"},
+        {"Search": "/qa-001/hotel-api/1.0/hotels/search", "Booking": "/qa-001/hotel-api/1.2/bookings/booking"},
         supplier_code="HBS",
     )
-    assert opt["searchUrl"].endswith("/hotel-api/1.0/hotels/search")
-    assert opt["prebookingUrl"].endswith("/hotel-api/1.0/checkrates/preBooking")
+    assert opt["searchUrl"] == "http://mock.example/qa-001/hotel-api/1.0/hotels/search"
+    assert opt["bookingUrl"] == "http://mock.example/qa-001/hotel-api/1.2/bookings/booking"
 
 
-def test_finalize_expectation_applies_hbs_mock_path():
+def test_finalize_expectation_applies_hbs_mock_path_with_namespace_prefix():
     expectation = {
         "httpRequest": {
             "path": "/hotel-api/1.2/hotels",
@@ -47,5 +35,5 @@ def test_finalize_expectation_applies_hbs_mock_path():
         "priority": 1000,
     }
     result = finalize_expectation_for_register(expectation, "qa-001", "HBS", "Search")
-    assert result["httpRequest"]["path"] == "/hotel-api/1.0/hotels/search"
+    assert result["httpRequest"]["path"] == "/qa-001/hotel-api/1.0/hotels/search"
     assert "body" not in result["httpRequest"]

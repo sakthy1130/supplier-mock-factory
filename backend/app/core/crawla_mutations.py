@@ -7,7 +7,7 @@ from typing import Optional
 
 from app.models.scenario import SupplierMutation
 from app.plugins.json_utils import deep_copy, update_fields_recursive
-from app.plugins.room_names import apply_hbs_room_name
+from app.plugins.room_names import apply_exp_board_basis_to_rate, apply_hbs_room_name
 
 PRICE_FIELD_NAMES = {
     "amount",
@@ -251,24 +251,10 @@ def _apply_exp_bed_groups_description(expectation: dict, description: str) -> No
                             bg["description"] = description
 
 
-# Amenity IDs that represent a meal plan in the EXP/Rapid API.
-# Non-meal amenities (WiFi, parking, etc.) are intentionally excluded.
-_EXP_MEAL_AMENITY_IDS: frozenset[str] = frozenset({
-    "2098", "2102", "2103", "2104", "2105", "2106", "2107", "2111",
-    "2193", "2194", "2205", "2206", "2207", "2209", "2210", "2211",
-    "1073742621", "1073742625", "1073742626", "1073742786", "1073742857", "1073742551",
-})
-
-# Canonical amenity (id, name) to inject per board code.
-_EXP_BOARD_AMENITY: dict[str, tuple[str, str]] = {
-    "BB": ("2098", "Free Breakfast"),
-    "HB": ("2206", "Half Board"),
-    "FB": ("2207", "Full Board"),
-    "AI": ("2111", "All-Inclusive"),
-}
-
-
 def _apply_exp_room_basis(expectation: dict, room_basis: str) -> None:
+    """Apply the same board basis to every EXP rate (used for the crawla-mutation
+    supplier-wide override; per-package board basis is applied in ExpMockPlugin
+    itself via apply_exp_board_basis_to_rate)."""
     body = expectation.get("httpResponse", {}).get("body")
     if isinstance(body, dict):
         entries = body.get("body")
@@ -278,7 +264,6 @@ def _apply_exp_room_basis(expectation: dict, room_basis: str) -> None:
         return
     if not isinstance(entries, list):
         return
-    amenity_entry = _EXP_BOARD_AMENITY.get(room_basis.upper() if room_basis else "")
     for prop in entries:
         if not isinstance(prop, dict):
             continue
@@ -286,18 +271,7 @@ def _apply_exp_room_basis(expectation: dict, room_basis: str) -> None:
             if not isinstance(room, dict):
                 continue
             for rate in room.get("rates") or []:
-                if not isinstance(rate, dict):
-                    continue
-                rate.pop("meal_plan", None)
-                amenities = rate.setdefault("amenities", {})
-                if not isinstance(amenities, dict):
-                    continue
-                for key in list(amenities):
-                    if str(key) in _EXP_MEAL_AMENITY_IDS:
-                        del amenities[key]
-                if amenity_entry:
-                    amenity_id, amenity_name = amenity_entry
-                    amenities[amenity_id] = {"id": amenity_id, "name": amenity_name}
+                apply_exp_board_basis_to_rate(rate, room_basis)
 
 
 def _apply_exp_room_name(expectation: dict, room_name: str) -> None:

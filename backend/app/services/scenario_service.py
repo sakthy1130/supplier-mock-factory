@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.orchestrator import SupplierMockScenarioOrchestrator
 from app.db.models import ScenarioRecord
+from app.env_context import get_current_env, use_env
 from app.integrations.mock_server import MockServerClient
 from app.services import provisioning_log_cache
 from app.models.scenario import (
@@ -39,9 +40,14 @@ def record_to_bundle(record: ScenarioRecord) -> ScenarioBundle:
     br_setup = request_data.get("br_setup")
     if not isinstance(br_setup, dict):
         br_setup = None
+    # br_setup is appended onto request_json after create (see apply_bundle) and is
+    # already surfaced separately as bundle.br_setup — exclude it here so `request`
+    # reflects only what was actually submitted, not the provisioning result.
+    original_request = {k: v for k, v in request_data.items() if k != "br_setup"} or None
     return ScenarioBundle(
         id=record.id,
         namespace=record.namespace,
+        env=record.env,
         status=ScenarioStatus(record.status),
         api_key=record.api_key,
         api_key_id=record.api_key_id,
@@ -60,6 +66,7 @@ def record_to_bundle(record: ScenarioRecord) -> ScenarioBundle:
         expires_at=record.expires_at,
         sb_config_id=record.sb_config_id,
         sb_group_id=record.sb_group_id,
+        request=original_request,
     )
 
 
@@ -67,6 +74,7 @@ def record_to_list_item(record: ScenarioRecord) -> ScenarioListItem:
     return ScenarioListItem(
         id=record.id,
         namespace=record.namespace,
+        env=record.env,
         status=ScenarioStatus(record.status),
         created_at=record.created_at,
         suppliers=record.suppliers_json or [],
@@ -80,7 +88,14 @@ def get_record(db: Session, scenario_id: str) -> ScenarioRecord:
     return record
 
 
-def create_pending(db: Session, request: ScenarioRequest) -> ScenarioRecord:
+def create_pending(db: Session, request: ScenarioRequest, env: str | None = None) -> ScenarioRecord:
+    """Create a pending scenario row, tagged with the env it should run against.
+
+    ``env`` defaults to the active request env (contextvar, set by the X-SMF-Env
+    middleware). Once persisted, this value is what every lifecycle op (run,
+    refresh, teardown) resolves settings from — never the caller's current
+    dropdown selection — so switching envs mid-run can't retarget a scenario.
+    """
     existing = db.query(ScenarioRecord).filter(ScenarioRecord.namespace == request.namespace).first()
     if existing is not None:
         raise HTTPException(
@@ -92,6 +107,7 @@ def create_pending(db: Session, request: ScenarioRequest) -> ScenarioRecord:
     record = ScenarioRecord(
         id=str(uuid.uuid4()),
         namespace=request.namespace,
+        env=env or get_current_env(),
         status=ScenarioStatus.PENDING.value,
         request_json=request.model_dump(mode="json"),
         contracts_json={},
@@ -147,9 +163,10 @@ async def run_create_scenario(scenario_id: str) -> None:
         if record is None:
             return
         request = ScenarioRequest.model_validate(record.request_json)
-        orchestrator = SupplierMockScenarioOrchestrator()
         try:
-            bundle = await orchestrator.create_scenario(request)
+            with use_env(record.env):
+                orchestrator = SupplierMockScenarioOrchestrator()
+                bundle = await orchestrator.create_scenario(request)
             bundle.id = scenario_id
             apply_bundle(session, record, bundle)
             if bundle.provisioning_log:
@@ -173,9 +190,10 @@ async def run_refresh_booking_ids(scenario_id: str) -> None:
         if record.status != ScenarioStatus.READY.value:
             return
         request = ScenarioRequest.model_validate(record.request_json)
-        orchestrator = SupplierMockScenarioOrchestrator()
         try:
-            bundle = await orchestrator.refresh_booking_ids(request)
+            with use_env(record.env):
+                orchestrator = SupplierMockScenarioOrchestrator()
+                bundle = await orchestrator.refresh_booking_ids(request)
             bundle.id = scenario_id
             bundle.namespace = record.namespace
             bundle.contracts = record.contracts_json or {}
@@ -210,27 +228,30 @@ _TEARABLE_STATUSES = frozenset(
 )
 
 
-def list_tearable_records(db: Session) -> list[ScenarioRecord]:
-    return (
-        db.query(ScenarioRecord)
-        .filter(ScenarioRecord.status.in_(_TEARABLE_STATUSES))
-        .order_by(ScenarioRecord.created_at.desc())
-        .all()
-    )
+def list_tearable_records(db: Session, env: str | None = None) -> list[ScenarioRecord]:
+    query = db.query(ScenarioRecord).filter(ScenarioRecord.status.in_(_TEARABLE_STATUSES))
+    if env:
+        query = query.filter(ScenarioRecord.env == env)
+    return query.order_by(ScenarioRecord.created_at.desc()).all()
 
 
 async def _teardown_record(session: Session, record: ScenarioRecord) -> None:
-    orchestrator = SupplierMockScenarioOrchestrator()
-    bundle = await orchestrator.teardown_scenario(
-        record.namespace,
-        api_key_id=record.api_key_id,
-        api_key=record.api_key,
-        br_setup=(record.request_json or {}).get("br_setup"),
-        contracts=record.contracts_json or {},
-        suppliers=record.suppliers_json or [],
-        sb_config_id=record.sb_config_id,
-        sb_group_id=record.sb_group_id,
-    )
+    # Always tear down against the env this scenario was created in — never the
+    # caller's current env selection — so switching the dropdown mid-cleanup
+    # can't send stg contract/apiKey ids to the dev Backoffice (or vice versa).
+    with use_env(record.env):
+        orchestrator = SupplierMockScenarioOrchestrator()
+        supplier_codes = record.suppliers_json or []
+        bundle = await orchestrator.teardown_scenario(
+            record.namespace,
+            api_key_id=record.api_key_id,
+            api_key=record.api_key,
+            br_setup=(record.request_json or {}).get("br_setup"),
+            contracts=record.contracts_json or {},
+            suppliers=supplier_codes,
+            sb_config_id=record.sb_config_id,
+            sb_group_id=record.sb_group_id,
+        )
     bundle.id = record.id
     bundle.namespace = record.namespace
     bundle.check_in = record.check_in
@@ -255,45 +276,61 @@ async def run_teardown(scenario_id: str) -> None:
             return
         try:
             await _teardown_record(session, record)
-            session.delete(record)
-            session.commit()
         except Exception as exc:
-            logger.exception("Teardown failed id=%s", scenario_id)
+            logger.exception("Teardown failed id=%s (will still delete from DB)", scenario_id)
             record.error_message = str(exc)
             record.updated_at = _utcnow()
-            session.commit()
+
+        # Always delete from DB, even if teardown fails
+        # Backoffice errors shouldn't block database cleanup
+        session.delete(record)
+        session.commit()
     finally:
         session.close()
 
 
-async def run_teardown_all() -> None:
+async def run_teardown_all(env: str | None = None) -> None:
+    """Tear down every tearable scenario, scoped to ``env`` (None = all envs).
+
+    The blanket MockServer clear runs once per env actually represented among the
+    torn-down records — not once globally — so a mixed-env cleanup can't sweep the
+    wrong MockServer instance (dev and stg have separate MockServer hosts).
+    """
     session = get_session_factory_standalone()()
     try:
-        records = list_tearable_records(session)
+        records = list_tearable_records(session, env=env)
+        torn_down_envs: set[str] = set()
         for record in records:
             try:
                 await _teardown_record(session, record)
-                session.delete(record)
-                session.commit()
+                torn_down_envs.add(record.env)
             except Exception as exc:
-                logger.exception("Teardown failed id=%s namespace=%s", record.id, record.namespace)
+                logger.exception("Teardown failed id=%s namespace=%s (will still delete from DB)", record.id, record.namespace)
                 record.error_message = str(exc)
                 record.updated_at = _utcnow()
-                session.commit()
-        if records:
-            async with MockServerClient() as client:
-                await client.delete_all_expectations()
+
+            # Always delete from DB, even if teardown fails
+            # Backoffice errors shouldn't block database cleanup
+            session.delete(record)
+            session.commit()
+        for torn_env in torn_down_envs:
+            with use_env(torn_env):
+                async with MockServerClient() as client:
+                    await client.delete_all_expectations()
     finally:
         session.close()
 
 
-def queue_teardown_all(db: Session) -> TeardownAllResponse:
-    records = list_tearable_records(db)
+def queue_teardown_all(db: Session, env: str | None = None) -> TeardownAllResponse:
+    records = list_tearable_records(db, env=env)
     return TeardownAllResponse(
         queued=len(records),
         scenario_ids=[record.id for record in records],
     )
 
 
-def list_records(db: Session) -> list[ScenarioRecord]:
-    return db.query(ScenarioRecord).order_by(ScenarioRecord.created_at.desc()).all()
+def list_records(db: Session, env: str | None = None) -> list[ScenarioRecord]:
+    query = db.query(ScenarioRecord)
+    if env:
+        query = query.filter(ScenarioRecord.env == env)
+    return query.order_by(ScenarioRecord.created_at.desc()).all()

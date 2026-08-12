@@ -6,6 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.env_context import get_current_env, use_env
 from app.integrations.crawla import CrawlaApiError, CrawlaClient
 from app.integrations.core_app import CoreAppClient
 from app.models.crawla import (
@@ -49,9 +50,10 @@ async def create_crawla_scenario(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> ScenarioBundle:
+    env = get_current_env()
     base_request = _build_scenario_request(request)
     resolved = await resolve_scenario_hotel_ids(base_request)
-    record = scenario_service.create_pending(db, resolved)
+    record = scenario_service.create_pending(db, resolved, env=env)
     background_tasks.add_task(scenario_service.run_create_scenario, record.id)
     return scenario_service.record_to_bundle(record)
 
@@ -70,13 +72,14 @@ async def run_crawla_scenario(
     if not bundle.crawla_export:
         raise HTTPException(status_code=409, detail="Scenario has no Crawla export payload")
 
-    async with CoreAppClient() as client:
-        result = await client.run_search_and_packages(
-            api_key=bundle.api_key,
-            check_in=bundle.check_in,
-            check_out=bundle.check_out,
-            hotel_id=bundle.atg_hotel_id,
-        )
+    with use_env(record.env):
+        async with CoreAppClient() as client:
+            result = await client.run_search_and_packages(
+                api_key=bundle.api_key,
+                check_in=bundle.check_in,
+                check_out=bundle.check_out,
+                hotel_id=bundle.atg_hotel_id,
+            )
 
     result.scenario_id = scenario_id
     return result
@@ -112,6 +115,7 @@ def _build_scenario_request(request: CrawlaScenarioRequest) -> ScenarioRequest:
     raw_room_basis = package_price.room_basis or package_price.meal or "RO"
     pkg_room_basis = "RO" if is_l2 else raw_room_basis
 
+    is_only_crawla = request.bucket == CrawlaBucket.ONLY_CRAWLA
     suppliers = [
         SupplierScenario(
             code=SupplierCode.HBS,
@@ -122,16 +126,21 @@ def _build_scenario_request(request: CrawlaScenarioRequest) -> ScenarioRequest:
                 refundable=refundable,
             ),
         ),
-        SupplierScenario(
-            code=SupplierCode.EXP,
-            packages=PackageSpec(
-                count=package_count,
-                room_basis=pkg_room_basis,
-                prices=exp_prices,
-                refundable=refundable,
-            ),
-        ),
     ]
+    # ONLY_CRAWLA: Expedia must not participate at all — skip the EXP mock AND
+    # the EXP contract so only Crawla anchors the price (HBS stays as the seller).
+    if not is_only_crawla:
+        suppliers.append(
+            SupplierScenario(
+                code=SupplierCode.EXP,
+                packages=PackageSpec(
+                    count=package_count,
+                    room_basis=pkg_room_basis,
+                    prices=exp_prices,
+                    refundable=refundable,
+                ),
+            )
+        )
     # CHEAPEST_L2_GROSS room-basis rule:
     #   - Enigma's verifyRoomBasisIsROorBBAndReturnRoomBasisAsList() hard-asserts RO.
     #   - Hardcode RO (not just normalise) so L2 eligibility is guaranteed.
@@ -168,9 +177,12 @@ def _build_scenario_request(request: CrawlaScenarioRequest) -> ScenarioRequest:
             # For L2: hardcoded RO (both suppliers must be RO for L2 eligibility).
             # For other buckets: preserve original meal/room_basis order.
             room_basis=effective_room_basis if is_l2 else (package_price.meal or package_price.room_basis),
-            bed_groups_description="3 Bed" if request.bucket == CrawlaBucket.ONLY_CRAWLA else None,
+            bed_groups_description="3 Bed" if is_only_crawla else None,
         ),
     }
+    # ONLY_CRAWLA drops EXP entirely (no mock/contract), so its mutation is unused.
+    if is_only_crawla:
+        supplier_mutations.pop("EXP", None)
     return ScenarioRequest(
         namespace=request.namespace,
         check_in=request.check_in,

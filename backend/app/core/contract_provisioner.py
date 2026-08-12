@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import copy
+import logging
 from typing import Any
 
 from app.config import get_settings
 from app.core.chc_paths import apply_chc_contract_opt_defaults
 from app.core.exp_paths import apply_exp_contract_opt_defaults
+from app.core.ext_paths import apply_ext_contract_opt_defaults
 from app.core.hbs_paths import apply_hbs_contract_opt_defaults
 from app.core.mock_urls import build_mock_opt_urls
-from app.core.supplier_registry import SUPPLIER_REGISTRY
+from app.core.supplier_registry import get_supplier_registry
 from app.integrations.backoffice import BackofficeClient
 from app.models.scenario import ScenarioRequest
 
@@ -30,11 +32,11 @@ class ContractProvisioner:
         async with self.backoffice:
             for supplier in request.suppliers:
                 supplier_code = supplier.code.value
-                supplier_currency = supplier.packages.supplier_currency
+                contract_currency = supplier.contract_currency
                 paths = mock_paths.get(supplier_code, {})
                 opt_urls = build_mock_opt_urls(mock_base_url, paths, supplier_code=supplier_code)
                 body = await self._build_contract_body(
-                    supplier_code, request.namespace, opt_urls, supplier_currency
+                    supplier_code, request.namespace, opt_urls, contract_currency
                 )
                 contract_id = await self.backoffice.create_contract(body)
                 contract_ids[supplier_code] = contract_id
@@ -45,14 +47,29 @@ class ContractProvisioner:
         supplier_code: str,
         namespace: str,
         opt_urls: dict[str, str],
-        supplier_currency: str,
+        contract_currency: str,
     ) -> dict[str, Any]:
         reference_id = self._reference_contract_id(supplier_code)
         if reference_id:
             reference = await self.backoffice.get_contract(reference_id)
-            return _clone_contract(reference, supplier_code, namespace, opt_urls, supplier_currency)
+            return _clone_contract(reference, supplier_code, namespace, opt_urls, contract_currency)
+        # No reference id configured for this supplier — the minimal synthesized
+        # body carries a wrong supplier_id, so connectivity-core rejects it with
+        # "Cannot find Supplier of id" and search comes back empty (the recurring
+        # EXT-contract bug when {SUPPLIER}_REFERENCE_CONTRACT_ID is missing from
+        # this machine's .env). Warn loudly so the misconfig is obvious instead of
+        # silently producing a broken contract.
+        logging.getLogger(__name__).warning(
+            "No %s_REFERENCE_CONTRACT_ID set for env=%s — falling back to a minimal "
+            "contract body, which connectivity-core will likely reject (empty search). "
+            "Set %s_REFERENCE_CONTRACT_ID in backend/.env.%s.",
+            supplier_code,
+            getattr(self.settings, "env", "?"),
+            supplier_code,
+            getattr(self.settings, "env", "?") or "<env>",
+        )
         return _minimal_contract_body(
-            supplier_code, namespace, opt_urls, self.settings.mock_server_url, supplier_currency
+            supplier_code, namespace, opt_urls, self.settings.mock_server_url, contract_currency
         )
 
     def _reference_contract_id(self, supplier_code: str) -> str:
@@ -64,6 +81,8 @@ class ContractProvisioner:
             return self.settings.rhk_reference_contract_id
         if supplier_code == "CHC":
             return self.settings.chc_reference_contract_id
+        if supplier_code == "EXT":
+            return self.settings.ext_reference_contract_id
         return ""
 
 
@@ -72,7 +91,7 @@ def _clone_contract(
     supplier_code: str,
     namespace: str,
     opt_urls: dict[str, str],
-    supplier_currency: str,
+    contract_currency: str,
 ) -> dict[str, Any]:
     body = copy.deepcopy(reference)
     for key in ("_id", "id", "autoId", "createdAt", "updatedAt", "__v"):
@@ -90,26 +109,17 @@ def _clone_contract(
             apply_exp_contract_opt_defaults(opt, get_settings().mock_server_url)
         elif supplier_code == "CHC":
             apply_chc_contract_opt_defaults(opt, get_settings().mock_server_url)
-    if supplier_code == "CHC":
-        _apply_chc_contract_currency(body, supplier_currency)
-    return body
-
-
-def _apply_chc_contract_currency(body: dict[str, Any], currency: str) -> None:
-    """Align the CHC clone's contract currency with the scenario supplier currency.
-
-    The reference CHC contract carries ``currency: AED`` and an empty
-    ``supportedCurrencies``; downstream the BR/Crawla pipeline derives
-    ``defaultContractCurrency`` from it. Mocks emit ``supplier_currency`` (default
-    SAR), so the contract must declare the same currency or Crawla rejects the price.
-    """
-    body["currency"] = currency
-    supported = body.get("supportedCurrencies")
+        elif supplier_code == "EXT":
+            apply_ext_contract_opt_defaults(opt, get_settings().mock_server_url)
+    # Apply contract currency to all suppliers (not just CHC)
+    body["currency"] = contract_currency
+    supported = body.get("supportedCurrencies", [])
     if not isinstance(supported, list):
         supported = []
-    if currency not in supported:
-        supported = [currency, *supported]
+    if contract_currency not in supported:
+        supported = [contract_currency, *supported]
     body["supportedCurrencies"] = supported
+    return body
 
 
 def _minimal_contract_body(
@@ -117,11 +127,11 @@ def _minimal_contract_body(
     namespace: str,
     opt_urls: dict[str, str],
     mock_base_url: str,
-    supplier_currency: str,
+    contract_currency: str,
 ) -> dict[str, Any]:
-    meta = SUPPLIER_REGISTRY[supplier_code]
+    meta = get_supplier_registry()[supplier_code]
     uid = _contract_uid(namespace, supplier_code)
-    enabled_currencies = [supplier_currency, *(c for c in ("SAR", "AED", "USD", "EUR") if c != supplier_currency)]
+    enabled_currencies = [contract_currency, *(c for c in ("SAR", "AED", "USD", "EUR") if c != contract_currency)]
     body = {
         "code": meta["code"],
         "uid": uid,
@@ -134,7 +144,7 @@ def _minimal_contract_body(
         "supplierType": meta["supplier_type"],
         "timeoutSeconds": "60",
         "baseApiUrl": mock_base_url.rstrip("/"),
-        "currency": supplier_currency,
+        "currency": contract_currency,
         "supplierAutoId": str(meta["auto_id"]),
         "enabledCurrencyArr": enabled_currencies,
         "supplierSupportedCurrencies": enabled_currencies,
@@ -145,6 +155,8 @@ def _minimal_contract_body(
             if supplier_code == "EXP"
             else apply_chc_contract_opt_defaults(dict(opt_urls), mock_base_url)
             if supplier_code == "CHC"
+            else apply_ext_contract_opt_defaults(dict(opt_urls), mock_base_url)
+            if supplier_code == "EXT"
             else dict(opt_urls)
         ),
         "permission": {
@@ -166,7 +178,10 @@ def _contract_uid(namespace: str, supplier_code: str) -> str:
 
 
 def _apply_hbs_contract_defaults(body: dict[str, Any], supplier_code: str) -> None:
-    if supplier_code == "HBS":
+    # Net suppliers receive the borrowed market price (DynamicMarkupTarget); gross
+    # suppliers provide it (MarketPriceSource). CHC and EXT are net like HBS — without this it
+    # inherits the reference contract's "NotParticipating" and is left out of merge.
+    if supplier_code in ("HBS", "CHC", "EXT"):
         body["dynamicMarketType"] = "DynamicMarkupTarget"
     elif supplier_code == "EXP":
         body["dynamicMarketType"] = "MarketPriceSource"

@@ -19,6 +19,19 @@ def normalized_room_names(spec: PackageSpec) -> list[str]:
     return names[: spec.count]
 
 
+DEFAULT_ROOM_BASIS = "RO"
+
+
+def normalized_room_basis(spec: PackageSpec) -> list[str]:
+    """One board code per package, same padding/truncation rule as room names."""
+    values = [basis.strip().upper() for basis in spec.room_basis if basis and basis.strip()]
+    if not values:
+        values = [DEFAULT_ROOM_BASIS]
+    while len(values) < spec.count:
+        values.append(values[-1])
+    return values[: spec.count]
+
+
 def _set_room_name(room: dict, room_name: str) -> None:
     if "name" in room or "rates" in room:
         room["name"] = room_name
@@ -77,6 +90,43 @@ def apply_exp_room_names(expectation: dict, room_names: list[str]) -> None:
                 continue
             name = room_names[0] if uniform else room_names[index if index < len(room_names) else -1]
             room["room_name"] = name
+
+
+# EXP/Rapid encodes board basis as meal-plan amenities on the rate (no boardCode
+# field like HBS). Amenity IDs that represent ANY meal plan — must be stripped
+# before injecting the target board's amenity, or a stale one (e.g. HB) lingers
+# alongside the new one (e.g. RO, which injects none) and the rate looks HB anyway.
+EXP_MEAL_AMENITY_IDS: frozenset[str] = frozenset({
+    "2098", "2102", "2103", "2104", "2105", "2106", "2107", "2111",
+    "2193", "2194", "2205", "2206", "2207", "2209", "2210", "2211",
+    "1073742621", "1073742625", "1073742626", "1073742786", "1073742857", "1073742551",
+})
+
+# Canonical amenity (id, name) to inject per board code. RO injects nothing (no
+# meal-plan amenity at all, after stripping any pre-existing one above).
+EXP_BOARD_AMENITY: dict[str, tuple[str, str]] = {
+    "BB": ("2098", "Free Breakfast"),
+    "HB": ("2206", "Half Board"),
+    "FB": ("2207", "Full Board"),
+    "AI": ("2111", "All-Inclusive"),
+}
+
+
+def apply_exp_board_basis_to_rate(rate: dict, room_basis: str) -> None:
+    """Set a single EXP rate's meal-plan amenity to match room_basis (RO/BB/HB/FB/AI)."""
+    if not isinstance(rate, dict):
+        return
+    rate.pop("meal_plan", None)
+    amenities = rate.setdefault("amenities", {})
+    if not isinstance(amenities, dict):
+        return
+    for key in list(amenities):
+        if str(key) in EXP_MEAL_AMENITY_IDS:
+            del amenities[key]
+    amenity_entry = EXP_BOARD_AMENITY.get(room_basis.upper() if room_basis else "")
+    if amenity_entry:
+        amenity_id, amenity_name = amenity_entry
+        amenities[amenity_id] = {"id": amenity_id, "name": amenity_name}
 
 
 def apply_rhk_room_names(expectation: dict, room_names: list[str]) -> None:

@@ -27,6 +27,7 @@ def _request(**overrides) -> ScenarioRequest:
                     room_basis="RO",
                     prices=[100.0, 200.0],
                     refundable=[True, False],
+                    booking_package_index=0,
                 ),
             )
         ],
@@ -64,14 +65,40 @@ def test_scenario_engine_builds_hbs_expectations_with_namespace():
         assert "headers" not in http_request
 
     search = next(item for item in built if item.log_type == "Search")
-    assert search.expectation["httpRequest"]["path"] == "/hotel-api/1.0/hotels/search"
+    assert search.expectation["httpRequest"]["path"] == "/qa-test-001/hotel-api/1.0/hotels/search"
     search_hotels = search.expectation["httpResponse"]["body"]["hotels"]["hotels"]
     assert len(search_hotels) == 1
     assert search_hotels[0]["code"] == 99999
     prebook = next(item for item in built if item.log_type == "PreBooking")
-    assert prebook.expectation["httpRequest"]["path"] == "/hotel-api/1.0/checkrates/preBooking"
+    assert prebook.expectation["httpRequest"]["path"] == "/qa-test-001/hotel-api/1.0/checkrates/preBooking"
     booking = next(item for item in built if item.log_type == "Booking")
-    assert booking.expectation["httpRequest"]["path"] == "/hotel-api/1.2/bookings/booking"
+    assert booking.expectation["httpRequest"]["path"] == "/qa-test-001/hotel-api/1.2/bookings/booking"
+
+
+def test_scenario_engine_builds_hbs_expectations_with_per_package_room_basis():
+    engine = ScenarioEngine()
+    request = _request(
+        suppliers=[
+            SupplierScenario(
+                code=SupplierCode.HBS,
+                packages=PackageSpec(
+                    count=2,
+                    room_basis=["RO", "BB"],
+                    room_names=["Double Room", "Twin Room"],
+                    prices=[100.0, 200.0],
+                    refundable=[True, False],
+                ),
+            )
+        ],
+    )
+    # Full build (mutation + linkage validation) must accept distinct per-package
+    # boards and thread them through in order — this exercises the linkage
+    # validator's per-index comparison, not just the plugin mutation.
+    built = engine.build_expectations(request)
+    packages = next(item for item in built if item.log_type == "Packages")
+    rooms = packages.expectation["httpResponse"]["body"]["hotels"]["hotels"][0]["rooms"]
+    assert rooms[0]["rates"][0]["boardCode"] == "RO"
+    assert rooms[1]["rates"][0]["boardCode"] == "BB"
 
 
 @pytest.mark.skipif(
@@ -115,7 +142,7 @@ def test_scenario_engine_builds_exp_expectations():
         suppliers=[
             SupplierScenario(
                 code=SupplierCode.EXP,
-                packages=PackageSpec(count=2, room_basis="RO", prices=[150.0, 250.0], refundable=[True, False]),
+                packages=PackageSpec(count=2, room_basis="RO", prices=[150.0, 250.0], refundable=[True, False], booking_package_index=0),
             )
         ],
     )
@@ -138,12 +165,14 @@ def test_scenario_engine_builds_exp_expectations():
     room_id = package_properties[0]["rooms"][0]["id"]
     rate_id = rates[0]["id"]
     assert prebook.expectation["httpRequest"]["path"] == (
-        f"/v3/properties/{property_id}/rooms/{room_id}/rates/{rate_id}"
+        f"/qa-exp-001/v3/properties/{property_id}/rooms/{room_id}/rates/{rate_id}"
     )
-    assert booking.expectation["httpRequest"]["path"] == "/v3/itineraries"
-    assert get_order.expectation["httpRequest"]["path"].startswith("/v3/itineraries/")
+    assert booking.expectation["httpRequest"]["path"] == "/qa-exp-001/v3/itineraries"
+    assert get_order.expectation["httpRequest"]["path"].startswith("/qa-exp-001/v3/itineraries/")
     bed_group = next(iter(rates[0]["bed_groups"].values()))
     price_check_href = bed_group["links"]["price_check"]["href"]
+    # The href is embedded response-body data, not httpRequest.path — it is not
+    # touched by the namespace path-prefix step.
     assert price_check_href.startswith(
         f"/v3/properties/{property_id}/rooms/{room_id}/rates/{rate_id}"
     )
@@ -154,8 +183,8 @@ def test_scenario_engine_builds_exp_expectations():
     opt = build_mock_opt_urls("http://mock-server", paths, "EXP")
     assert opt["overrideSearchUrl"] == "http://mock-server/qa-exp-001/search"
     assert opt["overridePackagesUrl"] == "http://mock-server/qa-exp-001/package"
-    assert opt["overrideBookingUrl"] == "http://mock-server/v3/itineraries"
-    assert opt["overrideRetrieveBookingUrl"].startswith("http://mock-server/v3/itineraries/")
+    assert opt["overrideBookingUrl"] == "http://mock-server/qa-exp-001/v3/itineraries"
+    assert opt["overrideRetrieveBookingUrl"].startswith("http://mock-server/qa-exp-001/v3/itineraries/")
 
 
 @pytest.mark.skipif(

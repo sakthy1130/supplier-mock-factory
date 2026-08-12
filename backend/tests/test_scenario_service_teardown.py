@@ -8,7 +8,7 @@ from app.services import scenario_service
 
 @pytest.mark.asyncio
 async def test_run_teardown_all_clears_mockserver_after_record_teardown(monkeypatch):
-    records = [SimpleNamespace(id="scenario-1", namespace="qa-ns-1")]
+    records = [SimpleNamespace(id="scenario-1", namespace="qa-ns-1", env="stg")]
     teardown_mock = AsyncMock()
     delete_all_mock = AsyncMock()
 
@@ -22,7 +22,7 @@ async def test_run_teardown_all_clears_mockserver_after_record_teardown(monkeypa
         async def delete_all_expectations(self):
             await delete_all_mock()
 
-    monkeypatch.setattr(scenario_service, "list_tearable_records", lambda _db: records)
+    monkeypatch.setattr(scenario_service, "list_tearable_records", lambda _db, env=None: records)
     monkeypatch.setattr(scenario_service, "_teardown_record", teardown_mock)
     monkeypatch.setattr(scenario_service, "MockServerClient", FakeMockServerClient)
 

@@ -78,8 +78,15 @@ function pickDefaultOfferId(
   return exactMatch?.room_id ?? offers[0].room_id
 }
 
+function formatPayType(payAtProperty?: string | null) {
+  const value = (payAtProperty ?? '').trim().toLowerCase()
+  if (value === 'yes') return 'PostPay'
+  if (value === 'no') return 'PrePay'
+  return payAtProperty || 'n/a'
+}
+
 function offerLabel(offer: CrawlaAnchorPackagesResponse['hotels'][number]['data'][number]) {
-  return `${offer.room_name} · ${offer.room_basis ?? offer.meal ?? 'RO'} · ${formatMoney(offer.total_amount)} · ${offer.room_id}`
+  return `${offer.room_name} · ${offer.room_basis ?? offer.meal ?? 'RO'} · ${formatPayType(offer.pay_at_property)} · ${formatMoney(offer.total_amount)} · ${offer.room_id}`
 }
 
 function searchLabel(item: CrawlaAnchorSearchResponse['data'][number]) {
@@ -310,10 +317,16 @@ export function CrawlaMocksWizard({ onSubmit, busy }: Props) {
           <div className="field">
             <label>
               Check-out
-              <input type="date" value={checkOut} readOnly required />
+              <input
+                type="date"
+                value={checkOut}
+                min={checkIn}
+                onChange={(e) => setCheckOut(e.target.value)}
+                required
+              />
             </label>
             <p className="hint" style={{ marginTop: '0.35rem' }}>
-              Crawla requires checkout to be exactly 2 calendar days after check-in.
+              Defaults to 2 calendar days after check-in (Crawla's usual window); editable.
             </p>
           </div>
           <div className="field field-wide">
@@ -462,7 +475,7 @@ export function CrawlaMocksWizard({ onSubmit, busy }: Props) {
                     Selected offer details
                     <input
                       readOnly
-                      value={`${selectedOffer.room_name} | basis ${selectedOffer.room_basis ?? selectedOffer.meal ?? 'RO'} | refund ${selectedOffer.refundability ?? 'NO'} | ${formatMoney(selectedOffer.total_amount)} | ${selectedOffer.room_id}`}
+                      value={`${selectedOffer.room_name} | basis ${selectedOffer.room_basis ?? selectedOffer.meal ?? 'RO'} | refund ${selectedOffer.refundability ?? 'NO'} | pay ${formatPayType(selectedOffer.pay_at_property)} | ${formatMoney(selectedOffer.total_amount)} | ${selectedOffer.room_id}`}
                     />
                   </label>
                 </div>
@@ -512,6 +525,7 @@ export function CrawlaMocksWizard({ onSubmit, busy }: Props) {
                           <span>{offer.room_id}</span>
                           <span>{offer.room_basis ?? offer.meal ?? 'RO'}</span>
                           <span>{offer.refundability ?? 'NO'}</span>
+                          <span>{formatPayType(offer.pay_at_property)}</span>
                           <span>{formatMoney(offer.total_amount)}</span>
                           {selectedOfferId === offer.room_id && (
                             <span className="pill" style={{ marginLeft: 'auto' }}>

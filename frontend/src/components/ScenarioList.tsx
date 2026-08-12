@@ -1,4 +1,5 @@
 import type { ScenarioListItem } from '../types/scenario'
+import { formatStatus, statusClass } from '../utils/scenarioFormat'
 
 interface Props {
   items: ScenarioListItem[]
@@ -8,14 +9,6 @@ interface Props {
   onRefresh: () => void
   loading: boolean
   clearingIds?: Set<string>
-}
-
-function statusClass(status: string) {
-  return `status-pill status-${status.toLowerCase().replace(/_/g, '-')}`
-}
-
-function formatStatus(status: string) {
-  return status.replace(/_/g, ' ')
 }
 
 export function ScenarioList({ items, selectedId, onSelect, onClear, onRefresh, loading, clearingIds = new Set() }: Props) {
@@ -51,6 +44,7 @@ export function ScenarioList({ items, selectedId, onSelect, onClear, onRefresh, 
                 >
                   <div className="list-item-top">
                     <span className="list-ns">{item.namespace}</span>
+                    <span className={`env-badge env-${item.env}`}>{item.env}</span>
                     <span className={statusClass(item.status)}>{formatStatus(item.status)}</span>
                   </div>
                   <span className="list-meta">

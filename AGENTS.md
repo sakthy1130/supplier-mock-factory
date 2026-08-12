@@ -97,6 +97,21 @@ supplier-mock-factory/
 
 ---
 
+## Multi-env (dev / stg — default dev)
+
+Live UI toggle, no restart. Full design: [docs/MULTI_ENV_PLAN.md](docs/MULTI_ENV_PLAN.md).
+
+- **Selection:** every request carries `X-SMF-Env: dev|stg` (frontend `envHeaders()` in `frontend/src/api/base.ts`). Backend middleware (`main.py`) sets a contextvar (`app/env_context.py`) for the request; unset/unknown → `dev`.
+- **Settings:** `get_settings(env=None)` in `app/config.py` reads the contextvar when `env` omitted. Layering: legacy `backend/.env` → `.env.shared` → `.env.{env}` (later wins). Files are gitignored; copy from `.env.shared.example` / `.env.dev.example` / `.env.stg.example`.
+- **No client injection needed:** every integration client (`BackofficeClient`, `MockServerClient`, `CrawlaClient`, etc.) reads `self.settings = get_settings()` fresh at construction — since they're constructed per-call, the contextvar resolves correctly without threading `Settings` through call sites.
+- **Scenarios are env-tagged, not the ambient dropdown:** `ScenarioRecord.env` is set at create time and every lifecycle op (run / refresh-booking-ids / teardown) explicitly does `with use_env(record.env):` around the orchestrator call — so switching the dropdown mid-run can never retarget an in-flight or existing scenario. Background tasks always pin to `record.env`; only synchronous request-time calls (hotel mapping, crawla anchors, quickwit search) rely on the middleware-set contextvar.
+- **List filtering:** `GET /api/scenarios` filters to the request's env by default; `?env=all` bypasses. `DELETE /api/scenarios/all` (Clear all data) is also scoped to the active env — dev and stg have separate MockServer hosts, so a blanket clear must never cross envs.
+- **Quickwit index ≠ URL-derived anymore:** dev and stg share the same Quickwit URL; `resolve_console_logs_index(env, ...)` in `app/core/quickwit_indices.py` maps env → index prefix (`dev`→`dev`, `stg`→`staging`).
+- **Supplier registry:** `get_supplier_registry(env=None)` in `app/core/supplier_registry.py`. Dev currently shares stg's Backoffice supplier ids (confirmed) — if dev turns out to have its own Backoffice DB, only `_DEV_REGISTRY` needs new values.
+- **Adding a new env-specific value:** add the field to `Settings` in `config.py` with `= ""` default (no hardcoded staging/dev URL as default), then set it per env in `.env.dev` / `.env.stg` (or `.env.shared` if identical across envs).
+
+---
+
 ## Ingest extract modes
 
 P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from Enigma adapter logs.
@@ -117,7 +132,7 @@ P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from En
 
 ---
 
-## Supplier notes (HBS + EXP + RHK)
+## Supplier notes (HBS + EXP + RHK + CHC + EXT)
 
 ### Shared (v1)
 
@@ -137,6 +152,7 @@ P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from En
 - **Hotel ids:** UI sends **ATG hotel id**; backend resolves per-supplier ids via `GET /v2/supplier/{supplierCode}/{atgHotelId}`; mocks use supplier ids (e.g. HBS `156652`), core search uses ATG (e.g. `1446194`)
 - **Linkage critical:** `propagate_package_linkage` syncs packages → prebook → search (rateKey, net, boardCode, single room) — mismatch causes `E3021.1` price errors
 - Packages mutation collapses to **single room** (`hotel["rooms"] = [room]`)
+- **Not scenario-isolated by ATG hotel id:** unlike EXP (per-contract override URLs, naturally scoped to one namespace), HBS resolves packages by **contract for the ATG hotel id** across whatever's active in Backoffice. If two READY scenarios share the same `atg_hotel_id`, the real merge service returns packages from **both** contracts, surfacing as an unexpected package count/prices in only one of them (confirmed live in dev: a 3-package scenario showed 12, matching another still-active scenario's count on the same hotel id). Always tear down the previous scenario for a hotel id before creating a new one that reuses it — this is why the Template Bedding Mock presets warn about sharing a hotel id.
 
 ### EXP
 
@@ -159,22 +175,100 @@ P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from En
 - **Meal mapping:** RO→`nomeal`, BB→`breakfast`, HB→`halfboard`, FB→`fullboard`
 - Java ref: `qaBackend_Enigma/.../serviceAdapters/rhk/RhkAdapter*.java`
 
+### CHC (Choice Hotels)
+
+- Adapter source match: `hotels-choice-adapter-service`
+- **Supplier type:** NET (like HBS) — receives market price, DynamicMarkupTarget
+- **Contract opt:** `searchUrl`, `availabilityUrl`, `bookingUrl`, `orderUrl`, `cancelBookingUrl`
+- **Supported currencies:** SAR, AED, USD, etc.
+- **Hotel ids:** ATG mapping `GET /v2/supplier/CHC/{atgHotelId}` → supplier hotel id
+- **Reference contract:** `CHC_REFERENCE_CONTRACT_ID` (from `.env`)
+
+### EXT (Extranet)
+
+- **Supplier type:** NET (like HBS, CHC) — receives market price, DynamicMarkupTarget
+- **API endpoints** (`app/core/ext_paths.py`):
+  - Search: `/extranet/public/api/v1/distribution/search`
+  - Availability (Packages): `/extranet/public/api/v1/distribution/details`
+  - Booking: `/extranet/public/api/v1/accommodation/confirm`
+  - Order: `/extranet/public/api/v1/accommodation/search`
+  - Cancel: `/extranet/public/api/v1/accommodation/cancel`
+- **Contract opt:** `searchUrl`, `availabilityUrl`, `bookingUrl`, `orderUrl`, `cancelBookingUrl`
+- **Contract opt defaults:** `availabilityTimeoutSeconds: 7`, `cancellationPoliciesTimeoutSeconds: 10`, `supplierSubType: 2`
+- **Supplier registry:** `supplier_id=642c33cbff075a612ab6ad06`, `auto_id=100423`
+- **Reference contract:** `EXT_REFERENCE_CONTRACT_ID=64abf676042ebe591367e3dd` (contract 100423, in `.env.dev`)
+- **Default currencies:** EUR (supplier) / EUR (contract) for dev; configurable via UI
+- **Board types supported:** RO, BB, HB, FB, AI + Ramadan (IF, SO, IS)
+- **Pricing:** Per-person and per-room rates; percentage-based cancellation penalties
+- **Refundability:** Both refundable and non-refundable packages
+- **Hotel mapping:** Standard ATG → supplier hotel id (e.g., 1036203 test hotel)
+- **Test SID:** `019ac499-defd-746f-aea6-3523ed00009d` (booking flow with live data)
+
 ---
 
 ## API (implemented)
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/health` | status, phase |
+| GET | `/health` | status, phase, dependency checks |
 | POST | `/api/scenarios` | create (202, background) |
 | GET | `/api/scenarios` | list |
 | GET | `/api/scenarios/{id}` | bundle + status |
+| POST | `/api/scenarios/{id}/run` | execute scenario against core app |
 | POST | `/api/scenarios/{id}/refresh-booking-ids` | re-inject booking ids |
 | DELETE | `/api/scenarios/{id}` | teardown: mocks + contracts + apiKey |
 | DELETE | `/api/scenarios/all` | clear all active scenarios |
 | GET | `/api/scenarios/{id}/quickwit-logs` | Quickwit search by scenario api_key |
 | POST | `/api/logs/quickwit/search` | generic Quickwit search |
-| GET | `/api/suppliers` | HBS, EXP, RHK metadata |
+| GET | `/api/suppliers` | HBS, EXP, RHK, CHC, EXT metadata |
+| GET | `/api/scenario-templates` | List custom templates |
+| POST | `/api/scenario-templates` | Create template |
+| PUT | `/api/scenario-templates/{id}` | Edit template |
+| DELETE | `/api/scenario-templates/{id}` | Delete template |
+
+### Run-Template API (NEW — Automation Focus)
+
+**Purpose:** Create test data by running a saved template. Returns full scenario details + execution tracking.
+
+**Endpoint:** `POST /api/v1/run-template/{template_id}`
+
+**Request:**
+```json
+{
+  "environment": "dev|stg",
+  "check_in": "2026-07-29",           // optional, default: today
+  "check_out": "2026-07-30",          // optional, default: today+1
+  "hotel_id": "123456",                // optional, override template
+  "delete_mock_api_key": true,        // default: true (full cleanup)
+  "assign_api_key_to_br": true,       // default: true
+  "force_cleanup": true,              // default: true (cleanup on error)
+  "timeout_seconds": 300,             // default: 300
+  "include_logs": false               // default: false
+}
+```
+
+**Response (Success):**
+```json
+{
+  "request_id": "req-...",
+  "status": "COMPLETED",
+  "scenario_id": "...",
+  "api_key": "...",
+  "contract_id": "...",
+  "search_id": "...",
+  "package_id": "...",
+  "steps": {...},                     // execution step tracking
+  "summary": {...}                    // timing + overall stats
+}
+```
+
+**Use Cases:**
+- Automation: Java/Python tests need mock data → call API → use api_key in test
+- CI/CD: Pipeline stage for test data provisioning
+- Performance: Generate multiple scenarios in parallel
+- QA: Validate scenario creation + execution
+
+**See:** `API_DOCUMENTATION.md` for full details, examples, error codes, tracing
 
 ### Quickwit (runtime logs)
 

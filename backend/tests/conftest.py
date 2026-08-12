@@ -1,6 +1,6 @@
 import pytest
 
-from app.config import get_settings
+from app.config import clear_settings_cache
 from app.db.database import init_db, reset_engine
 from app.models.scenario import ScenarioRequest
 
@@ -25,7 +25,7 @@ def mock_hotel_mapping(monkeypatch):
 def api_client(tmp_path, monkeypatch):
     db_path = tmp_path / "smf-test.db"
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
-    get_settings.cache_clear()
+    clear_settings_cache()
     reset_engine()
     init_db()
 
@@ -37,4 +37,4 @@ def api_client(tmp_path, monkeypatch):
         yield client
 
     reset_engine()
-    get_settings.cache_clear()
+    clear_settings_cache()

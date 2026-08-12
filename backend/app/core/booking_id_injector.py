@@ -94,6 +94,20 @@ class BookingIdInjector:
             if partner_order_id:
                 return str(partner_order_id)
 
+        if supplier_code == "EXT":
+            # Try bookingId first, then fall back to reservationId
+            booking_id = booking_expectation.get("httpResponse", {}).get("body", {}).get("bookingId")
+            if booking_id:
+                return str(booking_id)
+            reservation_id = (
+                booking_expectation.get("httpResponse", {})
+                .get("body", {})
+                .get("reservations", [{}])[0]
+                .get("bookingId")
+            )
+            if reservation_id:
+                return str(reservation_id)
+
         raise ValueError(f"Could not extract booking id for supplier {supplier_code}")
 
     def generate_booking_id(self, supplier_code: str, sample_id: str) -> str:
@@ -136,6 +150,8 @@ class BookingIdInjector:
 
     @staticmethod
     def _apply_hbs_get_order_path(expectation: dict, booking_id: str) -> None:
+        """Append the booking id after the GetOrderBooking segment, regardless of
+        whatever namespace prefix precedes it (e.g. /{namespace}/hotel-api/1.2/bookings/GetOrderBooking)."""
         http_request = expectation.get("httpRequest")
         if not isinstance(http_request, dict):
             return
@@ -144,10 +160,13 @@ class BookingIdInjector:
         if not isinstance(path, str) or not path:
             return
 
-        base = "/hotel-api/1.2/bookings/GetOrderBooking"
-        if path == base or path.endswith("/GetOrderBooking"):
-            http_request["path"] = f"{base}/{booking_id}"
+        suffix = "/GetOrderBooking"
+        if path.endswith(suffix):
+            http_request["path"] = f"{path}/{booking_id}"
             return
 
-        if path.startswith(base + "/"):
+        marker = suffix + "/"
+        idx = path.find(marker)
+        if idx != -1:
+            base = path[: idx + len(suffix)]
             http_request["path"] = f"{base}/{booking_id}"

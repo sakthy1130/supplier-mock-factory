@@ -172,7 +172,11 @@ def test_hbs_propagate_package_linkage_syncs_prebook_price():
     assert prebook["httpRequest"]["body"]["json"]["rooms"][0]["rateKey"] == pkg_rate_key
     assert prebook_rate["rateKey"] == pkg_rate_key
     assert prebook_rate["net"] == "100.0"
-    assert prebook_rate["cancellationPolicies"][0]["amount"] == "100.0"
+    # PreBooking CP must be identical to the selected Packages rate CP (zero drift),
+    # so the adapter's prebooking-vs-packages CP check passes. For a refundable rate
+    # that means amount "0" (free cancellation), not the net.
+    pkg_rate = packages["httpResponse"]["body"]["hotels"]["hotels"][0]["rooms"][0]["rates"][0]
+    assert prebook_rate["cancellationPolicies"] == pkg_rate["cancellationPolicies"]
 
 
 def test_hbs_applies_uniform_room_name_on_search_packages_prebook():
@@ -228,6 +232,28 @@ def test_hbs_applies_per_package_room_names_when_distinct():
     assert [room["name"] for room in pkg_rooms] == names
     search_rooms = expectations["Search"]["httpResponse"]["body"]["hotels"]["hotels"][0]["rooms"]
     assert [room["name"] for room in search_rooms] == names
+
+
+def test_hbs_applies_per_package_room_basis_when_distinct():
+    plugin = HbsMockPlugin()
+    names = ["Double Room", "Twin Room"]
+    spec = PackageSpec(
+        count=2,
+        room_basis=["RO", "BB"],
+        prices=[100.0, 200.0],
+        room_names=names,
+        refundable=[True, False],
+    )
+    packages = plugin.mutate_packages(HBS_PACKAGES, spec, "156652", "2026-09-10", "2026-09-12", "Packages")
+    rooms = packages["httpResponse"]["body"]["hotels"]["hotels"][0]["rooms"]
+    assert len(rooms) == 2
+    assert rooms[0]["rates"][0]["boardCode"] == "RO"
+    assert rooms[1]["rates"][0]["boardCode"] == "BB"
+
+
+def test_package_spec_room_basis_string_applies_to_every_package():
+    spec = PackageSpec(count=3, room_basis="BB", prices=[100.0, 200.0, 300.0])
+    assert spec.room_basis == ["BB"]
 
 
 def test_hbs_mutate_packages_trims_and_prices():

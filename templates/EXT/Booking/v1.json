@@ -1,0 +1,31 @@
+{
+  "httpRequest": {
+    "path": "/extranet/public/api/v1/accommodation/confirm",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "statusCode": 200,
+    "headers": {
+      "Content-Type": ["application/json"]
+    },
+    "body": {
+      "message": "OK",
+      "body": {
+        "bookingId": "EXT-BK-220924-X7LaiK4d4dgrJk3",
+        "atgId": "100000",
+        "searchCode": "smf-search-code",
+        "status": "BOOKED",
+        "totalPrice": 1000,
+        "netPrice": 1000,
+        "userName": "StagingTest",
+        "checkInDate": "2026-09-01",
+        "checkOutDate": "2026-09-03",
+        "bookingDate": "2026-09-01",
+        "currency": "AED",
+        "supplierId": 145,
+        "supplierName": "DirectStatic",
+        "leadCustomer": "Guest User"
+      }
+    }
+  }
+}

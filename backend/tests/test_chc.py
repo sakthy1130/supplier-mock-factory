@@ -125,7 +125,7 @@ def test_chc_linkage_aligns_packages_and_prebook_to_search():
 
 
 def test_chc_get_order_forced_confirmed():
-    spec = PackageSpec(count=1, room_basis="RO", prices=[100], refundable=[True])
+    spec = PackageSpec(count=1, room_basis="RO", prices=[100], refundable=[True], booking_package_index=0)
     built = {b.log_type: b.expectation for b in ScenarioEngine().build_expectations(_chc_request(spec))}
 
     reservations = built["GetOrder"]["httpResponse"]["body"]["reservations"]

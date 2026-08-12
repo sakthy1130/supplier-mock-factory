@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.core.contract_provisioner import ContractProvisioner
+from app.env_context import use_env
 from app.models.scenario import PackageSpec, ScenarioRequest, SupplierCode, SupplierScenario
 
 
@@ -33,22 +34,37 @@ async def test_create_contracts_uses_minimal_body_when_no_reference():
     provisioner.settings.hbs_reference_contract_id = ""
     provisioner.settings.mock_server_url = "http://mockserver-staging.tajawal.io"
 
-    contract_ids = await provisioner.create_contracts(
-        _request(),
-        {"HBS": {"Search": "/hotel-api/1.2/hotels", "Booking": "/hotel-api/1.2/bookings"}},
-        "http://mockserver-staging.tajawal.io",
-    )
+    # Asserted supplierId/autoId below are stg's HBS supplier record — pin the env
+    # explicitly so this doesn't silently start reading dev's (different) values.
+    # Paths reflect what the finalized (namespace-prefixed) expectations would
+    # actually carry — HBS contract opt URLs are now built from these, not
+    # reconstructed independently from the canonical roots.
+    with use_env("stg"):
+        contract_ids = await provisioner.create_contracts(
+            _request(),
+            {
+                "HBS": {
+                    "Search": "/qa-p4-001/hotel-api/1.0/hotels/search",
+                    "Packages": "/qa-p4-001/hotel-api/1.0/hotels/package/availability",
+                    "PreBooking": "/qa-p4-001/hotel-api/1.0/checkrates/preBooking",
+                    "Booking": "/qa-p4-001/hotel-api/1.2/bookings/booking",
+                    "GetOrder": "/qa-p4-001/hotel-api/1.2/bookings/GetOrderBooking",
+                    "CancelOrder": "/qa-p4-001/hotel-api/1.2/bookings/cancelBooking",
+                }
+            },
+            "http://mockserver-staging.tajawal.io",
+        )
 
     assert contract_ids == {"HBS": "mongo-hbs-1"}
     body = backoffice.create_contract.await_args.args[0]
     assert body["supplierId"] == "5fd5fefb1a4e866f7b3cea44"
     assert body["dynamicMarketType"] == "DynamicMarkupTarget"
-    assert body["opt"]["searchUrl"].endswith("/hotel-api/1.0/hotels/search")
-    assert body["opt"]["availabilityUrl"].endswith("/hotel-api/1.0/hotels/package/availability")
-    assert body["opt"]["prebookingUrl"].endswith("/hotel-api/1.0/checkrates/preBooking")
-    assert body["opt"]["bookingUrl"].endswith("/hotel-api/1.2/bookings/booking")
-    assert body["opt"]["orderUrl"].endswith("/hotel-api/1.2/bookings/GetOrderBooking")
-    assert body["opt"]["cancelBookingUrl"].endswith("/hotel-api/1.2/bookings/cancelBooking")
+    assert body["opt"]["searchUrl"].endswith("/qa-p4-001/hotel-api/1.0/hotels/search")
+    assert body["opt"]["availabilityUrl"].endswith("/qa-p4-001/hotel-api/1.0/hotels/package/availability")
+    assert body["opt"]["prebookingUrl"].endswith("/qa-p4-001/hotel-api/1.0/checkrates/preBooking")
+    assert body["opt"]["bookingUrl"].endswith("/qa-p4-001/hotel-api/1.2/bookings/booking")
+    assert body["opt"]["orderUrl"].endswith("/qa-p4-001/hotel-api/1.2/bookings/GetOrderBooking")
+    assert body["opt"]["cancelBookingUrl"].endswith("/qa-p4-001/hotel-api/1.2/bookings/cancelBooking")
     assert body["opt"]["availabilityTimeoutSeconds"] == "50"
     assert body["supplierAutoId"] == "100004"
 
@@ -74,7 +90,7 @@ async def test_create_contracts_clones_reference_contract():
 
     contract_ids = await provisioner.create_contracts(
         _request(),
-        {"HBS": {"Search": "/hotel-api/1.2/hotels"}},
+        {"HBS": {"Search": "/qa-p4-001/hotel-api/1.0/hotels/search"}},
         "http://mockserver-staging.tajawal.io",
     )
 
@@ -84,7 +100,7 @@ async def test_create_contracts_clones_reference_contract():
     assert body["uid"] == "smf-qa-p4-001-hbs"
     assert body["dynamicMarketType"] == "DynamicMarkupTarget"
     assert body["opt"]["searchUrl"] == (
-        "http://mockserver-staging.tajawal.io/hotel-api/1.0/hotels/search"
+        "http://mockserver-staging.tajawal.io/qa-p4-001/hotel-api/1.0/hotels/search"
     )
     assert body["opt"]["availabilityTimeoutSeconds"] == "50"
 
@@ -117,6 +133,7 @@ async def test_create_contracts_chc_clone_normalizes_currency_to_scenario():
         suppliers=[
             SupplierScenario(
                 code=SupplierCode.CHC,
+                contract_currency="SAR",
                 packages=PackageSpec(count=1, room_basis="RO", prices=[100.0], supplier_currency="SAR"),
             )
         ],
@@ -134,6 +151,9 @@ async def test_create_contracts_chc_clone_normalizes_currency_to_scenario():
     body = backoffice.create_contract.await_args.args[0]
     assert body["currency"] == "SAR"
     assert "SAR" in body["supportedCurrencies"]
+    # CHC is a net supplier like HBS — must participate as a markup target, not inherit
+    # the reference contract's "NotParticipating".
+    assert body["dynamicMarketType"] == "DynamicMarkupTarget"
 
 
 @pytest.mark.asyncio
@@ -190,19 +210,22 @@ async def test_create_contracts_exp_uses_override_urls():
             )
         ],
     )
-    contract_ids = await provisioner.create_contracts(
-        request,
-        {
-            "EXP": {
-                "Search": "/v3/properties/availability",
-                "Packages": "/v3/properties/1/availability",
-                "Booking": "/v3/itineraries",
-                "GetOrder": "/v3/itineraries/1",
-                "CancelOrder": "/v3/itineraries/1/rooms/1",
-            }
-        },
-        "http://mockserver-staging.tajawal.io",
-    )
+    # Asserted supplierId below is stg's EXP supplier record — pin the env
+    # explicitly so this doesn't silently start reading dev's (different) value.
+    with use_env("stg"):
+        contract_ids = await provisioner.create_contracts(
+            request,
+            {
+                "EXP": {
+                    "Search": "/v3/properties/availability",
+                    "Packages": "/v3/properties/1/availability",
+                    "Booking": "/v3/itineraries",
+                    "GetOrder": "/v3/itineraries/1",
+                    "CancelOrder": "/v3/itineraries/1/rooms/1",
+                }
+            },
+            "http://mockserver-staging.tajawal.io",
+        )
 
     assert contract_ids == {"EXP": "mongo-exp-1"}
     body = backoffice.create_contract.await_args.args[0]
@@ -213,7 +236,11 @@ async def test_create_contracts_exp_uses_override_urls():
     assert body["opt"]["overrideBookingUrl"].endswith("/v3/itineraries")
     assert body["opt"]["overrideRetrieveBookingUrl"].endswith("/v3/itineraries/1")
     assert body["opt"]["overrideCancelBookingUrl"].endswith("/v3/itineraries/1/rooms/1")
-    assert "searchUrl" not in body["opt"]
+    # Standard fields are also set (pointed at the mock) so core's E2002
+    # "Booking url is blocked" check — which reads bookingUrl, not the override —
+    # doesn't reject a real-Expedia URL carried over from the reference contract.
+    assert body["opt"]["bookingUrl"].endswith("/v3/itineraries")
+    assert body["opt"]["searchUrl"].endswith("/v3/properties/availability")
 
 
 @pytest.mark.asyncio
@@ -267,6 +294,59 @@ async def test_create_contracts_exp_clones_reference_contract():
     assert body["dynamicMarketType"] == "MarketPriceSource"
     assert body["opt"]["overrideSearchUrl"].endswith("/new-ns/search")
     assert body["opt"]["overridePackagesUrl"].endswith("/new-ns/package")
+
+
+@pytest.mark.asyncio
+async def test_create_contracts_exp_forces_generic_bedding_off():
+    """Some reference contracts carry enableGenericBedding: true, which makes the
+    real EXP adapter emit an extra not-for-sale "generic bedding" package per rate
+    (double the requested count). SMF must force it off regardless of what the
+    cloned reference contract has, so mocks always produce exactly room_names/count.
+    """
+    backoffice = AsyncMock()
+    backoffice.__aenter__ = AsyncMock(return_value=backoffice)
+    backoffice.__aexit__ = AsyncMock(return_value=None)
+    backoffice.get_contract = AsyncMock(
+        return_value={
+            "_id": "dev-exp-mock-ulas",
+            "autoId": "77",
+            "uid": "exp-mock-ulas",
+            "supplierId": "5fb275f9c67d8a6ccb1e90e3",
+            "dynamicMarketType": "marketPriceSource",
+            "opt": {
+                "overrideSearchUrl": "http://mockserver-dev.tajawal.io/old-ns/search",
+                "overridePackagesUrl": "http://mockserver-dev.tajawal.io/old-ns/package",
+                "enableGenericBedding": True,
+                "dontSellGenericRoom": True,
+            },
+        }
+    )
+    backoffice.create_contract = AsyncMock(return_value="mongo-exp-clone")
+
+    provisioner = ContractProvisioner(backoffice=backoffice)
+    provisioner.settings.exp_reference_contract_id = "dev-exp-mock-ulas"
+
+    request = ScenarioRequest(
+        namespace="qa-exp-nobedding",
+        check_in="2026-09-01",
+        check_out="2026-09-03",
+        atg_hotel_id="1446194",
+        supplier_hotel_ids={},
+        suppliers=[
+            SupplierScenario(
+                code=SupplierCode.EXP,
+                packages=PackageSpec(count=1, room_basis="RO", prices=[100.0]),
+            )
+        ],
+    )
+    await provisioner.create_contracts(
+        request,
+        {"EXP": {"Search": "/new-ns/search", "Packages": "/new-ns/package"}},
+        "http://mockserver-dev.tajawal.io",
+    )
+
+    body = backoffice.create_contract.await_args.args[0]
+    assert body["opt"]["enableGenericBedding"] is False
     assert body["opt"]["enableAdapterTransformedLog"] is True
 
 

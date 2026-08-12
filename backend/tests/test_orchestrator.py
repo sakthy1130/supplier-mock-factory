@@ -7,8 +7,8 @@ from app.core.scenario_engine import BuiltExpectation
 from app.models.scenario import PackageSpec, ScenarioRequest, ScenarioStatus, SupplierCode, SupplierScenario
 
 
-def _request() -> ScenarioRequest:
-    return ScenarioRequest(
+def _request(**overrides) -> ScenarioRequest:
+    payload = dict(
         namespace="qa-orch-001",
         check_in="2026-09-01",
         check_out="2026-09-03",
@@ -25,6 +25,8 @@ def _request() -> ScenarioRequest:
             ),
         ],
     )
+    payload.update(overrides)
+    return ScenarioRequest(**payload)
 
 
 def _crawla_request() -> ScenarioRequest:
@@ -92,7 +94,87 @@ async def test_create_scenario_end_to_end_with_mocks():
 
 
 @pytest.mark.asyncio
-async def test_create_normal_scenario_does_not_provision_br():
+async def test_sb_scenario_splits_contracts_by_target():
+    engine = AsyncMock()
+    engine.build_expectations = lambda request: []
+
+    contract_provisioner = AsyncMock()
+    contract_provisioner.create_contracts = AsyncMock(
+        return_value={"HBS": "c-hbs", "EXP": "c-exp", "EXT": "c-ext"}
+    )
+
+    apikey_provisioner = AsyncMock()
+    apikey_provisioner.create_api_key = AsyncMock(return_value=("smf-qa-orch-001", "key-id-99"))
+
+    sb_group_provisioner = AsyncMock()
+    sb_group_provisioner.create_group = AsyncMock(return_value={"_id": "grp-1", "name": "smf-sb-x"})
+    sb_group_provisioner.create_sb_config = AsyncMock(return_value={"_id": "cfg-1", "name": "smf-sb-x"})
+
+    br_provisioner = AsyncMock()
+    br_provisioner.provision = AsyncMock(return_value={"status": "SUCCESS", "errors": []})
+
+    orchestrator = SupplierMockScenarioOrchestrator(
+        engine=engine,
+        contract_provisioner=contract_provisioner,
+        apikey_provisioner=apikey_provisioner,
+        sb_group_provisioner=sb_group_provisioner,
+        br_provisioner=br_provisioner,
+    )
+
+    # HBS→apikey, EXP→sbgroup, EXT→both
+    request = _request(
+        sb_enabled=True,
+        suppliers=[
+            SupplierScenario(code=SupplierCode.HBS, packages=PackageSpec(count=1, room_basis="RO", prices=[100.0]), assignment_target="apikey"),
+            SupplierScenario(code=SupplierCode.EXP, packages=PackageSpec(count=1, room_basis="RO", prices=[100.0]), assignment_target="sbgroup"),
+            SupplierScenario(code=SupplierCode.EXT, packages=PackageSpec(count=1, room_basis="RO", prices=[100.0]), assignment_target="both"),
+        ],
+    )
+
+    with patch("app.core.orchestrator.register_built_expectations", new=AsyncMock(return_value={})):
+        bundle = await orchestrator.create_scenario(request)
+
+    assert bundle.status == ScenarioStatus.READY
+    # SB group gets sbgroup + both contracts
+    grp_call = sb_group_provisioner.create_group.await_args
+    assert sorted(grp_call.kwargs["contract_ids"]) == sorted(["c-exp", "c-ext"])
+    # apiKey gets apikey + both contracts (not the sbgroup-only one)
+    ak_call = apikey_provisioner.create_api_key.await_args
+    assert ak_call.args[0] == {"HBS": "c-hbs", "EXT": "c-ext"}
+    # bundle.contracts keeps ALL suppliers for teardown
+    assert bundle.contracts == {"HBS": "c-hbs", "EXP": "c-exp", "EXT": "c-ext"}
+
+
+@pytest.mark.asyncio
+async def test_create_normal_scenario_provisions_br_by_default():
+    engine = AsyncMock()
+    engine.build_expectations = lambda request: []
+
+    contract_provisioner = AsyncMock()
+    contract_provisioner.create_contracts = AsyncMock(return_value={"HBS": "contract-hbs"})
+
+    apikey_provisioner = AsyncMock()
+    apikey_provisioner.create_api_key = AsyncMock(return_value=("smf-qa-orch-001", "key-id-99"))
+
+    br_provisioner = AsyncMock()
+    br_provisioner.provision = AsyncMock(return_value={"enabled": True, "status": "SUCCESS", "errors": []})
+
+    orchestrator = SupplierMockScenarioOrchestrator(
+        engine=engine,
+        contract_provisioner=contract_provisioner,
+        apikey_provisioner=apikey_provisioner,
+        br_provisioner=br_provisioner,
+    )
+
+    with patch("app.core.orchestrator.register_built_expectations", new=AsyncMock(return_value={})):
+        bundle = await orchestrator.create_scenario(_request())
+
+    assert bundle.status == ScenarioStatus.READY
+    br_provisioner.provision.assert_awaited_once_with("smf-qa-orch-001", template_id=None)
+
+
+@pytest.mark.asyncio
+async def test_create_normal_scenario_skips_br_when_opted_out():
     engine = AsyncMock()
     engine.build_expectations = lambda request: []
 
@@ -113,7 +195,7 @@ async def test_create_normal_scenario_does_not_provision_br():
     )
 
     with patch("app.core.orchestrator.register_built_expectations", new=AsyncMock(return_value={})):
-        bundle = await orchestrator.create_scenario(_request())
+        bundle = await orchestrator.create_scenario(_request(assign_to_br=False))
 
     assert bundle.status == ScenarioStatus.READY
     br_provisioner.provision.assert_not_awaited()
@@ -148,7 +230,7 @@ async def test_create_crawla_scenario_provisions_br_warning_non_blocking():
     assert bundle.status == ScenarioStatus.READY
     assert bundle.error_message == "BR setup failed"
     assert bundle.br_setup and bundle.br_setup["status"] == "FAILED"
-    br_provisioner.provision.assert_awaited_once_with("smf-qa-orch-001")
+    br_provisioner.provision.assert_awaited_once_with("smf-qa-orch-001", template_id=None)
 
 
 @pytest.mark.asyncio

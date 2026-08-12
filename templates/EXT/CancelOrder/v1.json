@@ -1,0 +1,23 @@
+{
+  "httpRequest": {
+    "path": "/extranet/public/api/v1/accommodation/cancel",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "statusCode": 200,
+    "headers": {
+      "Content-Type": ["application/json"]
+    },
+    "body": {
+      "message": "OK",
+      "bookingId": "EXT-BK-220924-X7LaiK4d4dgrJk3",
+      "confirmationNumber": "EXT123456789",
+      "status": "CANCELLED",
+      "cancellationId": "CANCEL-EXT-20260726-001",
+      "refundAmount": 1000,
+      "currency": "AED",
+      "cancellationDate": "2026-07-26",
+      "reason": "User requested"
+    }
+  }
+}

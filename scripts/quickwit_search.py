@@ -19,6 +19,12 @@ async def main() -> None:
     parser.add_argument("--minutes", type=int, default=60)
     parser.add_argument("--index", default=None, help="Override index name")
     parser.add_argument("--max-hits", type=int, default=500)
+    parser.add_argument(
+        "--env",
+        choices=["dev", "stg"],
+        default="stg",
+        help="Which env's Quickwit index to resolve (default: stg, matching this script's prior behavior)",
+    )
     args = parser.parse_args()
 
     result = await run_quickwit_search(
@@ -26,6 +32,7 @@ async def main() -> None:
         index=args.index,
         minutes=args.minutes,
         max_hits=args.max_hits,
+        env=args.env,
     )
     print(
         json.dumps(

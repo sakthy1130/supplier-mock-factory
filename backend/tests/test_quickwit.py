@@ -8,18 +8,23 @@ from app.integrations.quickwit import QuickwitClient, extract_hits, hit_count
 from app.services.quickwit_service import run_quickwit_search
 
 
-def test_resolve_staging_index():
-    base = "http://quickwit-nonprod.tajawal-prod-devops.internal/api/v1"
+def test_resolve_dev_index():
     assert (
-        resolve_console_logs_index(base, on_date=date(2026, 6, 6))
+        resolve_console_logs_index("dev", on_date=date(2026, 6, 6))
+        == "hotels-consolelogs-dev-2026_06_06"
+    )
+
+
+def test_resolve_staging_index():
+    assert (
+        resolve_console_logs_index("stg", on_date=date(2026, 6, 6))
         == "hotels-consolelogs-staging-2026_06_06"
     )
 
 
 def test_resolve_prod_index():
-    base = "http://quickwit-prod.tajawal-prod-devops.internal/api/v1"
     assert (
-        resolve_console_logs_index(base, on_date=date(2026, 6, 6))
+        resolve_console_logs_index("prod", on_date=date(2026, 6, 6))
         == "hotels-consolelogs-prod-apps-2026_06"
     )
 
@@ -78,9 +83,7 @@ async def test_run_quickwit_search(monkeypatch):
         )(),
     )
 
-    result = await run_quickwit_search("smf-qa-1", index=None, minutes=30, max_hits=100)
+    result = await run_quickwit_search("smf-qa-1", index=None, minutes=30, max_hits=100, env="stg")
     assert result.num_hits == 1
     assert result.query == "smf-qa-1"
-    assert result.index == "hotels-consolelogs-staging-2026_06_06" or result.index.startswith(
-        "hotels-consolelogs-staging-"
-    )
+    assert result.index.startswith("hotels-consolelogs-staging-")

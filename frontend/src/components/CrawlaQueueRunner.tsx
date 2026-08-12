@@ -136,6 +136,16 @@ function suggestPrices(base: number, bucket: CrawlaBucket): { exp: number; hbs: 
 }
 
 /** Build a CrawlaScenarioRequest for a bucket from fetched anchor data */
+/** Pick the Crawla package to mock: prefer a PrePay offer (pay_at_property == "No").
+ *  HBS is PrePay, so a PostPay Crawla offer can never pair with HBS for markup.
+ *  The backend already drops PostPay offers, but select explicitly for robustness. */
+function pickCrawlaOffer(
+  hotelItem: CrawlaAnchorPackagesResponse['hotels'][number] | undefined,
+) {
+  const offers = hotelItem?.data ?? []
+  return offers.find((o) => (o.pay_at_property ?? '').trim().toLowerCase() === 'no') ?? offers[0]
+}
+
 function buildRequest(
   bucket: CrawlaBucket,
   atgHotelId: string,
@@ -146,7 +156,7 @@ function buildRequest(
 ): CrawlaScenarioRequest {
   const searchItem = searchAnchors.data.find((i) => i.atg_id === atgHotelId) ?? searchAnchors.data[0]
   const hotelItem  = packagesAnchors.hotels.find((h) => h.atg_id === atgHotelId) ?? packagesAnchors.hotels[0]
-  const offer      = hotelItem?.data[0]
+  const offer      = pickCrawlaOffer(hotelItem)
 
   const searchBase  = searchItem?.total_amount ?? searchItem?.min_price ?? 500
   const packageBase = offer?.total_amount ?? hotelItem?.min_price ?? searchBase
@@ -477,6 +487,13 @@ export function CrawlaQueueRunner() {
 
       patchItem(bucket, { status: 'running', phase: 'creating', error: undefined })
 
+      // Track the created scenario so it is ALWAYS torn down — even on error or
+      // abort. HBS mocks live at shared canonical paths (/hotel-api/1.0/...), so an
+      // orphaned scenario's HBS expectation collides with the next bucket/run and
+      // corrupts the merge (e.g. EXP hidden). The finally below guarantees cleanup.
+      let scenarioId: string | undefined
+      let tornDown = false
+
       try {
         // 1. Create scenario
         // ONLY_EXPEDIA: check-in must be > 2 weeks out so the search is also
@@ -489,7 +506,7 @@ export function CrawlaQueueRunner() {
         const request = buildRequest(bucket, atgHotelId, effectiveCheckIn, effectiveCheckOut, searchAnchors, packagesAnchors)
         const created = await createCrawlaScenario(request)
         if (!created.id) throw new Error('Create response missing scenario id')
-        const scenarioId = created.id
+        scenarioId = created.id
         patchItem(bucket, { scenarioId, phase: 'waiting_ready' })
 
         if (abortRef.current) break
@@ -508,6 +525,7 @@ export function CrawlaQueueRunner() {
 
         // 4. Teardown (reuses existing teardownScenario — same as Clear Data)
         await teardownScenario(scenarioId)
+        tornDown = true
         patchItem(bucket, { phase: 'verifying_cleanup' })
 
         // 5. Poll until TORN_DOWN (cleanup verification).
@@ -540,6 +558,17 @@ export function CrawlaQueueRunner() {
         const message = err instanceof Error ? err.message : String(err)
         patchItem(bucket, { status: 'failed', error: message, phase: undefined })
         // Continue to next bucket even on failure
+      } finally {
+        // Safety net: if the scenario was created but never torn down (create
+        // succeeded then ready/run failed, or the user aborted mid-bucket), delete
+        // its mocks now so they can't leak into the next bucket/run.
+        if (scenarioId && !tornDown) {
+          try {
+            await teardownScenario(scenarioId)
+          } catch {
+            // Best-effort — a stuck row is recoverable via "Clear all data".
+          }
+        }
       }
     }
 

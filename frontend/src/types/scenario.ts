@@ -1,4 +1,4 @@
-export type SupplierCode = 'HBS' | 'EXP' | 'RHK' | 'CHC'
+export type SupplierCode = 'HBS' | 'EXP' | 'RHK' | 'CHC' | 'EXT'
 
 export type ScenarioStatus =
   | 'PENDING'
@@ -12,25 +12,35 @@ export type ScenarioStatus =
 
 export interface PackageSpec {
   count: number
-  room_basis: string
+  room_basis: string[]
   room_names: string[]
   supplier_currency: string
   prices: number[]
   refundable: boolean[]
+  // 0-based index of the package the Booking/GetOrder flow is built for.
+  // null/undefined means no booking flow (only search + package mocks).
+  booking_package_index?: number | null
 }
 
 export const DEFAULT_ROOM_NAME = '1 Double Bed, Nonsmoking'
+export const DEFAULT_ROOM_BASIS = 'RO'
 
 export const DEFAULT_SUPPLIER_CURRENCIES: Record<SupplierCode, string> = {
   HBS: 'EUR',
   EXP: 'USD',
   RHK: 'USD',
   CHC: 'SAR',
+  EXT: 'EUR',
 }
+
+export type AssignmentTarget = 'apikey' | 'sbgroup' | 'both'
 
 export interface SupplierScenario {
   code: SupplierCode
+  contract_currency: string
   packages: PackageSpec
+  // Where this supplier's contract attaches when SmartBooking is on. Default apikey.
+  assignment_target?: AssignmentTarget
 }
 
 export interface ScenarioRequest {
@@ -38,12 +48,18 @@ export interface ScenarioRequest {
   check_in: string
   check_out: string
   atg_hotel_id: string
+  supplier_hotel_ids?: Record<string, string>
   suppliers: SupplierScenario[]
+  assign_to_br?: boolean
+  // Create the apiKey with SmartBooking enabled (backend fills default SB config).
+  sb_enabled?: boolean
+  template_id?: string
 }
 
 export interface ScenarioBundle {
   id?: string
   namespace: string
+  env: string
   status: ScenarioStatus
   api_key?: string
   api_key_id?: string
@@ -66,6 +82,7 @@ export interface ScenarioBundle {
 export interface ScenarioListItem {
   id: string
   namespace: string
+  env: string
   status: ScenarioStatus
   created_at?: string
   suppliers: string[]

@@ -16,6 +16,11 @@ SB_CONFIG_API_PATH = "/api/dynamic-forms/smart_booking"
 SB_GROUP_API_PATH = "/api/dynamic-forms/smart_booking_group"
 
 
+def _bstr(value: bool) -> str:
+    """Portal stores SB survey flags as the strings 'true'/'false', not booleans."""
+    return "true" if value else "false"
+
+
 class SBGroupProvisioner:
     """Creates, assigns, and deletes SB configuration + groups for test scenarios."""
 
@@ -95,16 +100,15 @@ class SBGroupProvisioner:
         node_id: str,
         sb_config_id: str | None = None,
     ) -> None:
-        """Disable SB on apiKey, delete group and config. Best-effort."""
-        async with self.backoffice:
-            try:
-                await self._disable_sb_on_api_key(api_key_id, node_id)
-                logger.info("SB disabled on apiKey: api_key_id=%s", api_key_id)
-            except Exception as exc:
-                logger.error(
-                    "Failed to disable SB on apiKey api_key_id=%s: %s", api_key_id, exc
-                )
+        """Delete the SB group and config. Best-effort.
 
+        We intentionally do NOT try to disable SB on the apiKey: teardown deletes
+        the apiKey before this runs, so a GET on its config returns an empty body
+        (JSON decode error) and the disable is redundant anyway — removing the
+        apiKey already drops its opt.smartBooking reference. The group and config
+        are separate dynamic-forms entities, so they still need explicit deletes.
+        """
+        async with self.backoffice:
             try:
                 await self._delete_sb_group(group_id)
                 logger.info("SB group deleted: group_id=%s", group_id)
@@ -127,6 +131,23 @@ class SBGroupProvisioner:
     ) -> dict[str, Any]:
         config_name = f"smf-sb-{namespace}"
         gc = sb_config.group_configuration
+        # The portal stores the survey flags as the STRINGS "true"/"false" and reads
+        # the SB behavior from BOTH the nested groupConfiguration AND a set of
+        # top-level fields (survey1/board/cancellationPolicy/includeNewSession/
+        # priceMarginToUpgrade). Sending only the nested block with boolean survey
+        # values leaves the config effectively inert, so a contract in the SB group
+        # never engages in search. Mirror everything to match the working shape.
+        # Top-level survey/board/cancellationPolicy are the tuned values the SB
+        # engine reads (driven by the config). The nested groupConfiguration keeps
+        # the portal's stored form defaults (all-true survey, board/CP off) — this
+        # is exactly how the known-working reference config is shaped.
+        top_survey1 = {
+            "class": _bstr(gc.survey1_class),
+            "type": _bstr(gc.survey1_type),
+            "view": _bstr(gc.survey1_view),
+            "bedding": _bstr(gc.survey1_bedding),
+        }
+        nested_survey1 = {"class": "true", "type": "true", "view": "true", "bedding": "true"}
         body: dict[str, Any] = {
             "name": config_name,
             "label": config_name,
@@ -135,18 +156,14 @@ class SBGroupProvisioner:
             "autoId": "",
             "uid": config_name,
             "groupConfiguration": {
-                "survey1": {
-                    "class": gc.survey1_class,
-                    "type": gc.survey1_type,
-                    "view": gc.survey1_view,
-                    "bedding": gc.survey1_bedding,
-                },
-                "board": gc.board,
-                "cancellationPolicy": gc.cancellation_policy,
+                "survey1": nested_survey1,
+                "board": False,
+                "cancellationPolicy": False,
             },
             "price": {
                 "priceMarginPercentage": sb_config.price_margin_percentage,
                 "ignoreDeltaProfitAmount": sb_config.forfeit_amount,
+                "priceMarginToUpgrade": sb_config.price_margin_to_upgrade,
             },
             "opt": {
                 "fetchCancellationPolicyForExcludedPackages": sb_config.fetch_cancellation_policy_for_excluded,
@@ -154,6 +171,12 @@ class SBGroupProvisioner:
                 "considerOriginalPackage": sb_config.consider_original_package,
             },
             "submit": True,
+            # Top-level fields the SB engine actually reads.
+            "includeNewSession": sb_config.include_new_session,
+            "survey1": top_survey1,
+            "board": gc.board,
+            "cancellationPolicy": gc.cancellation_policy,
+            "priceMarginToUpgrade": "",
         }
         client = self.backoffice._get_client()
         url = f"{self.backoffice.base_url}{SB_CONFIG_API_PATH}"
@@ -204,9 +227,16 @@ class SBGroupProvisioner:
         group_id = data.get("_id") or data.get("id")
         if not group_id:
             raise BackofficeError("Create SB group response missing _id")
+        # Echo back the contracts so the apiKey's opt.smartBooking.groups[] carries
+        # them — without the contracts array on the embedded group object, the SB
+        # engine never pulls the group's contract into the (SB-session) search
+        # (supplierConfigList shows only the apiKey's own contracts).
         return {
             "_id": str(group_id),
             "name": str(data.get("name", group_name)),
+            "isActive": bool(data.get("isActive", True)),
+            "contracts": data.get("contracts") or list(contract_ids),
+            "submit": True,
             "created_at": data.get("created_at") or data.get("createdAt") or 0,
         }
 
@@ -247,16 +277,6 @@ class SBGroupProvisioner:
             "[SB assign] PUT /api/node/user/%s/%s  FULL_BODY=%s",
             api_key_id, node_id, json.dumps(config, default=str),
         )
-        await self.backoffice.update_api_key(api_key_id, node_id, config)
-
-    async def _disable_sb_on_api_key(self, api_key_id: str, node_id: str) -> None:
-        """Read current apiKey config, remove all SB fields, write back."""
-        config = await self.backoffice.get_api_key_config(api_key_id, node_id)
-        opt = config.get("opt") or {}
-        for field in ("smartBooking", "smartBook", "smartBookGroup", "smartBookRetry",
-                      "smartBookErrorCodes", "winningPackagesEnabled"):
-            opt.pop(field, None)
-        config["opt"] = opt
         await self.backoffice.update_api_key(api_key_id, node_id, config)
 
     async def _delete_sb_group(self, group_id: str) -> None:

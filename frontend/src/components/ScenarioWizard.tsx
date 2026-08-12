@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { resolveHotelMapping } from '../api/hotels'
-import type { ScenarioRequest, SupplierCode } from '../types/scenario'
-import { DEFAULT_ROOM_NAME, DEFAULT_SUPPLIER_CURRENCIES } from '../types/scenario'
+import type { AssignmentTarget, ScenarioRequest, SupplierCode } from '../types/scenario'
+import { DEFAULT_ROOM_BASIS, DEFAULT_ROOM_NAME, DEFAULT_SUPPLIER_CURRENCIES } from '../types/scenario'
 
 function defaultNamespace() {
   const d = new Date()
@@ -10,98 +10,146 @@ function defaultNamespace() {
   return `qa-${stamp}-${suffix}`
 }
 
-const ROOM_NAME_SEP = ' - '
-
-function defaultRoomNamesText(count: number): string {
-  return Array.from({ length: count }, () => DEFAULT_ROOM_NAME).join(ROOM_NAME_SEP)
+export interface PackageRow {
+  roomBasis: string
+  roomName: string
+  price: string
+  refundable: boolean
 }
 
-function defaultPricesText(count: number): string {
-  const base = [100, 200, 300]
-  const prices = Array.from({ length: count }, (_, index) => base[index] ?? base[base.length - 1] ?? 100)
-  return prices.join(', ')
-}
+const DEFAULT_ROW_PRICES = [100, 200, 300]
 
-function defaultRefundableText(count: number): string {
-  const base = [true, true, false]
-  const flags = Array.from({ length: count }, (_, index) => base[index] ?? false)
-  return flags.map(String).join(', ')
-}
-
-function parsePrices(text: string, count: number): number[] {
-  const parts = text
-    .split(',')
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map(Number)
-  if (parts.some((n) => Number.isNaN(n))) {
-    throw new Error('Prices must be comma-separated numbers')
+function defaultPackageRow(index: number): PackageRow {
+  return {
+    roomBasis: DEFAULT_ROOM_BASIS,
+    roomName: DEFAULT_ROOM_NAME,
+    price: String(DEFAULT_ROW_PRICES[index] ?? DEFAULT_ROW_PRICES[DEFAULT_ROW_PRICES.length - 1]),
+    refundable: true,
   }
-  if (parts.length < count) {
-    const last = parts[parts.length - 1] ?? 100
-    while (parts.length < count) parts.push(last)
-  }
-  return parts.slice(0, count)
 }
 
-function parseRefundable(text: string, count: number): boolean[] {
-  if (!text.trim()) return Array.from({ length: count }, () => false)
-  const parts = text.split(',').map((p) => p.trim().toLowerCase())
-  const flags = parts.map((p) => p === 'true' || p === '1' || p === 'yes')
-  while (flags.length < count) flags.push(false)
-  return flags.slice(0, count)
+function defaultPackageRows(count: number): PackageRow[] {
+  return Array.from({ length: count }, (_, index) => defaultPackageRow(index))
 }
 
-function parseRoomNames(text: string, count: number): string[] {
-  const parts = text
-    .split(/\s+-\s+/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-  if (parts.length === 0) {
-    return Array.from({ length: count }, () => DEFAULT_ROOM_NAME)
-  }
-  if (parts.length < count) {
-    const last = parts[parts.length - 1] ?? DEFAULT_ROOM_NAME
-    while (parts.length < count) parts.push(last)
-  }
-  return parts.slice(0, count)
+interface ParsedRows {
+  room_basis: string[]
+  room_names: string[]
+  prices: number[]
+  refundable: boolean[]
+}
+
+function parseRows(supplierLabel: string, rows: PackageRow[]): ParsedRows {
+  const room_basis: string[] = []
+  const room_names: string[] = []
+  const prices: number[] = []
+  const refundable: boolean[] = []
+  rows.forEach((row, index) => {
+    const basis = row.roomBasis.trim().toUpperCase() || DEFAULT_ROOM_BASIS
+    const name = row.roomName.trim() || DEFAULT_ROOM_NAME
+    const price = Number(row.price)
+    if (Number.isNaN(price)) {
+      throw new Error(`${supplierLabel} package ${index + 1}: price must be a number`)
+    }
+    room_basis.push(basis)
+    room_names.push(name)
+    prices.push(price)
+    refundable.push(row.refundable)
+  })
+  return { room_basis, room_names, prices, refundable }
+}
+
+const SUPPLIER_CODES: SupplierCode[] = ['HBS', 'EXP', 'RHK', 'CHC', 'EXT']
+
+const SUPPLIER_META: {
+  code: SupplierCode
+  className: string
+  label: string
+  description: string
+  currencyPlaceholder: string
+}[] = [
+  { code: 'HBS', className: 'hbs', label: 'HBS', description: 'Hotelbeds · net supplier', currencyPlaceholder: 'EUR' },
+  { code: 'EXP', className: 'exp', label: 'EXP', description: 'Expedia · override URLs', currencyPlaceholder: 'USD' },
+  { code: 'RHK', className: 'rhk', label: 'RHK', description: 'RateHawk · WorldOTA B2B', currencyPlaceholder: 'USD' },
+  { code: 'CHC', className: 'chc', label: 'CHC', description: 'Choice · net supplier', currencyPlaceholder: 'SAR' },
+  { code: 'EXT', className: 'ext', label: 'EXT', description: 'Extranet · net supplier', currencyPlaceholder: 'EUR' },
+]
+
+export interface ScenarioWizardTemplate {
+  atgHotelId?: string
+  enabledSuppliers?: Partial<Record<SupplierCode, boolean>>
+  packages?: Partial<Record<SupplierCode, PackageRow[]>>
+  supplierCurrencies?: Partial<Record<SupplierCode, string>>
+  contractCurrencies?: Partial<Record<SupplierCode, string>>
+  sbEnabled?: boolean
+  assignmentTargets?: Partial<Record<SupplierCode, AssignmentTarget>>
 }
 
 interface Props {
   onSubmit: (request: ScenarioRequest) => Promise<void>
   busy: boolean
+  initialTemplate?: ScenarioWizardTemplate
 }
 
-export function ScenarioWizard({ onSubmit, busy }: Props) {
+export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
   const [namespace, setNamespace] = useState(defaultNamespace)
   const [checkIn, setCheckIn] = useState('2026-09-01')
   const [checkOut, setCheckOut] = useState('2026-09-03')
-  const [atgHotelId, setAtgHotelId] = useState('1446194')
-  const [, setSupplierHotelIds] = useState<Record<string, string>>({})
+  const [atgHotelId, setAtgHotelId] = useState(() => initialTemplate?.atgHotelId ?? '1446194')
+  const [supplierHotelIds, setSupplierHotelIds] = useState<Record<string, string>>({})
   const [mappingHint, setMappingHint] = useState<string | null>(null)
   const [mappingLoading, setMappingLoading] = useState(false)
-  const [packageCount, setPackageCount] = useState(3)
-  const [roomBasis, setRoomBasis] = useState('RO')
-  const [roomNamesText, setRoomNamesText] = useState(() => defaultRoomNamesText(3))
-  const [pricesText, setPricesText] = useState(() => defaultPricesText(3))
-  const [refundableText, setRefundableText] = useState(() => defaultRefundableText(3))
-  const [supplierCurrencies, setSupplierCurrencies] = useState<Record<SupplierCode, string>>({
+  const [supplierCurrencies, setSupplierCurrencies] = useState<Record<SupplierCode, string>>(() => ({
     ...DEFAULT_SUPPLIER_CURRENCIES,
-  })
-  const [enableHbs, setEnableHbs] = useState(true)
-  const [enableExp, setEnableExp] = useState(true)
-  const [enableRhk, setEnableRhk] = useState(false)
-  const [enableChc, setEnableChc] = useState(false)
+    ...(initialTemplate?.supplierCurrencies ?? {}),
+  }))
+  const [contractCurrencies, setContractCurrencies] = useState<Record<SupplierCode, string>>(() => ({
+    HBS: initialTemplate?.contractCurrencies?.HBS ?? 'USD',
+    EXP: initialTemplate?.contractCurrencies?.EXP ?? 'USD',
+    RHK: initialTemplate?.contractCurrencies?.RHK ?? 'USD',
+    CHC: initialTemplate?.contractCurrencies?.CHC ?? 'USD',
+    EXT: initialTemplate?.contractCurrencies?.EXT ?? 'USD',
+  }))
+  const [supplierPackages, setSupplierPackages] = useState<Record<SupplierCode, PackageRow[]>>(() => ({
+    HBS: initialTemplate?.packages?.HBS ?? defaultPackageRows(3),
+    EXP: initialTemplate?.packages?.EXP ?? defaultPackageRows(3),
+    RHK: initialTemplate?.packages?.RHK ?? defaultPackageRows(3),
+    CHC: initialTemplate?.packages?.CHC ?? defaultPackageRows(3),
+    EXT: initialTemplate?.packages?.EXT ?? defaultPackageRows(3),
+  }))
+  const [enabledSuppliers, setEnabledSuppliers] = useState<Record<SupplierCode, boolean>>(() => ({
+    HBS: initialTemplate?.enabledSuppliers?.HBS ?? true,
+    EXP: initialTemplate?.enabledSuppliers?.EXP ?? true,
+    RHK: initialTemplate?.enabledSuppliers?.RHK ?? false,
+    CHC: initialTemplate?.enabledSuppliers?.CHC ?? false,
+    EXT: initialTemplate?.enabledSuppliers?.EXT ?? false,
+  }))
+  // Which package row (per supplier) the Booking/GetOrder flow is built for.
+  // null = no booking flow (only search + package mocks created).
+  const [bookingRow, setBookingRow] = useState<Record<SupplierCode, number | null>>(() => ({
+    HBS: null,
+    EXP: null,
+    RHK: null,
+    CHC: null,
+    EXT: null,
+  }))
+  const [assignToBr, setAssignToBr] = useState(true)
+  // SmartBooking: create the apiKey with SB enabled, and per-supplier route each
+  // contract to the apiKey, the SB group, or both (default apikey).
+  const [sbEnabled, setSbEnabled] = useState(() => initialTemplate?.sbEnabled ?? false)
+  const [assignmentTargets, setAssignmentTargets] = useState<Record<SupplierCode, AssignmentTarget>>(() => ({
+    HBS: initialTemplate?.assignmentTargets?.HBS ?? 'apikey',
+    EXP: initialTemplate?.assignmentTargets?.EXP ?? 'apikey',
+    RHK: initialTemplate?.assignmentTargets?.RHK ?? 'apikey',
+    CHC: initialTemplate?.assignmentTargets?.CHC ?? 'apikey',
+    EXT: initialTemplate?.assignmentTargets?.EXT ?? 'apikey',
+  }))
   const [formError, setFormError] = useState<string | null>(null)
 
-  const suppliers = useMemo(() => {
-    const codes: SupplierCode[] = []
-    if (enableHbs) codes.push('HBS')
-    if (enableExp) codes.push('EXP')
-    if (enableRhk) codes.push('RHK')
-    if (enableChc) codes.push('CHC')
-    return codes
-  }, [enableHbs, enableExp, enableRhk, enableChc])
+  const suppliers = useMemo(
+    () => SUPPLIER_CODES.filter((code) => enabledSuppliers[code]),
+    [enabledSuppliers],
+  )
 
   useEffect(() => {
     const atg = atgHotelId.trim()
@@ -139,20 +187,57 @@ export function ScenarioWizard({ onSubmit, busy }: Props) {
     }
   }, [atgHotelId, suppliers])
 
-  useEffect(() => {
-    setRoomNamesText((prev) => parseRoomNames(prev, packageCount).join(ROOM_NAME_SEP))
-    setPricesText((prev) => {
-      try {
-        return parsePrices(prev, packageCount).join(', ')
-      } catch {
-        return defaultPricesText(packageCount)
-      }
-    })
-    setRefundableText((prev) => parseRefundable(prev, packageCount).map(String).join(', '))
-  }, [packageCount])
+  const toggleSupplier = (code: SupplierCode, checked: boolean) => {
+    setEnabledSuppliers((prev) => ({ ...prev, [code]: checked }))
+  }
 
   const updateSupplierCurrency = (code: SupplierCode, value: string) => {
     setSupplierCurrencies((prev) => ({ ...prev, [code]: value.toUpperCase().slice(0, 3) }))
+  }
+
+  const updateContractCurrency = (code: SupplierCode, value: string) => {
+    setContractCurrencies((prev) => ({ ...prev, [code]: value.toUpperCase().slice(0, 3) }))
+  }
+
+  const updateAssignmentTarget = (code: SupplierCode, value: AssignmentTarget) => {
+    setAssignmentTargets((prev) => ({ ...prev, [code]: value }))
+  }
+
+  const updateRow = (code: SupplierCode, index: number, patch: Partial<PackageRow>) => {
+    setSupplierPackages((prev) => {
+      const rows = prev[code].map((row, i) => (i === index ? { ...row, ...patch } : row))
+      return { ...prev, [code]: rows }
+    })
+  }
+
+  const addRow = (code: SupplierCode) => {
+    setSupplierPackages((prev) => {
+      const rows = prev[code]
+      const last = rows[rows.length - 1] ?? defaultPackageRow(rows.length)
+      return { ...prev, [code]: [...rows, { ...last }] }
+    })
+  }
+
+  const removeRow = (code: SupplierCode, index: number) => {
+    setSupplierPackages((prev) => {
+      const rows = prev[code]
+      if (rows.length <= 1) return prev
+      return { ...prev, [code]: rows.filter((_, i) => i !== index) }
+    })
+    // Keep the booking selection pointing at the same row after removal.
+    setBookingRow((prev) => {
+      const selected = prev[code]
+      if (selected === null) return prev
+      if (selected === index) return { ...prev, [code]: null }
+      if (selected > index) return { ...prev, [code]: selected - 1 }
+      return prev
+    })
+  }
+
+  // Radio-style selection: picking a row sets it; clicking the selected row
+  // again clears it (so "no booking flow" stays reachable).
+  const toggleBookingRow = (code: SupplierCode, index: number) => {
+    setBookingRow((prev) => ({ ...prev, [code]: prev[code] === index ? null : index }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -162,26 +247,39 @@ export function ScenarioWizard({ onSubmit, busy }: Props) {
       setFormError('Select at least one supplier')
       return
     }
+    // SmartBooking needs at least one supplier feeding the SB group, else the
+    // group would be created empty (mirrors the backend guard).
+    if (sbEnabled && !suppliers.some((code) => assignmentTargets[code] !== 'apikey')) {
+      setFormError('SmartBooking is on — set at least one supplier to SbGroup or Both')
+      return
+    }
     try {
-      const prices = parsePrices(pricesText, packageCount)
-      const refundable = parseRefundable(refundableText, packageCount)
-      const room_names = parseRoomNames(roomNamesText, packageCount)
       const request: ScenarioRequest = {
         namespace: namespace.trim(),
         check_in: checkIn,
         check_out: checkOut,
         atg_hotel_id: atgHotelId.trim(),
-        suppliers: suppliers.map((code) => ({
-          code,
-          packages: {
-            count: packageCount,
-            room_basis: roomBasis,
-            room_names,
-            supplier_currency: supplierCurrencies[code] || DEFAULT_SUPPLIER_CURRENCIES[code],
-            prices,
-            refundable,
-          },
-        })),
+        supplier_hotel_ids: supplierHotelIds,
+        suppliers: suppliers.map((code) => {
+          const rows = supplierPackages[code]
+          const parsed = parseRows(code, rows)
+          return {
+            code,
+            contract_currency: contractCurrencies[code] || 'USD',
+            assignment_target: assignmentTargets[code],
+            packages: {
+              count: rows.length,
+              room_basis: parsed.room_basis,
+              room_names: parsed.room_names,
+              supplier_currency: supplierCurrencies[code] || DEFAULT_SUPPLIER_CURRENCIES[code],
+              prices: parsed.prices,
+              refundable: parsed.refundable,
+              booking_package_index: bookingRow[code],
+            },
+          }
+        }),
+        assign_to_br: assignToBr,
+        sb_enabled: sbEnabled,
       }
       await onSubmit(request)
     } catch (err) {
@@ -253,154 +351,168 @@ export function ScenarioWizard({ onSubmit, busy }: Props) {
       </div>
 
       <div className="wizard-section">
-        <div className="wizard-section-title">Packages</div>
-        <div className="field-grid">
-          <div className="field">
-            <label>
-              Count
-              <input
-                type="number"
-                min={1}
-                max={20}
-                value={packageCount}
-                onChange={(e) => setPackageCount(Number(e.target.value))}
-              />
-            </label>
-          </div>
-          <div className="field">
-            <label>
-              Room basis
-              <select value={roomBasis} onChange={(e) => setRoomBasis(e.target.value)}>
-                <option value="RO">RO — Room only</option>
-                <option value="BB">BB — Bed & breakfast</option>
-                <option value="HB">HB — Half board</option>
-                <option value="FB">FB — Full board</option>
-              </select>
-            </label>
-          </div>
-        </div>
-        <div className="field-grid" style={{ marginTop: '0.85rem' }}>
-          <div className="field field-wide">
-            <label>
-              Room names (- separated, one per package)
-              <input
-                value={roomNamesText}
-                onChange={(e) => setRoomNamesText(e.target.value)}
-                placeholder={defaultRoomNamesText(packageCount)}
-              />
-            </label>
-            <p className="hint" style={{ marginTop: '0.35rem' }}>
-              HBS: set on mock per package. CHC: display name from hotel content cache by roomId.
-            </p>
-          </div>
-        </div>
-        <div className="field-grid" style={{ marginTop: '0.85rem' }}>
-          <div className="field">
-            <label>
-              Prices (comma-separated)
-              <input
-                value={pricesText}
-                onChange={(e) => setPricesText(e.target.value)}
-                placeholder={defaultPricesText(packageCount)}
-              />
-            </label>
-          </div>
-          <div className="field">
-            <label>
-              Refundable (true/false)
-              <input
-                value={refundableText}
-                onChange={(e) => setRefundableText(e.target.value)}
-                placeholder={defaultRefundableText(packageCount)}
-              />
-            </label>
-          </div>
+        <div className="wizard-section-title">Suppliers</div>
+        <p className="hint" style={{ marginBottom: '0.75rem' }}>
+          Each supplier has its own package rows — add/remove a row per package instead of editing separated text.
+        </p>
+        <div className="supplier-tiles supplier-tiles-wide">
+          {SUPPLIER_META.map((meta) => {
+            const enabled = enabledSuppliers[meta.code]
+            const rows = supplierPackages[meta.code]
+            return (
+              <div key={meta.code} className={`supplier-tile ${meta.className}`}>
+                <label className="supplier-tile-header">
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onChange={(e) => toggleSupplier(meta.code, e.target.checked)}
+                  />
+                  <div className="supplier-tile-body">
+                    <strong>{meta.label}</strong>
+                    <span>{meta.description}</span>
+                  </div>
+                </label>
+                {enabled && (
+                  <div className="supplier-tile-content">
+                    <label className="supplier-tile-field" style={{ maxWidth: '140px' }}>
+                      Supplier Currency
+                      <input
+                        value={supplierCurrencies[meta.code]}
+                        onChange={(e) => updateSupplierCurrency(meta.code, e.target.value)}
+                        maxLength={3}
+                        placeholder={meta.currencyPlaceholder}
+                      />
+                    </label>
+
+                    <label className="supplier-tile-field" style={{ maxWidth: '140px' }}>
+                      Contract Currency
+                      <select
+                        value={contractCurrencies[meta.code]}
+                        onChange={(e) => updateContractCurrency(meta.code, e.target.value)}
+                      >
+                        <option value="SAR">SAR</option>
+                        <option value="AED">AED</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                      </select>
+                    </label>
+
+                    {sbEnabled && (
+                      <label className="supplier-tile-field" style={{ maxWidth: '160px' }}>
+                        Contract goes to
+                        <select
+                          value={assignmentTargets[meta.code]}
+                          onChange={(e) => updateAssignmentTarget(meta.code, e.target.value as AssignmentTarget)}
+                        >
+                          <option value="apikey">ApiKey</option>
+                          <option value="sbgroup">SB Group</option>
+                          <option value="both">Both</option>
+                        </select>
+                      </label>
+                    )}
+
+                    <div className="package-rows">
+                      <div className="package-row package-row-head">
+                        <span title="Build the Booking/GetOrder flow for this package">Book</span>
+                        <span>Room basis</span>
+                        <span>Room name</span>
+                        <span>Price</span>
+                        <span>Refundable</span>
+                        <span />
+                      </div>
+                      {rows.map((row, index) => (
+                        <div key={index} className="package-row">
+                          <input
+                            type="radio"
+                            name={`booking-${meta.code}`}
+                            checked={bookingRow[meta.code] === index}
+                            // Toggle on click (clears when the selected row is re-clicked);
+                            // onChange is a no-op required for a controlled radio.
+                            onChange={() => {}}
+                            onClick={() => toggleBookingRow(meta.code, index)}
+                            title="Select this package for the Booking/GetOrder flow (click again to clear)"
+                          />
+                          <input
+                            value={row.roomBasis}
+                            onChange={(e) => updateRow(meta.code, index, { roomBasis: e.target.value.toUpperCase() })}
+                            placeholder="RO"
+                          />
+                          <input
+                            value={row.roomName}
+                            onChange={(e) => updateRow(meta.code, index, { roomName: e.target.value })}
+                            placeholder={DEFAULT_ROOM_NAME}
+                          />
+                          <input
+                            type="number"
+                            value={row.price}
+                            onChange={(e) => updateRow(meta.code, index, { price: e.target.value })}
+                            placeholder="100"
+                          />
+                          <input
+                            type="checkbox"
+                            checked={row.refundable}
+                            onChange={(e) => updateRow(meta.code, index, { refundable: e.target.checked })}
+                          />
+                          <button
+                            type="button"
+                            className="btn ghost package-row-remove"
+                            onClick={() => removeRow(meta.code, index)}
+                            disabled={rows.length <= 1}
+                            title="Remove package"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button type="button" className="btn ghost" onClick={() => addRow(meta.code)}>
+                      + Add package
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 
       <div className="wizard-section">
-        <div className="wizard-section-title">Suppliers</div>
-        <div className="supplier-tiles">
-          <label className="supplier-tile hbs">
-            <input type="checkbox" checked={enableHbs} onChange={(e) => setEnableHbs(e.target.checked)} />
-            <div className="supplier-tile-body">
-              <strong>HBS</strong>
-              <span>Hotelbeds · net supplier</span>
-              {enableHbs && (
-                <label className="supplier-tile-field" onClick={(e) => e.preventDefault()}>
-                  Currency
-                  <input
-                    value={supplierCurrencies.HBS}
-                    onChange={(e) => updateSupplierCurrency('HBS', e.target.value)}
-                    maxLength={3}
-                    placeholder="EUR"
-                  />
-                </label>
-              )}
-            </div>
-          </label>
-          <label className="supplier-tile exp">
-            <input type="checkbox" checked={enableExp} onChange={(e) => setEnableExp(e.target.checked)} />
-            <div className="supplier-tile-body">
-              <strong>EXP</strong>
-              <span>Expedia · override URLs</span>
-              {enableExp && (
-                <label className="supplier-tile-field" onClick={(e) => e.preventDefault()}>
-                  Currency
-                  <input
-                    value={supplierCurrencies.EXP}
-                    onChange={(e) => updateSupplierCurrency('EXP', e.target.value)}
-                    maxLength={3}
-                    placeholder="USD"
-                  />
-                </label>
-              )}
-            </div>
-          </label>
-          <label className="supplier-tile rhk">
-            <input type="checkbox" checked={enableRhk} onChange={(e) => setEnableRhk(e.target.checked)} />
-            <div className="supplier-tile-body">
-              <strong>RHK</strong>
-              <span>RateHawk · WorldOTA B2B</span>
-              {enableRhk && (
-                <label className="supplier-tile-field" onClick={(e) => e.preventDefault()}>
-                  Currency
-                  <input
-                    value={supplierCurrencies.RHK}
-                    onChange={(e) => updateSupplierCurrency('RHK', e.target.value)}
-                    maxLength={3}
-                    placeholder="USD"
-                  />
-                </label>
-              )}
-            </div>
-          </label>
-          <label className="supplier-tile chc">
-            <input type="checkbox" checked={enableChc} onChange={(e) => setEnableChc(e.target.checked)} />
-            <div className="supplier-tile-body">
-              <strong>CHC</strong>
-              <span>Choice · net supplier</span>
-              {enableChc && (
-                <label className="supplier-tile-field" onClick={(e) => e.preventDefault()}>
-                  Currency
-                  <input
-                    value={supplierCurrencies.CHC}
-                    onChange={(e) => updateSupplierCurrency('CHC', e.target.value)}
-                    maxLength={3}
-                    placeholder="SAR"
-                  />
-                </label>
-              )}
-            </div>
-          </label>
-        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500 }}>
+          <input type="checkbox" checked={assignToBr} onChange={(e) => setAssignToBr(e.target.checked)} />
+          Assign apiKey to BR (Static + Dynamic Markup rules)
+        </label>
+        <p className="hint" style={{ marginTop: '0.35rem' }}>
+          On by default. Cleaned up automatically on teardown. Uncheck to skip BR assignment for this scenario.
+        </p>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}>
+          <input type="checkbox" checked={sbEnabled} onChange={(e) => setSbEnabled(e.target.checked)} />
+          Create apiKey with SmartBooking (creates an SB group)
+        </label>
+        <p className="hint" style={{ marginTop: '0.35rem' }}>
+          {sbEnabled
+            ? 'An SB group is created first, then attached to the apiKey. Choose per supplier (above) whether its contract goes to the ApiKey, the SB Group, or Both — at least one must be SB Group or Both.'
+            : 'Off by default. When on, each supplier can route its contract to the apiKey, the SB group, or both.'}
+        </p>
       </div>
 
       <div className="form-footer">
         <p className="hint">
-          {suppliers.length > 0
-            ? `Will create mocks for ${suppliers.join(' + ')}`
-            : 'Select at least one supplier'}
+          {suppliers.length > 0 ? (
+            <>
+              Will create mocks for {suppliers.join(' + ')}.{' '}
+              {(() => {
+                const withBooking = suppliers.filter((code) => bookingRow[code] !== null)
+                return withBooking.length > 0
+                  ? `Booking flow: ${withBooking.join(', ')} (package #${withBooking
+                      .map((code) => (bookingRow[code] ?? 0) + 1)
+                      .join(', #')}).`
+                  : 'No booking flow — search + package mocks only. Pick a "Book" package to add it.'
+              })()}
+            </>
+          ) : (
+            'Select at least one supplier'
+          )}
         </p>
         <button type="submit" className="btn primary" disabled={busy || suppliers.length === 0}>
           {busy ? 'Provisioning…' : 'Create scenario →'}

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.models.scenario import PackageSpec
 from app.plugins.json_utils import collect_field_values
+from app.plugins.room_names import normalized_room_basis
 
 
 class LinkageError(ValueError):
@@ -25,6 +26,8 @@ class LinkageValidator:
             self._validate_rhk(expectations_by_type, spec)
         elif supplier_code == "CHC":
             self._validate_chc(expectations_by_type, spec)
+        elif supplier_code == "EXT":
+            self._validate_ext(expectations_by_type, spec)
         else:
             raise LinkageError(f"Unsupported supplier for linkage validation: {supplier_code}")
 
@@ -47,7 +50,10 @@ class LinkageValidator:
             packages.get("httpResponse", {}).get("body", {}),
             "boardCode",
         )
-        if board_codes and any(code != spec.room_basis for code in board_codes[: spec.count]):
+        expected_boards = normalized_room_basis(spec)
+        if board_codes and any(
+            code != expected_boards[index] for index, code in enumerate(board_codes[: spec.count])
+        ):
             raise LinkageError("HBS package boardCode does not match requested room_basis")
 
         if prebook is not None:
@@ -106,10 +112,10 @@ class LinkageValidator:
                 f"RHK package rate count {len(rates)} < requested {spec.count}"
             )
 
-        expected_meal = _rhk_meal_for_basis(spec.room_basis)
+        expected_meals = [_rhk_meal_for_basis(basis) for basis in normalized_room_basis(spec)]
         for index, rate in enumerate(rates[: spec.count]):
             meal = rate.get("meal")
-            if meal and meal != expected_meal:
+            if meal and meal != expected_meals[index]:
                 raise LinkageError("RHK package meal does not match requested room_basis")
             if "refundable" in rate and len(spec.refundable) > index:
                 expected = spec.refundable[index]
@@ -136,17 +142,64 @@ class LinkageValidator:
                 f"CHC package rate count {len(rates)} < requested {spec.count}"
             )
 
-        expected_meal = spec.room_basis.upper()
-        for rate in rates[: spec.count]:
+        expected_meals = normalized_room_basis(spec)
+        for index, rate in enumerate(rates[: spec.count]):
             meal = rate.get("mealPlan")
-            if meal and meal != expected_meal:
+            if meal and meal != expected_meals[index]:
                 raise LinkageError("CHC package mealPlan does not match requested room_basis")
+
+    def _validate_ext(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
+        packages = expectations_by_type.get("Packages")
+        if packages is None:
+            raise LinkageError("EXT Packages template missing")
+
+        accommodations = _ext_package_rates(packages)
+        if len(accommodations) < spec.count:
+            raise LinkageError(
+                f"EXT accommodation count {len(accommodations)} < requested {spec.count}"
+            )
+
+        expected_meals = normalized_room_basis(spec)
+        for index, accommodation in enumerate(accommodations[: spec.count]):
+            # EXT stores board in distributions[0]
+            distributions = accommodation.get("distributions", [])
+            if distributions and isinstance(distributions[0], dict):
+                meal = distributions[0].get("board")
+                if meal and meal != expected_meals[index]:
+                    raise LinkageError("EXT accommodation board does not match requested room_basis")
 
 
 def _chc_package_rates(packages: dict) -> list[dict]:
     body = packages.get("httpResponse", {}).get("body", {})
     rates = body.get("roomRates") if isinstance(body, dict) else None
     return [rate for rate in rates if isinstance(rate, dict)] if isinstance(rates, list) else []
+
+
+def _ext_package_rates(packages: dict) -> list[dict]:
+    """Extract distributions from EXT Packages response (accommodations with distributions).
+
+    EXT structure: body.body[].accommodations[] (one per package count).
+    Each accommodation has distributions[], but we validate by accommodation count.
+    """
+    body = packages.get("httpResponse", {}).get("body", {})
+    if not isinstance(body, dict):
+        return []
+
+    # EXT structure: body.body[].accommodations[]
+    body_list = body.get("body")
+    if not isinstance(body_list, list) or not body_list:
+        return []
+
+    hotel = body_list[0]
+    if not isinstance(hotel, dict):
+        return []
+
+    accommodations = hotel.get("accommodations")
+    if not isinstance(accommodations, list):
+        return []
+
+    # Return accommodations as "rates" — one accommodation per package
+    return [acc for acc in accommodations if isinstance(acc, dict)]
 
 
 def _rhk_meal_for_basis(room_basis: str) -> str:

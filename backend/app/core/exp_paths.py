@@ -14,6 +14,13 @@ def apply_exp_contract_opt_defaults(opt: dict[str, Any], mock_base_url: str) -> 
     for key, value in EXP_CONTRACT_OPT_DEFAULTS.items():
         if opt.get(key) is None:
             opt[key] = value
+    # Always force off — some reference contracts (e.g. a dev clone source) carry
+    # enableGenericBedding: true, which makes the real EXP adapter emit a second,
+    # not-for-sale "generic bedding" package per rate (room name loses the mock's
+    # room_name and gets a ", <n> Bed" suffix instead). SMF mocks should produce
+    # exactly the requested room_names/count with nothing extra, regardless of
+    # what the cloned reference contract carried.
+    opt["enableGenericBedding"] = False
     return opt
 
 
@@ -25,12 +32,11 @@ EXP_MOCK_PATH_SUFFIX: dict[str, str] = {
 # PreBooking / Booking / GetOrder / CancelOrder keep canonical /v3/... template paths.
 
 
-def build_exp_mock_path(namespace: str, log_type: str) -> str | None:
+def build_exp_mock_path(log_type: str) -> str | None:
     suffix = EXP_MOCK_PATH_SUFFIX.get(log_type)
     if not suffix:
         return None
-    safe = namespace.strip().replace(" ", "-")
-    return f"/{safe}/{suffix}"
+    return f"/{suffix}"
 
 
 def build_exp_price_check_href(
@@ -51,10 +57,11 @@ def extract_price_check_token(href: str) -> str:
     return href.split("?", 1)[1]
 
 
-def apply_exp_mock_path(expectation: dict[str, Any], namespace: str, log_type: str) -> dict[str, Any]:
-    """Namespace paths only for Search/Packages override URLs; other log types stay on /v3/..."""
+def apply_exp_mock_path(expectation: dict[str, Any], log_type: str) -> dict[str, Any]:
+    """Override the recorded path for Search/Packages; other log types stay on /v3/...
+    (namespace prefixing is applied uniformly afterwards in expectation_utils)."""
     if log_type in EXP_MOCK_PATH_SUFFIX:
-        mock_path = build_exp_mock_path(namespace, log_type)
+        mock_path = build_exp_mock_path(log_type)
         if mock_path:
             http_request = expectation.setdefault("httpRequest", {})
             if isinstance(http_request, dict):

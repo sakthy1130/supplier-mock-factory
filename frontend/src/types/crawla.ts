@@ -31,6 +31,7 @@ export interface CrawlaHotelOffer {
   meal?: string | null
   refundability?: string | null
   bed_type?: string | null
+  pay_at_property?: string | null
 }
 
 export interface CrawlaHotelAnchorItem {
@@ -95,4 +96,12 @@ export interface CrawlaScenarioRunResult {
     status: string
     http_status: string
   }>
+  // Booking-flow verification — present only when a package was selected.
+  booking_b_id?: string | null
+  booking_status?: string | null
+  order_status?: string | null
+  order_price?: number | null
+  selected_package_id?: string | null
+  booking_match?: boolean | null
+  booking_message?: string | null
 }

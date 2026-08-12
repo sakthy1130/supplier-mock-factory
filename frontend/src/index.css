@@ -1,41 +1,45 @@
 :root {
   --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  --bg: #070b14;
-  --bg-elevated: #0c1222;
-  --surface: rgba(16, 24, 40, 0.72);
-  --surface-solid: #101a2e;
-  --surface-hover: #152238;
-  --border: rgba(148, 163, 184, 0.14);
-  --border-strong: rgba(148, 163, 184, 0.28);
+  /* Ledger: cool limestone ground, ink-teal accent — packages read as a rate manifest. */
+  --bg: #edefef;
+  --bg-elevated: #f6f7f6;
+  --surface: #ffffff;
+  --surface-solid: #ffffff;
+  --surface-hover: #eef1f0;
+  --border: #d7dbda;
+  --border-strong: #c3cac8;
 
-  --text: #94a3b8;
-  --text-strong: #f1f5f9;
-  --text-muted: #64748b;
+  --text: #445056;
+  --text-strong: #17262b;
+  --text-muted: #5c6b6e;
 
-  --accent: #38bdf8;
-  --accent-dim: rgba(56, 189, 248, 0.12);
-  --accent-glow: rgba(56, 189, 248, 0.35);
-  --success: #34d399;
-  --success-dim: rgba(52, 211, 153, 0.12);
-  --warning: #fbbf24;
-  --danger: #f87171;
-  --danger-dim: rgba(248, 113, 113, 0.12);
+  --accent: #0f5c57;
+  --accent-dim: rgba(15, 92, 87, 0.08);
+  --accent-glow: rgba(15, 92, 87, 0.25);
+  --success: #1f8a5f;
+  --success-dim: rgba(31, 138, 95, 0.1);
+  --warning: #b8860b;
+  --danger: #b03a2e;
+  --danger-dim: rgba(176, 58, 46, 0.08);
 
-  --hbs: #818cf8;
-  --exp: #f472b6;
-  --rhk: #34d399;
-  --chc: #fbbf24;
+  --hbs: #5b63c9;
+  --exp: #b23e73;
+  --rhk: #c1652f;
+  --chc: #7d4f85;
+  --ext: #1b8080;
+  --template: #2f6f8f;
 
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 1px 2px rgba(23, 38, 43, 0.06);
+  --shadow-md: 0 8px 24px rgba(23, 38, 43, 0.08);
+  --shadow-lg: 0 20px 50px rgba(23, 38, 43, 0.12);
 
   font-family: var(--font-sans);
   font-size: 15px;
@@ -56,10 +60,11 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.15), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(129, 140, 248, 0.1), transparent),
-    var(--bg);
+  background: var(--bg);
+}
+
+h1, h2 {
+  font-family: var(--font-serif);
 }
 
 #root {
