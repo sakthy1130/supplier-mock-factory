@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -346,17 +347,31 @@ class CrawlaBusinessRulesProvisioner:
             raw_parent = str(parent_condition_id)
             body["parentRuleValueMappingId"] = int(raw_parent) if raw_parent.isdigit() else raw_parent
 
+        created_by_us = True
         try:
             response = await self.client.create_condition_raw(body)
+            condition_id = _extract_id(response)
         except Exception as exc:  # noqa: BLE001 - BR setup is non-blocking by design
-            logger.exception("BR contract condition failed rule=%s", body.get("ruleId"))
-            setup["errors"].append({"step": "contract_condition", "message": str(exc)})
-            return
+            # BR answers 400 AlreadyExistsException when the condition is already there,
+            # and helpfully names its id. Standing conditions (each rule's root) are the
+            # normal case for that, so reuse the id instead of failing the scenario —
+            # but do NOT record it for teardown: we did not create it, and deleting a
+            # rule's root condition would break the rule for everyone.
+            condition_id = _existing_condition_id(str(exc))
+            if condition_id is None:
+                logger.exception("BR contract condition failed rule=%s", body.get("ruleId"))
+                setup["errors"].append({"step": "contract_condition", "message": str(exc)})
+                return
+            created_by_us = False
+            logger.info(
+                "BR condition already exists rule=%s id=%s (%s) — reusing it, not deleting on teardown",
+                body.get("ruleId"), condition_id, body.get("description"),
+            )
+            setup.setdefault("reused_condition_ids", []).append(condition_id)
 
-        condition_id = _extract_id(response)
-        if condition_id:
+        if condition_id and created_by_us:
             setup["contract_condition_ids"].append(condition_id)
-        elif children:
+        elif not condition_id and children:
             setup["errors"].append({
                 "step": "contract_condition",
                 "message": (
@@ -526,6 +541,23 @@ def _json_or_empty(response: httpx.Response) -> dict[str, Any]:
         return {}
     data = response.json()
     return data if isinstance(data, dict) else {"data": data}
+
+
+_ALREADY_EXISTS_ID_RE = re.compile(r"already exists", re.IGNORECASE)
+_CONDITION_ID_RE = re.compile(r"with ID:\s*(\d+)", re.IGNORECASE)
+
+
+def _existing_condition_id(error_text: str) -> str | None:
+    """Pull the existing condition id out of BR's AlreadyExistsException message.
+
+    BR answers e.g. `Same Rule condition [with ID: 6, description: (marketPrice is NOT
+    NULL), parent ID: null, and rule ID: 4] already exists in db`. Returns None for any
+    other error, so genuine failures still surface.
+    """
+    if not _ALREADY_EXISTS_ID_RE.search(error_text):
+        return None
+    match = _CONDITION_ID_RE.search(error_text)
+    return match.group(1) if match else None
 
 
 def _extract_id(data: dict[str, Any]) -> str | None:

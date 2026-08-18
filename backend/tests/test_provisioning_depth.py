@@ -291,8 +291,8 @@ async def test_contract_condition_joins_auto_ids_into_one_in_list():
     setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
 
     assert setup["status"] == "SUCCESS"
-    # Rule 3 is one condition; rule 4 is a parent + child chain.
-    assert client.create_condition_raw.await_count == 3
+    # One condition per rule (3 and 4), each under its standing parent.
+    assert client.create_condition_raw.await_count == 2
     bodies = [call.args[0] for call in client.create_condition_raw.await_args_list]
     static = next(b for b in bodies if b["ruleId"] == "3")
     assert static["inputValue"] == "10103,10106"
@@ -361,34 +361,27 @@ async def test_auto_ids_are_read_back_from_backoffice():
 
 
 @pytest.mark.asyncio
-async def test_rule_4_is_a_parent_child_chain():
-    """Dynamic Markup needs the root "marketPrice is NOT NULL" test first, with the
-    contractId condition hanging off the id BR returns for it. The parent must NOT
-    receive an inputValue — its operator is NOT EQUAL TO with no value."""
+async def test_both_rules_hang_under_their_standing_parent():
+    """Each rule's root condition already exists in BR and is referenced by id, never
+    created: rule 3 under "apikey IN" (5), rule 4 under "marketPrice is NOT NULL" (6).
+    Creating the rule-4 root returns 400 AlreadyExistsException."""
     provisioner, client = _br_provisioner("stg")
 
     setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
 
     bodies = [call.args[0] for call in client.create_condition_raw.await_args_list]
-    rule4 = [b for b in bodies if b["ruleId"] == "4"]
-    assert len(rule4) == 2
-    parent, child = rule4
-
-    assert parent["inputDetailId"] == 22 and parent["description"] == "marketPrice is NOT NULL"
-    assert "inputValue" not in parent, "the marketPrice test must stay operator-only"
-    assert parent.get("parentRuleValueMapping") is None
-
-    assert child["inputDetailId"] == 30
-    assert child["inputValue"] == "10103,10106"
-    # Chained to the LIVE parent id, not a value from config.
-    assert child["parentRuleValueMappingId"] == 501 + bodies.index(parent)
+    parents = {b["ruleId"]: b["parentRuleValueMapping"]["id"] for b in bodies}
+    assert parents == {"3": 5, "4": 6}
+    # Both are the contractId input, both carry the joined list.
+    assert {b["inputDetailId"] for b in bodies} == {30}
+    assert {b["inputValue"] for b in bodies} == {"10103,10106"}
 
     # Config-only keys must never reach BR.
     for body in bodies:
         assert "children" not in body and "inject_input_value" not in body
 
     assert setup["status"] == "SUCCESS"
-    assert len(setup["contract_condition_ids"]) == 3
+    assert len(setup["contract_condition_ids"]) == 2
 
 
 @pytest.mark.asyncio
@@ -407,13 +400,73 @@ async def test_cleanup_deletes_children_before_parents():
 
 @pytest.mark.asyncio
 async def test_a_parent_returning_no_id_skips_its_children():
-    """Without the parent id the child would be created at the root of the rule, where
-    it would match every request rather than just this scenario's contracts."""
+    """The children/inject_input_value knobs are unused by the current config (both rules
+    reference standing parents), so exercise them directly. Without the parent id the
+    child would be created at the rule ROOT, matching every request rather than just this
+    scenario's contracts — so it must be skipped, loudly."""
     provisioner, client = _br_provisioner("stg")
-    client.create_condition_raw = AsyncMock(side_effect=[{"id": 501}, {}, {"id": 503}])
+    client.create_condition_raw = AsyncMock(return_value={})  # no id back
+    setup = {"contract_condition_ids": [], "errors": []}
+
+    await provisioner._create_condition_tree(
+        setup,
+        {
+            "ruleId": "4",
+            "description": "a parent that does not pre-exist",
+            "inject_input_value": False,
+            "children": [{"ruleId": "4", "inputDetailId": 30}],
+        },
+        "10103,10106",
+    )
+
+    assert client.create_condition_raw.await_count == 1, "the child must not be created"
+    assert any("cannot attach its child" in e["message"] for e in setup["errors"])
+    body = client.create_condition_raw.await_args.args[0]
+    assert "inputValue" not in body, "inject_input_value=False must be honoured"
+
+
+_ALREADY_EXISTS_400 = (
+    'BR create condition (raw) failed status=400 body={"status":400,'
+    '"error":"Same Rule condition [with ID: 6, description: (marketPrice is NOT NULL), '
+    'parent ID: null, and rule ID: 4] already exists in db",'
+    '"exception":"AlreadyExistsException"}'
+)
+
+
+@pytest.mark.asyncio
+async def test_already_existing_condition_is_reused_and_never_deleted():
+    """BR returns 400 AlreadyExistsException naming the existing id. Reuse it rather than
+    failing the scenario — but keep it out of the teardown list: deleting a condition SMF
+    did not create (a rule's standing root, say) would break that rule for everyone."""
+    from app.integrations.business_rules import BusinessRulesError
+
+    provisioner, client = _br_provisioner("stg")
+    client.create_condition_raw = AsyncMock(
+        side_effect=[{"id": 701}, BusinessRulesError(_ALREADY_EXISTS_400)]
+    )
 
     setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
 
-    assert client.create_condition_raw.await_count == 2  # rule 3, then the failed parent
+    assert setup["status"] == "SUCCESS", setup.get("errors")
+    assert setup["contract_condition_ids"] == ["701"]
+    assert setup["reused_condition_ids"] == ["6"]
+
+    await provisioner.cleanup(setup, None)
+    deleted = [call.args[0] for call in client.delete_condition.await_args_list]
+    assert deleted == ["701"], "a reused condition must not be deleted"
+
+
+@pytest.mark.asyncio
+async def test_a_real_failure_still_fails():
+    """Only already-exists is forgiven; anything else must surface."""
+    from app.integrations.business_rules import BusinessRulesError
+
+    provisioner, client = _br_provisioner("stg")
+    client.create_condition_raw = AsyncMock(
+        side_effect=BusinessRulesError("BR create condition (raw) failed status=500 body=boom")
+    )
+
+    setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
+
     assert setup["status"] == "FAILED"
-    assert any("cannot attach its child" in e["message"] for e in setup["errors"])
+    assert setup["contract_condition_ids"] == []

@@ -25,20 +25,24 @@
     "particular. Do not copy the stg block to dev without checking the ids there; a wrong",
     "parent id makes the BR step fail loudly rather than silently.",
     "",
-    "Rule 4 (Dynamic Markup) is a CHAIN, not a single condition: the root",
-    "'marketPrice is NOT NULL' test (inputDetailId 22, operator NOT EQUAL TO with no",
-    "value) is created first, and the contractId-IN condition hangs off whatever id BR",
-    "returns for it. Two knobs make that expressible:",
+    "Each rule's root condition ALREADY EXISTS in BR and is referenced by id, never",
+    "created: rule 3 hangs under 'apikey IN' (id 5), rule 4 under 'marketPrice is NOT",
+    "NULL' (id 6). Trying to create the rule-4 root returns",
+    "400 AlreadyExistsException, which is how we learned its id. This mirrors the apiKey",
+    "path, which references its parents (STATIC/DYNAMIC_MARKUP_PARENT_CONDITION_ID) too.",
+    "",
+    "Two extra knobs exist for a parent that genuinely does NOT pre-exist (unused here):",
     "",
     "  children             : nested conditions. Each is created with",
     "                         parentRuleValueMappingId set to the LIVE id of its parent,",
     "                         never a value hardcoded here.",
-    "  inject_input_value   : false means 'do not put the contract list in this body'.",
-    "                         The marketPrice parent is an operator-only test, so giving",
-    "                         it an inputValue would change what it matches.",
+    "  inject_input_value   : false means 'do not put the contract list in this body' —",
+    "                         for an operator-only test where a value would change what",
+    "                         it matches.",
     "",
-    "Teardown deletes these in reverse creation order, because BR refuses to delete a",
-    "parent while a child still points at it.",
+    "Teardown deletes what SMF created, in reverse creation order (BR refuses to delete a",
+    "parent while a child points at it). A condition that came back as already-existing is",
+    "never deleted — it was not ours to create.",
     "",
     "To disable for an env, set it to {} — contract_br then still creates the mocks and",
     "contract and reports the BR step as NOT_CONFIGURED."
@@ -62,27 +66,15 @@
       },
       {
         "ruleId": "4",
-        "description": "marketPrice is NOT NULL",
-        "executionOrder": 1,
-        "inputDetailId": 22,
+        "description": "Contract ID IN the List",
+        "executionOrder": 4,
+        "inputDetailId": 30,
         "outputDetail": null,
         "outputValue": "",
         "outputType": "",
-        "overwrite": true,
-        "parentRuleValueMapping": null,
-        "inject_input_value": false,
-        "children": [
-          {
-            "ruleId": "4",
-            "description": "Contract ID IN the List",
-            "executionOrder": 4,
-            "inputDetailId": 30,
-            "outputDetail": null,
-            "outputValue": "",
-            "outputType": "",
-            "overwrite": false
-          }
-        ]
+        "overwrite": false,
+        "parentRuleValueMapping": { "id": 6, "description": "marketPrice is NOT NULL" },
+        "parentRuleValueMappingId": null
       }
     ]
   }
