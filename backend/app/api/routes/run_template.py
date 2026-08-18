@@ -82,7 +82,42 @@ def build_scenario_request_from_template(
         sb_enabled=sb_enabled,
         assign_to_br=request_data.assign_api_key_to_br,
         template_id=template_id,
+        provisioning_depth=request_data.provisioning_depth,
+        existing_api_key=request_data.existing_api_key,
     )
+
+
+async def _finish_without_run(
+    response: RunTemplateResponse,
+    tracker: RequestTracker,
+    request_data: RunTemplateRequest,
+    scenario_id: str,
+    message: str,
+) -> RunTemplateResponse:
+    """Report a run that was skipped for want of an apiKey, honouring cleanup flags.
+
+    Mirrors the tail of run_template_endpoint (cleanup → status → logs) so a
+    contract-only run still tears down when asked, and reports COMPLETED rather than
+    a misleading failure — the mocks and contract really were created.
+    """
+    if request_data.delete_mock_api_key:
+        tracker.start_step("cleanup")
+        try:
+            await scenario_service.run_teardown(scenario_id)
+            response.deleted = True
+            tracker.log("Scenario cleaned up")
+            tracker.end_step("cleanup")
+        except Exception as exc:  # noqa: BLE001 - cleanup is best-effort here too
+            tracker.log(f"Cleanup warning: {exc}")
+            tracker.end_step("cleanup", success=False, error=str(exc))
+    else:
+        tracker.log("Cleanup skipped (delete_mock_api_key=false)")
+
+    response.assigned_to_br = False
+    response.status = "COMPLETED"
+    response.booking_message = message
+    response.logs = tracker.get_logs() if request_data.include_logs else None
+    return response
 
 
 def _booking_selection_from_request(request: ScenarioRequest) -> Optional[dict]:
@@ -353,6 +388,28 @@ async def run_template_endpoint(
             )
             tracker.log(response.booking_message)
         tracker.log(f"Booking selection for run: {booking_selection}")
+
+        # A contract-only depth creates no apiKey, and core cannot search without one.
+        # Say so explicitly rather than calling core with api_key=None and failing deep
+        # inside the search step. Falls through to the normal cleanup/report path below,
+        # so delete_mock_api_key still behaves as asked.
+        if not record.api_key:
+            run_error = None
+            response.search_status = "SKIPPED"
+            response.package_status = "SKIPPED"
+            skip_message = (
+                "No apiKey for this run (provisioning_depth="
+                f"{scenario_request.provisioning_depth.value}); mocks and contracts were "
+                "created, but the search/book run needs an apiKey. Pass existing_api_key "
+                "to attach the contract to one."
+            )
+            tracker.log(skip_message)
+            tracker.start_step("scenario_run")
+            tracker.end_step("scenario_run")
+            return _finish_without_run(
+                response, tracker, request_data, scenario_id, skip_message
+            )
+
         tracker.start_step("scenario_run")
         try:
             from app.integrations.core_app import CoreAppClient

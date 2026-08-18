@@ -64,6 +64,26 @@ class RunTemplateRequest(BaseModel):
         default=True,
         description="If true: assign generated API key to BR. If false: skip BR assignment."
     )
+    provisioning_depth: str = Field(
+        default="full",
+        description=(
+            "How far provisioning goes. 'full' (default) = mocks + contract + a new "
+            "apiKey (+ apiKey to BR), i.e. the historical behaviour. 'contract_only' = "
+            "mocks + contract, no apiKey. 'contract_br' = mocks + contract with the "
+            "CONTRACT assigned to the BR rules. The two contract depths create no "
+            "apiKey, so the search/book run is skipped unless existing_api_key is given."
+        ),
+        examples=["full", "contract_only", "contract_br"],
+    )
+    existing_api_key: Optional[str] = Field(
+        default=None,
+        description=(
+            "Optional apiKey that already exists; the contract(s) are attached to it "
+            "instead of creating a new apiKey. Only for the contract_only / contract_br "
+            "depths. SMF never deletes an apiKey it did not create — cleanup only "
+            "detaches the contracts."
+        ),
+    )
     force_cleanup: bool = Field(
         default=True,
         description="If true: cleanup even if scenario creation/run fails. If false: skip cleanup on error."

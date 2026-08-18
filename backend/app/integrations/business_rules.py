@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BR_CHILD_CONDITIONS_PATH = REPO_ROOT / "field-maps" / "br_child_conditions.json"
+BR_CONTRACT_CONDITIONS_PATH = REPO_ROOT / "field-maps" / "br_contract_conditions.json"
 
 
 STATIC_MARKUP_RULE_ID = 3
@@ -243,11 +244,103 @@ class CrawlaBusinessRulesProvisioner:
                 created.append(child_id)
         return {"rule_id": DYNAMIC_MARKUP_RULE_ID, "template_child_condition_ids": created}
 
+    async def provision_for_contracts(self, contracts: list[dict[str, Any]]) -> dict[str, Any]:
+        """Assign CONTRACTS (not an apiKey) to the markup rules — the contract_br depth.
+
+        Config-driven via field-maps/br_contract_conditions.json because SMF's BR
+        integration is otherwise entirely apiKey-shaped (inputDetailId 26) and the
+        contract input id is not known yet. With no config for this env the step
+        reports NOT_CONFIGURED and records an error, rather than reporting success
+        for work it did not do.
+
+        `contracts` is a list of {"instance_key", "uid", "id"} for the scenario's
+        created contracts.
+        """
+        setup: dict[str, Any] = {
+            "enabled": True,
+            "status": "SUCCESS",
+            "mode": "contract",
+            "contracts": [c.get("uid") or c.get("id") for c in contracts],
+            "rules": {},
+            "contract_condition_ids": [],
+            "errors": [],
+        }
+        config = _load_contract_conditions().get(self.client.settings.env) or {}
+        payloads = config.get("conditions") or []
+        if not payloads:
+            setup["status"] = "NOT_CONFIGURED"
+            setup["warning"] = (
+                "No contract BR conditions configured for env="
+                f"{self.client.settings.env}. Add them to field-maps/br_contract_conditions.json "
+                "(the contract inputDetailId is still unknown); mocks and contracts were created."
+            )
+            logger.warning(setup["warning"])
+            setup["errors"].append({"step": "contract_conditions", "message": "not configured"})
+            return setup
+
+        value_field = config.get("contract_value_field") or "uid"
+        async with self.client:
+            for contract in contracts:
+                input_value = contract.get(value_field) or contract.get("uid") or contract.get("id")
+                if not input_value:
+                    setup["errors"].append({
+                        "step": "contract_conditions",
+                        "message": f"contract {contract} has no '{value_field}' to use as inputValue",
+                    })
+                    continue
+                for payload in payloads:
+                    # Deliberately not _run_step: it merges results into
+                    # setup["rules"][rule_id], so several conditions on one rule would
+                    # overwrite each other's condition_id and teardown would leak them.
+                    try:
+                        created = await self._create_contract_condition(payload, str(input_value))
+                        if created.get("condition_id"):
+                            setup["contract_condition_ids"].append(created["condition_id"])
+                    except Exception as exc:  # noqa: BLE001 - BR setup is non-blocking by design
+                        logger.exception("BR contract condition failed value=%s", input_value)
+                        setup["errors"].append({"step": "contract_condition", "message": str(exc)})
+            await self._run_step(setup, "refresh", self.client.refresh)
+        if setup["errors"]:
+            setup["status"] = "FAILED"
+            setup["warning"] = "BR contract setup failed"
+        return setup
+
+    async def _create_contract_condition(
+        self,
+        payload: dict[str, Any],
+        input_value: str,
+    ) -> dict[str, Any]:
+        body = {**payload, "inputValue": input_value}
+        response = await self.client.create_condition_raw(body)
+        condition_id = _extract_id(response)
+        return {
+            "rule_id": body.get("ruleId"),
+            "condition_id": condition_id,
+            "input_value": input_value,
+        }
+
     async def cleanup(self, setup: dict[str, Any] | None, api_key: str | None) -> dict[str, Any]:
         if not setup and not api_key:
             return {"enabled": False, "status": "SKIPPED", "errors": []}
         api_key = api_key or str((setup or {}).get("api_key") or "")
         result: dict[str, Any] = {"enabled": True, "status": "SUCCESS", "errors": []}
+
+        # contract_br scenarios have no apiKey rule-configs to unpick — just the
+        # contract conditions this scenario created.
+        contract_condition_ids = list((setup or {}).get("contract_condition_ids") or [])
+        if contract_condition_ids:
+            async with self.client:
+                for condition_id in contract_condition_ids:
+                    await self._cleanup_step(
+                        result, "delete_contract_condition", self.client.delete_condition, str(condition_id)
+                    )
+                await self._cleanup_step(result, "refresh", self.client.refresh)
+            if result["errors"]:
+                result["status"] = "FAILED"
+                result["warning"] = "BR contract cleanup failed"
+            if not api_key:
+                return result
+
         async with self.client:
             # Child conditions reference the parent via parentRuleValueMappingId — the
             # BR service won't let a parent be deleted while a child still points at
@@ -353,6 +446,20 @@ def _load_template_child_conditions() -> dict[str, dict[str, list[dict[str, Any]
     if not BR_CHILD_CONDITIONS_PATH.exists():
         return {}
     return json.loads(BR_CHILD_CONDITIONS_PATH.read_text(encoding="utf-8"))
+
+
+def _load_contract_conditions() -> dict[str, dict[str, Any]]:
+    """{env: {"contract_value_field": ..., "conditions": [...]}} — read fresh each call
+    so filling in the real contract inputDetailId needs no restart."""
+    if not BR_CONTRACT_CONDITIONS_PATH.exists():
+        return {}
+    data = json.loads(BR_CONTRACT_CONDITIONS_PATH.read_text(encoding="utf-8"))
+    return {key: value for key, value in data.items() if isinstance(value, dict)}
+
+
+def has_contract_br_conditions(env: str) -> bool:
+    """Whether the contract_br depth can actually create BR conditions in this env."""
+    return bool((_load_contract_conditions().get(env) or {}).get("conditions"))
 
 
 def has_template_child_condition(template_id: str, env: str) -> bool:

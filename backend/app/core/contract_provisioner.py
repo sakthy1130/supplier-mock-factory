@@ -199,6 +199,12 @@ def _minimal_contract_body(
     return body
 
 
+def contract_uid(namespace: str, instance_key: str) -> str:
+    """Public alias — the BR contract conditions may key on the contract uid, which is
+    deterministic from (namespace, instance key) and so derivable without a re-read."""
+    return _contract_uid(namespace, instance_key)
+
+
 def _contract_uid(namespace: str, instance_key: str) -> str:
     """`instance_key` is the supplier code for a single entry, or "EXP-2" for a
     repeated one — the uid must differ or backoffice rejects the second contract."""

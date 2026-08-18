@@ -15,9 +15,33 @@ from app.core.scenario_engine import ScenarioEngine
 from app.integrations.business_rules import CrawlaBusinessRulesProvisioner
 from app.integrations.backoffice import BackofficeClient, BackofficeError
 from app.integrations.mock_server import MockServerClient
-from app.models.scenario import ScenarioBundle, ScenarioRequest, ScenarioStatus
+from app.models.scenario import (
+    ProvisioningDepth,
+    ScenarioBundle,
+    ScenarioRequest,
+    ScenarioStatus,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _contract_refs(request: ScenarioRequest, contracts: dict[str, str]) -> list[dict[str, str]]:
+    """Per-contract identity for the BR contract conditions.
+
+    The BR condition may key on the contract uid, autoId or mongo id — which one is
+    config-driven (see field-maps/br_contract_conditions.json), so pass what we know:
+    the instance key, the deterministic uid, and the created mongo id.
+    """
+    from app.core.contract_provisioner import contract_uid
+
+    return [
+        {
+            "instance_key": instance_key,
+            "uid": contract_uid(request.namespace, instance_key),
+            "id": contract_id,
+        }
+        for instance_key, contract_id in contracts.items()
+    ]
 
 
 class SupplierMockScenarioOrchestrator:
@@ -118,20 +142,40 @@ class SupplierMockScenarioOrchestrator:
             )
             logger.info("SB config created: _id=%s", sb_config_data["_id"])
 
-        # Step 4: Create apiKey and attach contracts (cache cleared inside provisioner)
-        bundle.status = ScenarioStatus.CREATING_API_KEY
-        api_key, api_key_id = await self.apikey_provisioner.create_api_key(
-            apikey_contracts,
-            request.namespace,
-            sb_config_data=sb_config_data,
-            sb_group_data=sb_group_data,
-            sb_enabled=(
-                request.sb_config.enable_profitable_sb
-                if request.sb_config is not None
-                else True
-            ),
-            prov_log=plog,
-        )
+        # Step 4: the apiKey — created fresh for the `full` depth, or (for the
+        # contract-only depths) an EXISTING one the caller named, which only receives
+        # the contracts. When neither applies the scenario stops at the contracts.
+        api_key: str | None = None
+        api_key_id: str | None = None
+        if request.provisioning_depth is ProvisioningDepth.full:
+            bundle.status = ScenarioStatus.CREATING_API_KEY
+            api_key, api_key_id = await self.apikey_provisioner.create_api_key(
+                apikey_contracts,
+                request.namespace,
+                sb_config_data=sb_config_data,
+                sb_group_data=sb_group_data,
+                sb_enabled=(
+                    request.sb_config.enable_profitable_sb
+                    if request.sb_config is not None
+                    else True
+                ),
+                prov_log=plog,
+            )
+        elif request.existing_api_key:
+            bundle.status = ScenarioStatus.CREATING_API_KEY
+            api_key = request.existing_api_key
+            api_key_id = await self.apikey_provisioner.attach_contracts(
+                api_key,
+                list(apikey_contracts.values()),
+                prov_log=plog,
+            )
+            # Teardown reads this to detach instead of deleting — see teardown_scenario.
+            bundle.api_key_is_external = True
+        else:
+            plog.append(
+                f"[apiKey] skipped (provisioning_depth={request.provisioning_depth.value}, "
+                "no existing_api_key given)"
+            )
         bundle.api_key = api_key
         bundle.api_key_id = api_key_id
 
@@ -149,11 +193,23 @@ class SupplierMockScenarioOrchestrator:
                 f"group={sb_group_data['_id']} (no post-create PUT)"
             )
 
-        # Step 6: BR provisioning — for crawla_export, all SB scenarios, and plain
-        # scenarios that opted in via assign_to_br (default True; UI checkbox).
-        if request.crawla_export or request.sb_config is not None or request.assign_to_br:
+        # Step 6: BR provisioning. `full` assigns the apiKey (for crawla_export, all SB
+        # scenarios, and plain scenarios that opted in via assign_to_br). contract_br
+        # assigns the CONTRACTS instead — never the apiKey, even when the caller
+        # supplied one, because the depth is what decides.
+        br_setup: dict | None = None
+        if request.provisioning_depth is ProvisioningDepth.contract_br:
+            logger.info("Provisioning Business Rules for contracts=%s", list(bundle.contracts))
+            br_setup = await self.br_provisioner.provision_for_contracts(
+                _contract_refs(request, bundle.contracts)
+            )
+        elif request.provisioning_depth is ProvisioningDepth.full and (
+            request.crawla_export or request.sb_config is not None or request.assign_to_br
+        ):
             logger.info("Provisioning Business Rules for api_key=%s", api_key)
             br_setup = await self.br_provisioner.provision(api_key, template_id=request.template_id)
+
+        if br_setup is not None:
             bundle.br_setup = br_setup
             br_status = br_setup.get("status", "?")
             br_errors = br_setup.get("errors", [])
@@ -164,7 +220,11 @@ class SupplierMockScenarioOrchestrator:
 
         bundle.mock_server_base_url = mock_base
         bundle.status = ScenarioStatus.READY
-        plog.append(f"[done] Scenario READY api_key={api_key} api_key_id={api_key_id}")
+        plog.append(
+            f"[done] Scenario READY depth={request.provisioning_depth.value} "
+            f"api_key={api_key or '-'} api_key_id={api_key_id or '-'}"
+            f"{' (existing)' if bundle.api_key_is_external else ''}"
+        )
         return bundle
 
     async def refresh_booking_ids(self, request: ScenarioRequest) -> ScenarioBundle:
@@ -193,12 +253,29 @@ class SupplierMockScenarioOrchestrator:
         suppliers: list[str] | None = None,
         sb_group_id: str | None = None,
         sb_config_id: str | None = None,
+        api_key_is_external: bool = False,
     ) -> ScenarioBundle:
         if br_setup:
-            await self.br_provisioner.cleanup(br_setup, api_key)
+            # cleanup() handles both shapes: apiKey rule-configs/conditions, and the
+            # contract conditions created by the contract_br depth.
+            await self.br_provisioner.cleanup(
+                br_setup, None if api_key_is_external else api_key
+            )
 
         async with MockServerClient() as client:
             await client.delete_by_namespace(namespace, suppliers=suppliers)
+
+        # The apiKey was NOT created by this scenario — it belongs to someone else and
+        # must survive. Detach our contracts from it first, so it is never left
+        # pointing at a contract we are about to delete.
+        if api_key_is_external and api_key and contracts:
+            try:
+                await self.apikey_provisioner.detach_contracts(api_key, list(contracts.values()))
+            except Exception:  # noqa: BLE001 - teardown continues; contracts still get deleted
+                logger.exception(
+                    "Failed to detach contracts from existing apiKey=%s — it may still "
+                    "reference the deleted contracts", api_key,
+                )
 
         if contracts or api_key_id:
             async with BackofficeClient() as backoffice:
@@ -208,7 +285,7 @@ class SupplierMockScenarioOrchestrator:
                     except BackofficeError as exc:
                         if "status=404" not in str(exc):
                             raise
-                if api_key_id:
+                if api_key_id and not api_key_is_external:
                     try:
                         await backoffice.delete_api_key(api_key_id)
                     except BackofficeError as exc:

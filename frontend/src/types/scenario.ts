@@ -35,6 +35,28 @@ export const DEFAULT_SUPPLIER_CURRENCIES: Record<SupplierCode, string> = {
 
 export type AssignmentTarget = 'apikey' | 'sbgroup' | 'both'
 
+/** How far provisioning goes past the mocks and contracts. 'full' is the historical
+ *  behaviour and stays the default. */
+export type ProvisioningDepth = 'contract_only' | 'contract_br' | 'full'
+
+export const PROVISIONING_DEPTHS: { value: ProvisioningDepth; label: string; hint: string }[] = [
+  {
+    value: 'contract_only',
+    label: 'Mocks + contract only',
+    hint: 'No apiKey is created. Optionally attach the contract to an apiKey you already have.',
+  },
+  {
+    value: 'contract_br',
+    label: 'Mocks + contract, contract → BR',
+    hint: 'Also assigns the contract to the Static/Dynamic Markup rules. No apiKey is created.',
+  },
+  {
+    value: 'full',
+    label: 'Mocks + contract + apiKey',
+    hint: 'Creates a new apiKey and attaches the contracts to it. Required for SmartBooking.',
+  },
+]
+
 export interface SupplierScenario {
   code: SupplierCode
   contract_currency: string
@@ -54,6 +76,10 @@ export interface ScenarioRequest {
   // Create the apiKey with SmartBooking enabled (backend fills default SB config).
   sb_enabled?: boolean
   template_id?: string
+  provisioning_depth?: ProvisioningDepth
+  // Attach the contracts to this existing apiKey instead of creating one.
+  // Only meaningful for the contract_only / contract_br depths.
+  existing_api_key?: string | null
 }
 
 export interface ScenarioBundle {
@@ -63,6 +89,9 @@ export interface ScenarioBundle {
   status: ScenarioStatus
   api_key?: string
   api_key_id?: string
+  // api_key refers to a PRE-EXISTING apiKey this scenario only attached contracts to;
+  // teardown detaches rather than deleting it.
+  api_key_is_external?: boolean
   contracts: Record<string, string>
   booking_ids: Record<string, string>
   check_in: string

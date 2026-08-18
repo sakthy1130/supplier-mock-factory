@@ -828,6 +828,24 @@
   font-size: 0.78rem;
 }
 
+.depth-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.depth-option > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.depth-option .hint {
+  margin: 0;
+}
+
 .supplier-tile-field {
   display: block;
   font-size: 0.72rem;

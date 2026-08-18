@@ -330,8 +330,20 @@ export function ScenarioResult({
         <>
           <div className="data-section-title">Credentials</div>
           <div className="data-grid">
-            {bundle.api_key && <CopyRow label="ApiKey" value={bundle.api_key} stacked />}
+            {bundle.api_key && (
+              <CopyRow
+                label={bundle.api_key_is_external ? 'ApiKey (existing)' : 'ApiKey'}
+                value={bundle.api_key}
+                stacked
+              />
+            )}
             {bundle.api_key_id && <CopyRow label="Key ID" value={bundle.api_key_id} stacked />}
+            {!bundle.api_key && (
+              <p className="hint">
+                No apiKey — this scenario created mocks and contracts only. Attach the contract to
+                an apiKey of your own to search with it.
+              </p>
+            )}
           </div>
 
           {Object.keys(bundle.contracts).length > 0 && (

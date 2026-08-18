@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { resolveHotelMapping } from '../api/hotels'
-import type { AssignmentTarget, ScenarioRequest, SupplierCode } from '../types/scenario'
+import { PROVISIONING_DEPTHS } from '../types/scenario'
+import type {
+  AssignmentTarget,
+  ProvisioningDepth,
+  ScenarioRequest,
+  SupplierCode,
+} from '../types/scenario'
 import { DEFAULT_ROOM_BASIS, DEFAULT_ROOM_NAME, DEFAULT_SUPPLIER_CURRENCIES } from '../types/scenario'
 
 function defaultNamespace() {
@@ -158,6 +164,9 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
     }
   })
   const [assignToBr, setAssignToBr] = useState(true)
+  // How far provisioning goes. 'full' keeps the historical behaviour.
+  const [depth, setDepth] = useState<ProvisioningDepth>('full')
+  const [existingApiKey, setExistingApiKey] = useState('')
   // SmartBooking: create the apiKey with SB enabled, and per-supplier route each
   // contract to the apiKey, the SB group, or both (default apikey).
   const [sbEnabled, setSbEnabled] = useState(() => initialTemplate?.sbEnabled ?? false)
@@ -330,7 +339,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
     }
     // SmartBooking needs at least one supplier feeding the SB group, else the
     // group would be created empty (mirrors the backend guard).
-    if (sbEnabled && !suppliers.some((code) => assignmentTargets[code] !== 'apikey')) {
+    if (depth === 'full' && sbEnabled && !suppliers.some((code) => assignmentTargets[code] !== 'apikey')) {
       setFormError('SmartBooking is on — set at least one supplier to SbGroup or Both')
       return
     }
@@ -362,8 +371,12 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
             }
           }),
         ),
-        assign_to_br: assignToBr,
-        sb_enabled: sbEnabled,
+        provisioning_depth: depth,
+        // The backend rejects these outside 'full' rather than ignoring them, so don't
+        // send stale values from a depth the user switched away from.
+        assign_to_br: depth === 'full' ? assignToBr : false,
+        sb_enabled: depth === 'full' ? sbEnabled : false,
+        existing_api_key: depth === 'full' ? null : existingApiKey.trim() || null,
       }
       await onSubmit(request)
     } catch (err) {
@@ -592,23 +605,67 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
       </div>
 
       <div className="wizard-section">
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500 }}>
-          <input type="checkbox" checked={assignToBr} onChange={(e) => setAssignToBr(e.target.checked)} />
-          Assign apiKey to BR (Static + Dynamic Markup rules)
-        </label>
-        <p className="hint" style={{ marginTop: '0.35rem' }}>
-          On by default. Cleaned up automatically on teardown. Uncheck to skip BR assignment for this scenario.
+        <div className="wizard-section-title">Provisioning</div>
+        <p className="hint" style={{ marginBottom: '0.6rem' }}>
+          How far to go past the mocks. Mocks and contracts are always created.
         </p>
+        {PROVISIONING_DEPTHS.map((option) => (
+          <label key={option.value} className="depth-option">
+            <input
+              type="radio"
+              name="provisioning-depth"
+              checked={depth === option.value}
+              onChange={() => setDepth(option.value)}
+            />
+            <span>
+              <strong>{option.label}</strong>
+              <span className="hint">{option.hint}</span>
+            </span>
+          </label>
+        ))}
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}>
-          <input type="checkbox" checked={sbEnabled} onChange={(e) => setSbEnabled(e.target.checked)} />
-          Create apiKey with SmartBooking (creates an SB group)
-        </label>
-        <p className="hint" style={{ marginTop: '0.35rem' }}>
-          {sbEnabled
-            ? 'An SB group is created first, then attached to the apiKey. Choose per supplier (above) whether its contract goes to the ApiKey, the SB Group, or Both — at least one must be SB Group or Both.'
-            : 'Off by default. When on, each supplier can route its contract to the apiKey, the SB group, or both.'}
-        </p>
+        {depth !== 'full' && (
+          <label className="supplier-tile-field" style={{ maxWidth: '340px', marginTop: '0.5rem' }}>
+            Existing apiKey (optional)
+            <input
+              value={existingApiKey}
+              onChange={(e) => setExistingApiKey(e.target.value)}
+              placeholder="tj-htl-test-bookable"
+            />
+            <span className="hint">
+              Leave blank to create no apiKey at all. If given, this scenario's contracts are added
+              to it — SMF never deletes an apiKey it didn't create, so teardown only detaches them.
+            </span>
+          </label>
+        )}
+
+        {/* BR + SmartBooking only apply to the full depth: both hang off a new apiKey. */}
+        {depth === 'full' && (
+          <>
+            <label
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}
+            >
+              <input type="checkbox" checked={assignToBr} onChange={(e) => setAssignToBr(e.target.checked)} />
+              Assign apiKey to BR (Static + Dynamic Markup rules)
+            </label>
+            <p className="hint" style={{ marginTop: '0.35rem' }}>
+              On by default. Cleaned up automatically on teardown. Uncheck to skip BR assignment for
+              this scenario.
+            </p>
+
+            <label
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}
+            >
+              <input type="checkbox" checked={sbEnabled} onChange={(e) => setSbEnabled(e.target.checked)} />
+              Create apiKey with SmartBooking (creates an SB group)
+            </label>
+            <p className="hint" style={{ marginTop: '0.35rem' }}>
+              {sbEnabled
+                ? 'An SB group is created first, then attached to the apiKey. Choose per supplier (above) whether its contract goes to the ApiKey, the SB Group, or Both — at least one must be SB Group or Both.'
+                : 'Off by default. When on, each supplier can route its contract to the apiKey, the SB group, or both.'}
+            </p>
+          </>
+        )}
       </div>
 
       <div className="form-footer">
@@ -616,6 +673,11 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
           {suppliers.length > 0 ? (
             <>
               Will create mocks for {supplierEntryLabels.join(' + ')}.{' '}
+              {depth === 'full'
+                ? 'Contracts + a new apiKey. '
+                : depth === 'contract_br'
+                  ? `Contracts + BR${existingApiKey.trim() ? `, added to ${existingApiKey.trim()}` : ', no apiKey'}. `
+                  : `Contracts only${existingApiKey.trim() ? `, added to ${existingApiKey.trim()}` : ', no apiKey'}. `}
               {(() => {
                 const withBooking = supplierEntries.filter(
                   ({ code, instance }) => bookingRow[code][instance] !== null,
