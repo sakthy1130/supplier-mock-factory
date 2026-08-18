@@ -625,18 +625,24 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
         ))}
 
         {depth !== 'full' && (
-          <label className="supplier-tile-field" style={{ maxWidth: '340px', marginTop: '0.5rem' }}>
-            Existing apiKey (optional)
+          <div className="depth-field">
+            {/* Deliberately NOT .supplier-tile-field: that class uppercases both label and
+                input, which would render an apiKey uid (lowercase by convention) as
+                something other than what gets sent. */}
+            <label htmlFor="existing-api-key">Existing apiKey (optional)</label>
             <input
+              id="existing-api-key"
               value={existingApiKey}
               onChange={(e) => setExistingApiKey(e.target.value)}
               placeholder="tj-htl-test-bookable"
+              spellCheck={false}
+              autoComplete="off"
             />
-            <span className="hint">
+            <p className="hint">
               Leave blank to create no apiKey at all. If given, this scenario's contracts are added
               to it — SMF never deletes an apiKey it didn't create, so teardown only detaches them.
-            </span>
-          </label>
+            </p>
+          </div>
         )}
 
         {/* BR + SmartBooking only apply to the full depth: both hang off a new apiKey. */}
