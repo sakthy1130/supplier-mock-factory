@@ -278,22 +278,42 @@ class CrawlaBusinessRulesProvisioner:
             setup["errors"].append({"step": "contract_conditions", "message": "not configured"})
             return setup
 
-        value_field = config.get("contract_value_field") or "uid"
+        value_field = config.get("contract_value_field") or "autoId"
+        # The real condition is "contractId IN <comma-separated list>", so by default
+        # every contract goes into ONE condition. per_contract is there for a
+        # single-value operator (EQUALS), which would need one condition each.
+        value_mode = config.get("value_mode") or "join"
+        separator = config.get("value_separator") or ","
+
+        values: list[str] = []
+        for contract in contracts:
+            value = contract.get(value_field)
+            if value in (None, ""):
+                setup["errors"].append({
+                    "step": "contract_conditions",
+                    "message": (
+                        f"contract {contract.get('instance_key')} has no '{value_field}' — "
+                        f"cannot build the BR condition inputValue"
+                    ),
+                })
+                continue
+            values.append(str(value))
+
+        if not values:
+            setup["status"] = "FAILED"
+            setup["warning"] = f"No contract '{value_field}' values available for the BR condition"
+            return setup
+
+        input_values = [separator.join(values)] if value_mode == "join" else values
+        setup["input_values"] = input_values
         async with self.client:
-            for contract in contracts:
-                input_value = contract.get(value_field) or contract.get("uid") or contract.get("id")
-                if not input_value:
-                    setup["errors"].append({
-                        "step": "contract_conditions",
-                        "message": f"contract {contract} has no '{value_field}' to use as inputValue",
-                    })
-                    continue
+            for input_value in input_values:
                 for payload in payloads:
                     # Deliberately not _run_step: it merges results into
                     # setup["rules"][rule_id], so several conditions on one rule would
                     # overwrite each other's condition_id and teardown would leak them.
                     try:
-                        created = await self._create_contract_condition(payload, str(input_value))
+                        created = await self._create_contract_condition(payload, input_value)
                         if created.get("condition_id"):
                             setup["contract_condition_ids"].append(created["condition_id"])
                     except Exception as exc:  # noqa: BLE001 - BR setup is non-blocking by design

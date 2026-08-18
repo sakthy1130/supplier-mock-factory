@@ -25,23 +25,32 @@ from app.models.scenario import (
 logger = logging.getLogger(__name__)
 
 
-def _contract_refs(request: ScenarioRequest, contracts: dict[str, str]) -> list[dict[str, str]]:
+def _contract_refs(
+    request: ScenarioRequest,
+    contracts: dict[str, str],
+    auto_ids: dict[str, str] | None = None,
+) -> list[dict[str, str]]:
     """Per-contract identity for the BR contract conditions.
 
-    The BR condition may key on the contract uid, autoId or mongo id — which one is
-    config-driven (see field-maps/br_contract_conditions.json), so pass what we know:
-    the instance key, the deterministic uid, and the created mongo id.
+    Which field the condition keys on is config-driven
+    (field-maps/br_contract_conditions.json), so pass everything we know: the
+    deterministic uid, the created mongo id, and the short numeric autoId that the
+    real "contractId IN" condition matches on.
     """
     from app.core.contract_provisioner import contract_uid
 
-    return [
-        {
+    auto_ids = auto_ids or {}
+    refs = []
+    for instance_key, contract_id in contracts.items():
+        ref = {
             "instance_key": instance_key,
             "uid": contract_uid(request.namespace, instance_key),
             "id": contract_id,
         }
-        for instance_key, contract_id in contracts.items()
-    ]
+        if instance_key in auto_ids:
+            ref["autoId"] = auto_ids[instance_key]
+        refs.append(ref)
+    return refs
 
 
 class SupplierMockScenarioOrchestrator:
@@ -200,8 +209,12 @@ class SupplierMockScenarioOrchestrator:
         br_setup: dict | None = None
         if request.provisioning_depth is ProvisioningDepth.contract_br:
             logger.info("Provisioning Business Rules for contracts=%s", list(bundle.contracts))
+            # The "contractId IN" condition matches on autoId, which create_contract
+            # does not return — read it back only for this depth.
+            auto_ids = await self.contract_provisioner.fetch_contract_auto_ids(bundle.contracts)
+            plog.append(f"[contracts] autoIds: {auto_ids}")
             br_setup = await self.br_provisioner.provision_for_contracts(
-                _contract_refs(request, bundle.contracts)
+                _contract_refs(request, bundle.contracts, auto_ids)
             )
         elif request.provisioning_depth is ProvisioningDepth.full and (
             request.crawla_export or request.sb_config is not None or request.assign_to_br

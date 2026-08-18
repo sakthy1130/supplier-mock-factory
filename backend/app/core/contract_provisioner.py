@@ -50,6 +50,31 @@ class ContractProvisioner:
                 contract_ids[instance_key] = contract_id
         return contract_ids
 
+    async def fetch_contract_auto_ids(self, contract_ids: dict[str, str]) -> dict[str, str]:
+        """{instance_key: autoId} for created contracts.
+
+        The BR "contractId IN" condition matches on the contract's short numeric
+        autoId (e.g. 10103), not the mongo _id — and create_contract only surfaces the
+        _id. Read it back per contract. Only the contract_br depth needs this, so the
+        extra GET is paid there and nowhere else. A contract whose autoId cannot be
+        read is omitted rather than guessed at.
+        """
+        auto_ids: dict[str, str] = {}
+        async with self.backoffice:
+            for instance_key, contract_id in contract_ids.items():
+                try:
+                    doc = await self.backoffice.get_contract(contract_id)
+                except BackofficeError:
+                    logging.getLogger(__name__).exception(
+                        "Could not read back contract %s (%s) to get its autoId",
+                        instance_key, contract_id,
+                    )
+                    continue
+                auto_id = doc.get("autoId") or doc.get("auto_id")
+                if auto_id not in (None, ""):
+                    auto_ids[instance_key] = str(auto_id)
+        return auto_ids
+
     async def _build_contract_body(
         self,
         supplier_code: str,

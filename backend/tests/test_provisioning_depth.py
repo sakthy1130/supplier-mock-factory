@@ -47,6 +47,10 @@ def _orchestrator(contracts: dict[str, str]) -> tuple[SupplierMockScenarioOrches
 
     contract_provisioner = MagicMock()
     contract_provisioner.create_contracts = AsyncMock(return_value=contracts)
+    # Only the contract_br depth reads autoIds back.
+    contract_provisioner.fetch_contract_auto_ids = AsyncMock(
+        return_value={key: f"1010{i}" for i, key in enumerate(contracts, start=3)}
+    )
 
     apikey = MagicMock()
     apikey.create_api_key = AsyncMock(return_value=("smf-qa-depth-001", "key-mongo-1"))
@@ -125,7 +129,15 @@ async def test_contract_br_assigns_contracts_not_the_api_key(monkeypatch):
     stubs["br"].provision_for_contracts.assert_awaited_once()
     stubs["br"].provision.assert_not_awaited()
     refs = stubs["br"].provision_for_contracts.await_args.args[0]
-    assert refs == [{"instance_key": "HBS", "uid": "smf-qa-depth-001-hbs", "id": "contract-1"}]
+    # autoId rides along because the "contractId IN" condition matches on it.
+    assert refs == [
+        {
+            "instance_key": "HBS",
+            "uid": "smf-qa-depth-001-hbs",
+            "id": "contract-1",
+            "autoId": "10103",
+        }
+    ]
 
     stubs["apikey"].create_api_key.assert_not_awaited()
     stubs["apikey"].attach_contracts.assert_awaited_once_with(
@@ -242,3 +254,102 @@ def test_writable_api_key_body_strips_read_only_fields_and_flattens_contracts():
     assert body["opt"] == {"smartBooking": {"isEnabled": True}}
     # The source config must not be mutated.
     assert config["contracts"][0] == {"_id": "contract-a", "code": "HBS"}
+
+
+# --- the BR contract condition ------------------------------------------------
+
+
+def _br_provisioner(env: str):
+    """Provisioner whose client records the bodies it would POST."""
+    client = MagicMock()
+    client.settings = MagicMock(env=env)
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+    client.create_condition_raw = AsyncMock(return_value={"id": "cond-1"})
+    client.delete_condition = AsyncMock()
+    client.refresh = AsyncMock()
+    from app.integrations.business_rules import CrawlaBusinessRulesProvisioner
+
+    return CrawlaBusinessRulesProvisioner(client=client), client
+
+
+_CONTRACT_REFS = [
+    {"instance_key": "HBS", "uid": "smf-ns-hbs", "id": "mongo-1", "autoId": "10103"},
+    {"instance_key": "EXP", "uid": "smf-ns-exp", "id": "mongo-2", "autoId": "10106"},
+]
+
+
+@pytest.mark.asyncio
+async def test_contract_condition_joins_auto_ids_into_one_in_list():
+    """The real condition is "contractId IN <list>" — every contract belongs in ONE
+    condition, keyed on the short numeric autoId, not one condition per contract."""
+    provisioner, client = _br_provisioner("dev")
+
+    setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
+
+    assert setup["status"] == "SUCCESS"
+    assert client.create_condition_raw.await_count == 1
+    body = client.create_condition_raw.await_args.args[0]
+    assert body["inputValue"] == "10103,10106"
+    assert body["inputDetailId"] == 30
+    assert body["ruleId"] == "3"
+    # The rest of the configured body is passed through untouched.
+    assert body["parentRuleValueMapping"] == {"id": 5, "description": "apikey IN"}
+    assert setup["contract_condition_ids"] == ["cond-1"]
+
+
+@pytest.mark.asyncio
+async def test_unconfigured_env_reports_not_configured_rather_than_success():
+    """stg has no conditions yet. The mocks and contract are still real, so the step
+    must say so instead of claiming BR success it never achieved."""
+    provisioner, client = _br_provisioner("stg")
+
+    setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
+
+    assert setup["status"] == "NOT_CONFIGURED"
+    assert "br_contract_conditions.json" in setup["warning"]
+    client.create_condition_raw.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_missing_auto_id_fails_loudly_instead_of_sending_a_wrong_value():
+    provisioner, client = _br_provisioner("dev")
+
+    setup = await provisioner.provision_for_contracts(
+        [{"instance_key": "HBS", "uid": "smf-ns-hbs", "id": "mongo-1"}]
+    )
+
+    assert setup["status"] == "FAILED"
+    client.create_condition_raw.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_contract_conditions_are_deleted_on_cleanup():
+    provisioner, client = _br_provisioner("dev")
+
+    result = await provisioner.cleanup(
+        {"contract_condition_ids": ["cond-1", "cond-2"], "mode": "contract"}, None
+    )
+
+    assert result["status"] == "SUCCESS"
+    assert [c.args[0] for c in client.delete_condition.await_args_list] == ["cond-1", "cond-2"]
+
+
+@pytest.mark.asyncio
+async def test_auto_ids_are_read_back_from_backoffice():
+    """create_contract only returns the mongo _id, so the autoId the BR condition needs
+    has to be read back per contract."""
+    from app.core.contract_provisioner import ContractProvisioner
+
+    backoffice = MagicMock()
+    backoffice.__aenter__ = AsyncMock(return_value=backoffice)
+    backoffice.__aexit__ = AsyncMock(return_value=False)
+    backoffice.get_contract = AsyncMock(
+        side_effect=[{"_id": "mongo-1", "autoId": 10103}, {"_id": "mongo-2", "autoId": 10106}]
+    )
+
+    auto_ids = await ContractProvisioner(backoffice=backoffice).fetch_contract_auto_ids(
+        {"HBS": "mongo-1", "EXP": "mongo-2"}
+    )
+
+    assert auto_ids == {"HBS": "10103", "EXP": "10106"}
