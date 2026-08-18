@@ -24,6 +24,10 @@ DYNAMIC_MARKUP_RULE_ID = 4
 STATIC_MARKUP_PARENT_CONDITION_ID = 178
 DYNAMIC_MARKUP_PARENT_CONDITION_ID = 176
 API_KEY_INPUT_DETAIL_ID = 26
+# "contractId IN" (field contractId, operator IN, datatype STRING). The contract_br
+# depth builds the SAME conditions as the apiKey path and swaps only this input id and
+# the value it matches on.
+CONTRACT_INPUT_DETAIL_ID = 30
 STATIC_MARKUP_OUTPUT_DETAIL_ID = 4
 DYNAMIC_MARKUP_OUTPUT_DETAIL_ID = 8
 
@@ -89,12 +93,21 @@ class BusinessRulesClient:
         output_detail_id: int,
         api_key: str,
         output_value: str,
+        input_detail_id: int = API_KEY_INPUT_DETAIL_ID,
+        description: str = "APIKey Included",
     ) -> dict[str, Any]:
+        """Create a markup-rule condition.
+
+        `api_key` is the inputValue — an apiKey by default, or a contract id list when
+        input_detail_id is CONTRACT_INPUT_DETAIL_ID. Everything else about the body is
+        identical either way, which is the point: a contract-scoped scenario should
+        produce the same rule setup as the apiKey one, differing only in what it matches on.
+        """
         body = {
             "ruleId": rule_id,
-            "description": "APIKey Included",
+            "description": description,
             "parentRuleValueMappingId": parent_condition_id,
-            "inputDetailId": API_KEY_INPUT_DETAIL_ID,
+            "inputDetailId": input_detail_id,
             "outputDetailId": output_detail_id,
             "inputValue": api_key,
             "inputValueListId": None,
@@ -248,14 +261,21 @@ class CrawlaBusinessRulesProvisioner:
     async def provision_for_contracts(self, contracts: list[dict[str, Any]]) -> dict[str, Any]:
         """Assign CONTRACTS (not an apiKey) to the markup rules — the contract_br depth.
 
-        Config-driven via field-maps/br_contract_conditions.json because SMF's BR
-        integration is otherwise entirely apiKey-shaped (inputDetailId 26) and the
-        contract input id is not known yet. With no config for this env the step
-        reports NOT_CONFIGURED and records an error, rather than reporting success
-        for work it did not do.
+        Deliberately the SAME setup as provision(): the same two rules, the same parent
+        conditions, the same outputDetailIds and markup values, same overwrite and
+        executionOrder. The only difference is what the condition matches on —
+        inputDetailId CONTRACT_INPUT_DETAIL_ID (30, "contractId IN") with the contract id
+        list as inputValue, instead of 26 with the apiKey.
 
-        `contracts` is a list of {"instance_key", "uid", "id"} for the scenario's
-        created contracts.
+        The apiKey path's rule-CONFIG assignment (POST /v1/apikeys/create-assign/rule/...)
+        has no contract equivalent and is skipped; only the conditions differ per input.
+
+        field-maps/br_contract_conditions.json remains an optional per-env OVERRIDE for
+        sites whose ids differ from the constants; with no entry, the mirrored path above
+        runs (no more NOT_CONFIGURED).
+
+        `contracts` is a list of {"instance_key", "uid", "id", "autoId"} for the
+        scenario's created contracts.
         """
         setup: dict[str, Any] = {
             "enabled": True,
@@ -268,16 +288,6 @@ class CrawlaBusinessRulesProvisioner:
         }
         config = _load_contract_conditions().get(self.client.settings.env) or {}
         payloads = config.get("conditions") or []
-        if not payloads:
-            setup["status"] = "NOT_CONFIGURED"
-            setup["warning"] = (
-                "No contract BR conditions configured for env="
-                f"{self.client.settings.env}. Add them to field-maps/br_contract_conditions.json "
-                "(the contract inputDetailId is still unknown); mocks and contracts were created."
-            )
-            logger.warning(setup["warning"])
-            setup["errors"].append({"step": "contract_conditions", "message": "not configured"})
-            return setup
 
         value_field = config.get("contract_value_field") or "autoId"
         # The real condition is "contractId IN <comma-separated list>", so by default
@@ -308,14 +318,77 @@ class CrawlaBusinessRulesProvisioner:
         input_values = [separator.join(values)] if value_mode == "join" else values
         setup["input_values"] = input_values
         async with self.client:
-            for input_value in input_values:
-                for payload in payloads:
-                    await self._create_condition_tree(setup, payload, input_value)
+            if payloads:
+                # Per-env override: raw bodies straight from the field-map.
+                for input_value in input_values:
+                    for payload in payloads:
+                        await self._create_condition_tree(setup, payload, input_value)
+            else:
+                # Default: mirror the apiKey path, swapping only the input.
+                for input_value in input_values:
+                    for rule_id, parent_id, output_detail_id, output_value in (
+                        (
+                            STATIC_MARKUP_RULE_ID,
+                            STATIC_MARKUP_PARENT_CONDITION_ID,
+                            STATIC_MARKUP_OUTPUT_DETAIL_ID,
+                            "10%",
+                        ),
+                        (
+                            DYNAMIC_MARKUP_RULE_ID,
+                            DYNAMIC_MARKUP_PARENT_CONDITION_ID,
+                            DYNAMIC_MARKUP_OUTPUT_DETAIL_ID,
+                            "15%-25%",
+                        ),
+                    ):
+                        await self._create_contract_condition(
+                            setup, rule_id, parent_id, output_detail_id, input_value, output_value
+                        )
             await self._run_step(setup, "refresh", self.client.refresh)
         if setup["errors"]:
             setup["status"] = "FAILED"
             setup["warning"] = "BR contract setup failed"
         return setup
+
+    async def _create_contract_condition(
+        self,
+        setup: dict[str, Any],
+        rule_id: int,
+        parent_condition_id: int,
+        output_detail_id: int,
+        input_value: str,
+        output_value: str,
+    ) -> None:
+        """One markup condition keyed on contracts — same body as the apiKey path's."""
+        try:
+            response = await self.client.create_condition(
+                rule_id=rule_id,
+                parent_condition_id=parent_condition_id,
+                output_detail_id=output_detail_id,
+                api_key=input_value,
+                output_value=output_value,
+                input_detail_id=CONTRACT_INPUT_DETAIL_ID,
+                description="Contract Included",
+            )
+            condition_id = _extract_id(response)
+        except Exception as exc:  # noqa: BLE001 - BR setup is non-blocking by design
+            # An already-existing condition is reused, not fatal — and not ours to delete.
+            existing_id = _existing_condition_id(str(exc))
+            if existing_id is None:
+                logger.exception("BR contract condition failed rule=%s", rule_id)
+                setup["errors"].append({"step": f"condition_rule_{rule_id}", "message": str(exc)})
+                return
+            logger.info(
+                "BR contract condition already exists rule=%s id=%s — reusing it, not deleting on teardown",
+                rule_id, existing_id,
+            )
+            setup.setdefault("reused_condition_ids", []).append(existing_id)
+            return
+
+        if condition_id:
+            setup["contract_condition_ids"].append(condition_id)
+        setup["rules"].setdefault(str(rule_id), {}).update(
+            {"parent_condition_id": parent_condition_id, "condition_id": condition_id}
+        )
 
     async def _create_condition_tree(
         self,
