@@ -103,7 +103,10 @@ def create_pending(db: Session, request: ScenarioRequest, env: str | None = None
             detail=f"Scenario namespace already exists: {request.namespace}",
         )
 
-    suppliers = [s.code.value for s in request.suppliers]
+    # Instance keys, not bare codes: teardown enumerates expectation ids from this
+    # list, and a scenario with two EXP entries owns both "EXP" and "EXP-2" ids.
+    # Older records hold bare codes, which are exactly the instance-1 keys.
+    suppliers = request.instance_keys()
     record = ScenarioRecord(
         id=str(uuid.uuid4()),
         namespace=request.namespace,

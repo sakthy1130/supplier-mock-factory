@@ -38,6 +38,9 @@ class ScenarioTemplateCreate(BaseModel):
     # default when the template is opened, which reads as "the hotel id I gave
     # didn't import" rather than "I never set one" — reject it up front instead.
     atg_hotel_id: str = Field(min_length=1)
+    # A supplier MAY appear more than once: each entry becomes its own scenario
+    # supplier instance ("EXP" then "EXP-2"), with its own packages and contract.
+    # See app.models.scenario.instance_key_for.
     suppliers: list[SupplierTemplatePackages] = Field(min_length=1)
     sb_enabled: bool = False
 
@@ -48,14 +51,6 @@ class ScenarioTemplateCreate(BaseModel):
         if not stripped:
             raise ValueError("atg_hotel_id must not be blank")
         return stripped
-
-    @field_validator("suppliers")
-    @classmethod
-    def _unique_suppliers(cls, value: list[SupplierTemplatePackages]) -> list[SupplierTemplatePackages]:
-        codes = [entry.supplier for entry in value]
-        if len(set(codes)) != len(codes):
-            raise ValueError("each supplier can only appear once per template")
-        return value
 
 
 class ScenarioTemplate(BaseModel):

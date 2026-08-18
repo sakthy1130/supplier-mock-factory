@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.core.exp_paths import apply_exp_mock_path
+from app.core.exp_paths import apply_exp_mock_path, apply_namespace_to_price_check_hrefs
 from app.core.hbs_paths import apply_hbs_mock_path
-from app.core.namespace import apply_namespace, safe_namespace_path_segment
+from app.core.namespace import (
+    apply_namespace,
+    instance_path_segment,
+    safe_namespace_path_segment,
+)
 
 
 def strip_http_request_matchers(expectation: dict[str, Any]) -> dict[str, Any]:
@@ -44,16 +48,30 @@ def strip_response_framing_headers(expectation: dict[str, Any]) -> dict[str, Any
     return expectation
 
 
-def apply_namespace_path_prefix(expectation: dict[str, Any], namespace: str) -> dict[str, Any]:
+def build_path_prefix(namespace: str, instance_segment: str = "") -> str:
+    """Leading path segments for a scenario's mocks: /{namespace}, plus an instance
+    segment when the same supplier appears more than once."""
+    prefix = f"/{safe_namespace_path_segment(namespace)}"
+    if instance_segment:
+        prefix = f"{prefix}/{instance_segment}"
+    return prefix
+
+
+def apply_namespace_path_prefix(
+    expectation: dict[str, Any],
+    namespace: str,
+    instance_segment: str = "",
+) -> dict[str, Any]:
     """Prefix httpRequest.path with the namespace so every supplier's mock path is
     unique per scenario, e.g. /hotel-api/1.0/hotels/search -> /{namespace}/hotel-api/1.0/hotels/search.
+    A repeated supplier also gets its instance segment: /{namespace}/exp-2/... .
     """
     http_request = expectation.get("httpRequest")
     if isinstance(http_request, dict):
         path = http_request.get("path")
         if isinstance(path, str) and path:
-            safe = safe_namespace_path_segment(namespace)
-            http_request["path"] = f"/{safe}/{path.lstrip('/')}"
+            prefix = build_path_prefix(namespace, instance_segment)
+            http_request["path"] = f"{prefix}/{path.lstrip('/')}"
     return expectation
 
 
@@ -62,15 +80,30 @@ def finalize_expectation_for_register(
     namespace: str,
     supplier_code: str,
     log_type: str,
+    instance_key: str = "",
 ) -> dict[str, Any]:
     """Apply namespace id, prefix the path with the namespace, and strip request
-    body/header matchers before MockServer register."""
-    apply_namespace(expectation, namespace, supplier_code, log_type)
+    body/header matchers before MockServer register.
+
+    `instance_key` distinguishes repeated entries of one supplier code; it defaults
+    to the code itself, which is the single-instance behaviour.
+    """
+    instance_key = instance_key or supplier_code
+    instance_segment = instance_path_segment(supplier_code, instance_key)
+    apply_namespace(expectation, namespace, instance_key, log_type)
     if supplier_code == "HBS":
         apply_hbs_mock_path(expectation, log_type)
     elif supplier_code == "EXP":
         apply_exp_mock_path(expectation, log_type)
-    apply_namespace_path_prefix(expectation, namespace)
+        # The price_check href lives in the response BODY, which the path prefixer
+        # below never touches — namespace it here or the adapter calls the
+        # unprefixed /v3/properties/... and misses the PreBooking mock. It must use
+        # the SAME prefix as the path below, instance segment included, or two EXP
+        # entries would both point at the first one's price-check mock.
+        apply_namespace_to_price_check_hrefs(
+            expectation, build_path_prefix(namespace, instance_segment)
+        )
+    apply_namespace_path_prefix(expectation, namespace, instance_segment)
     strip_response_framing_headers(expectation)
     return strip_http_request_matchers(expectation)
 

@@ -171,11 +171,13 @@ def test_scenario_engine_builds_exp_expectations():
     assert get_order.expectation["httpRequest"]["path"].startswith("/qa-exp-001/v3/itineraries/")
     bed_group = next(iter(rates[0]["bed_groups"].values()))
     price_check_href = bed_group["links"]["price_check"]["href"]
-    # The href is embedded response-body data, not httpRequest.path — it is not
-    # touched by the namespace path-prefix step.
+    # The adapter follows this href to reach price-check, so it must resolve to the
+    # namespaced path the PreBooking mock is actually registered at — the href lives
+    # in the response body, which the httpRequest.path prefixer never touches.
     assert price_check_href.startswith(
-        f"/v3/properties/{property_id}/rooms/{room_id}/rates/{rate_id}"
+        f"/qa-exp-001/v3/properties/{property_id}/rooms/{room_id}/rates/{rate_id}"
     )
+    assert price_check_href.split("?", 1)[0] == prebook.expectation["httpRequest"]["path"]
     assert rates[0]["sale_scenario"]["distribution"] is True
     assert len(search.expectation["httpResponse"]["body"][0]["rooms"][0]["rates"]) == 1
 
@@ -185,6 +187,18 @@ def test_scenario_engine_builds_exp_expectations():
     assert opt["overridePackagesUrl"] == "http://mock-server/qa-exp-001/package"
     assert opt["overrideBookingUrl"] == "http://mock-server/qa-exp-001/v3/itineraries"
     assert opt["overrideRetrieveBookingUrl"].startswith("http://mock-server/qa-exp-001/v3/itineraries/")
+    price_check_url = (
+        f"http://mock-server/qa-exp-001/v3/properties/{property_id}/rooms/{room_id}/rates/{rate_id}"
+    )
+    # The EXP adapter routes price-check via overridePrebookUrl — without it the
+    # booking fails even though the PreBooking mock is registered correctly.
+    assert opt["overridePrebookUrl"] == price_check_url
+    assert opt["cancellationPolicyUrl"] == price_check_url
+    # Standard fields must all point at the mock: a cloned EXP contract inherits
+    # real-Expedia URLs, and core's blocked-url check reads these, not the overrides.
+    assert opt["prebookingUrl"] == price_check_url
+    for field in ("searchUrl", "availabilityUrl", "cancellationPolicyUrl", "bookingUrl", "orderUrl"):
+        assert opt[field].startswith("http://mock-server/qa-exp-001/"), field
 
 
 @pytest.mark.skipif(
