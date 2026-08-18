@@ -17,16 +17,23 @@
     "                         for a single-value operator such as EQUALS.",
     "  value_separator      : default ','.",
     "",
-    "The dev/stg bodies below came from a working request. inputDetailId 30 is",
+    "The stg body below came from a working request against STAGING. inputDetailId 30 is",
     "'contractId IN' (field contractId, operator IN, datatype STRING) and the condition",
-    "hangs under the 'apikey IN' parent (id 5). VERIFY those ids per env before relying on",
-    "them — parent condition ids in particular are environment data, and a wrong id makes",
-    "the BR step fail loudly rather than silently.",
+    "hangs under the 'apikey IN' parent (id 5) of rule 3 (Static Markup).",
+    "",
+    "dev is {} because these ids are ENVIRONMENT data — the parent condition id in",
+    "particular. Do not copy the stg block to dev without checking the ids there; a wrong",
+    "parent id makes the BR step fail loudly rather than silently.",
+    "",
+    "To add Dynamic Markup (rule 4), append a second entry with ruleId '4' and that",
+    "rule's own 'apikey IN' parent id. inputDetailId stays 30 (the input field is the",
+    "same); only the rule and its parent change.",
     "",
     "To disable for an env, set it to {} — contract_br then still creates the mocks and",
     "contract and reports the BR step as NOT_CONFIGURED."
   ],
-  "dev": {
+  "dev": {},
+  "stg": {
     "contract_value_field": "autoId",
     "value_mode": "join",
     "conditions": [
@@ -43,6 +50,5 @@
         "parentRuleValueMappingId": null
       }
     ]
-  },
-  "stg": {}
+  }
 }

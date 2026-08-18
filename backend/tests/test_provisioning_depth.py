@@ -283,7 +283,7 @@ _CONTRACT_REFS = [
 async def test_contract_condition_joins_auto_ids_into_one_in_list():
     """The real condition is "contractId IN <list>" — every contract belongs in ONE
     condition, keyed on the short numeric autoId, not one condition per contract."""
-    provisioner, client = _br_provisioner("dev")
+    provisioner, client = _br_provisioner("stg")
 
     setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
 
@@ -300,9 +300,10 @@ async def test_contract_condition_joins_auto_ids_into_one_in_list():
 
 @pytest.mark.asyncio
 async def test_unconfigured_env_reports_not_configured_rather_than_success():
-    """stg has no conditions yet. The mocks and contract are still real, so the step
-    must say so instead of claiming BR success it never achieved."""
-    provisioner, client = _br_provisioner("stg")
+    """dev has no conditions: the ids are environment data and stg's cannot be assumed.
+    The mocks and contract are still real, so the step must say so instead of claiming
+    BR success it never achieved."""
+    provisioner, client = _br_provisioner("dev")
 
     setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
 
@@ -313,7 +314,7 @@ async def test_unconfigured_env_reports_not_configured_rather_than_success():
 
 @pytest.mark.asyncio
 async def test_missing_auto_id_fails_loudly_instead_of_sending_a_wrong_value():
-    provisioner, client = _br_provisioner("dev")
+    provisioner, client = _br_provisioner("stg")
 
     setup = await provisioner.provision_for_contracts(
         [{"instance_key": "HBS", "uid": "smf-ns-hbs", "id": "mongo-1"}]
@@ -325,7 +326,7 @@ async def test_missing_auto_id_fails_loudly_instead_of_sending_a_wrong_value():
 
 @pytest.mark.asyncio
 async def test_contract_conditions_are_deleted_on_cleanup():
-    provisioner, client = _br_provisioner("dev")
+    provisioner, client = _br_provisioner("stg")
 
     result = await provisioner.cleanup(
         {"contract_condition_ids": ["cond-1", "cond-2"], "mode": "contract"}, None
