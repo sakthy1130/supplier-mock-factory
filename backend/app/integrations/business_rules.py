@@ -91,15 +91,16 @@ class BusinessRulesClient:
         rule_id: int,
         parent_condition_id: int,
         output_detail_id: int,
-        api_key: str,
+        input_value: str,
         output_value: str,
         input_detail_id: int = API_KEY_INPUT_DETAIL_ID,
         description: str = "APIKey Included",
     ) -> dict[str, Any]:
         """Create a markup-rule condition.
 
-        `api_key` is the inputValue — an apiKey by default, or a contract id list when
-        input_detail_id is CONTRACT_INPUT_DETAIL_ID. Everything else about the body is
+        `input_value` is whatever the condition matches on — an apiKey by default, or a
+        contract id list when input_detail_id is CONTRACT_INPUT_DETAIL_ID. (It was named
+        api_key before this function served both.) Everything else about the body is
         identical either way, which is the point: a contract-scoped scenario should
         produce the same rule setup as the apiKey one, differing only in what it matches on.
         """
@@ -109,7 +110,7 @@ class BusinessRulesClient:
             "parentRuleValueMappingId": parent_condition_id,
             "inputDetailId": input_detail_id,
             "outputDetailId": output_detail_id,
-            "inputValue": api_key,
+            "inputValue": input_value,
             "inputValueListId": None,
             "outputValue": output_value,
             "overwrite": True,
@@ -364,7 +365,7 @@ class CrawlaBusinessRulesProvisioner:
                 rule_id=rule_id,
                 parent_condition_id=parent_condition_id,
                 output_detail_id=output_detail_id,
-                api_key=input_value,
+                input_value=input_value,
                 output_value=output_value,
                 input_detail_id=CONTRACT_INPUT_DETAIL_ID,
                 description="Contract Included",
@@ -533,7 +534,7 @@ class CrawlaBusinessRulesProvisioner:
             rule_id=rule_id,
             parent_condition_id=parent_condition_id,
             output_detail_id=output_detail_id,
-            api_key=api_key,
+            input_value=api_key,
             output_value=output_value,
         )
         return {

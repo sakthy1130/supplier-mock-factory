@@ -308,7 +308,7 @@ async def test_contract_conditions_match_the_api_key_path_but_for_the_input():
         # ...and these are the only differences.
         assert contract["input_detail_id"] == 30
         assert api.get("input_detail_id", 26) == 26
-        assert contract["api_key"] == "10103,10106"
+        assert contract["input_value"] == "10103,10106"
         assert contract["description"] == "Contract Included"
 
     # Static then Dynamic, with the markup values the apiKey path uses.
