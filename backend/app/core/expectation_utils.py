@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.core.exp_paths import apply_exp_mock_path
+from app.core.exp_paths import apply_exp_mock_path, apply_namespace_to_price_check_hrefs
 from app.core.hbs_paths import apply_hbs_mock_path
 from app.core.namespace import apply_namespace, safe_namespace_path_segment
 
@@ -70,6 +70,10 @@ def finalize_expectation_for_register(
         apply_hbs_mock_path(expectation, log_type)
     elif supplier_code == "EXP":
         apply_exp_mock_path(expectation, log_type)
+        # The price_check href lives in the response BODY, which the path prefixer
+        # below never touches — namespace it here or the adapter calls the
+        # unprefixed /v3/properties/... and misses the PreBooking mock.
+        apply_namespace_to_price_check_hrefs(expectation, namespace)
     apply_namespace_path_prefix(expectation, namespace)
     strip_response_framing_headers(expectation)
     return strip_http_request_matchers(expectation)

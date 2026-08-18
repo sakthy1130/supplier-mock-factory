@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.namespace import safe_namespace_path_segment
+
 EXP_CONTRACT_OPT_DEFAULTS: dict[str, Any] = {
     "enableAdapterTransformedLog": True,
 }
@@ -68,6 +70,67 @@ def apply_exp_mock_path(expectation: dict[str, Any], log_type: str) -> dict[str,
                 http_request["path"] = mock_path
         _unwrap_adapter_log_body(expectation, log_type)
     return expectation
+
+
+PRICE_CHECK_CANONICAL_PREFIX = "/v3/properties/"
+
+
+def apply_namespace_to_price_check_hrefs(
+    expectation: dict[str, Any],
+    namespace: str,
+) -> dict[str, Any]:
+    """Namespace-prefix every ``links.price_check.href`` in the response body.
+
+    The EXP adapter reaches price-check by following the href embedded in the
+    Search/Packages response, not via a contract URL. ``apply_namespace_path_prefix``
+    only rewrites ``httpRequest.path``, so without this the adapter calls the
+    canonical ``/v3/properties/...`` while the PreBooking mock is registered at
+    ``/{namespace}/v3/properties/...`` — MockServer finds no match and the booking
+    never gets past price-check.
+
+    Idempotent: an already-prefixed href no longer starts with ``/v3/properties/``.
+    """
+    safe = safe_namespace_path_segment(namespace)
+    if not safe:
+        return expectation
+    http_response = expectation.get("httpResponse")
+    if not isinstance(http_response, dict):
+        return expectation
+    for node in _walk_nodes(http_response.get("body")):
+        if not isinstance(node, dict):
+            continue
+        _prefix_price_check(node.get("links"), safe)
+        bed_groups = node.get("bed_groups")
+        if isinstance(bed_groups, dict):
+            for bed_group in bed_groups.values():
+                if isinstance(bed_group, dict):
+                    _prefix_price_check(bed_group.get("links"), safe)
+    return expectation
+
+
+def _prefix_price_check(links: Any, safe_namespace: str) -> None:
+    if not isinstance(links, dict):
+        return
+    price_check = links.get("price_check")
+    if not isinstance(price_check, dict):
+        return
+    href = price_check.get("href")
+    if isinstance(href, str) and href.startswith(PRICE_CHECK_CANONICAL_PREFIX):
+        price_check["href"] = f"/{safe_namespace}{href}"
+
+
+def _walk_nodes(node: Any) -> list[Any]:
+    """Local deep-walk. Deliberately not imported from app.plugins.json_utils:
+    app.plugins.__init__ imports the EXP plugin, which imports this module, so
+    reaching back into app.plugins here would be a circular import."""
+    nodes = [node]
+    if isinstance(node, dict):
+        for value in node.values():
+            nodes.extend(_walk_nodes(value))
+    elif isinstance(node, list):
+        for item in node:
+            nodes.extend(_walk_nodes(item))
+    return nodes
 
 
 def _unwrap_adapter_log_body(expectation: dict[str, Any], log_type: str) -> None:

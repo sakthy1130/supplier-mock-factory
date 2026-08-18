@@ -18,6 +18,10 @@ LOG_TYPE_TO_OPT_FIELD: dict[str, str] = {
 EXP_LOG_TYPE_TO_OVERRIDE_FIELD: dict[str, str] = {
     "Search": "overrideSearchUrl",
     "Packages": "overridePackagesUrl",
+    # Note the field is "Prebook", not "PreBooking" — this is the backoffice
+    # contract key, confirmed against a working EXP contract. Without it the EXP
+    # adapter never routes price-check at the mock and booking fails.
+    "PreBooking": "overridePrebookUrl",
     "Booking": "overrideBookingUrl",
     "GetOrder": "overrideRetrieveBookingUrl",
     "CancelOrder": "overrideCancelBookingUrl",
@@ -109,7 +113,47 @@ def build_exp_override_opt_urls(
         cancel = paths_by_log_type.get("CancelOrder")
         if cancel:
             opt["overrideCancelBookingUrl"] = f"{base}{cancel}"
+    prebook = paths_by_log_type.get("PreBooking")
+    if prebook:
+        opt.setdefault("overridePrebookUrl", f"{base}{prebook}")
+        # A working EXP contract points cancellationPolicyUrl at the same
+        # price-check path as the prebook URL.
+        opt.setdefault("cancellationPolicyUrl", f"{base}{prebook}")
+    _apply_exp_standard_url_fallbacks(opt, base, paths_by_log_type)
     return opt
+
+
+def _apply_exp_standard_url_fallbacks(
+    opt: dict[str, str],
+    base: str,
+    paths_by_log_type: dict[str, str],
+) -> None:
+    """Never leave a standard *Url field unset on a cloned EXP contract.
+
+    The clone inherits real-Expedia URLs (api.ean.com) for any field we don't
+    overwrite. Core's E2002 "Booking url is blocked" check reads those standard
+    fields, so an unset prebookingUrl/cancellationPolicyUrl silently blocks the
+    booking flow — the exact failure mode when a log type has no mock path.
+    Point every remaining field at a mock URL instead."""
+    fallback = (
+        opt.get("prebookingUrl")
+        or opt.get("bookingUrl")
+        or opt.get("availabilityUrl")
+        or opt.get("searchUrl")
+    )
+    if not fallback:
+        packages = paths_by_log_type.get("Packages") or paths_by_log_type.get("Search")
+        fallback = f"{base}{packages}" if packages else base
+    for field in (
+        "searchUrl",
+        "availabilityUrl",
+        "prebookingUrl",
+        "cancellationPolicyUrl",
+        "bookingUrl",
+        "orderUrl",
+        "cancelBookingUrl",
+    ):
+        opt.setdefault(field, fallback)
 
 
 def _apply_opt_fallbacks(

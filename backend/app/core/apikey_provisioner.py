@@ -115,6 +115,20 @@ def _ordered_contract_ids(contract_ids: dict[str, str]) -> list[str]:
     return ordered
 
 
+def _disable_inherited_smart_booking(opt: dict[str, Any]) -> None:
+    """Turn off any SmartBooking carried over from the template apiKey.
+
+    Keeps the block's shape (backoffice stores it on every apiKey) but forces it
+    inert: disabled and with no groups attached, so the scenario cannot route
+    through another team's standing SB groups.
+    """
+    smart_booking = opt.get("smartBooking")
+    if not isinstance(smart_booking, dict):
+        return
+    smart_booking["isEnabled"] = False
+    smart_booking["groups"] = []
+
+
 def _build_api_key_body(
     template: dict[str, Any],
     api_key: str,
@@ -145,6 +159,14 @@ def _build_api_key_body(
             "groups": [sb_group_data],
             "isEnabled": sb_enabled,
         }
+    else:
+        # SB is OFF for this scenario. The opt block above is deep-copied from the
+        # shared template apiKey, which on stg carries a fully enabled
+        # opt.smartBooking (isEnabled=true + the standing Expedia/NetSupplier/HBS
+        # groups). Writing that through unchanged produces a "non-SB" scenario
+        # whose apiKey silently books via SmartBooking. Neutralize the inherited
+        # block instead of trusting whatever state the template happens to be in.
+        _disable_inherited_smart_booking(opt)
 
     return {
         "name": api_key,
