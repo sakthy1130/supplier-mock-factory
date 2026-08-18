@@ -7,9 +7,9 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.db.repository import MongoStore
 from app.db.models import ScenarioRecord
 from app.env_context import get_current_env, use_env
 from app.models.run_template import RunTemplateRequest, RunTemplateResponse
@@ -155,7 +155,7 @@ def _booking_selection_from_request(request: ScenarioRequest) -> Optional[dict]:
 async def run_template_endpoint(
     template_id: str = ...,
     request_data: Optional[RunTemplateRequest] = None,
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> RunTemplateResponse:
     """Execute a template as a complete scenario workflow."""
     # Default request if not provided
