@@ -78,11 +78,22 @@ const SUPPLIER_META: {
 export interface ScenarioWizardTemplate {
   atgHotelId?: string
   enabledSuppliers?: Partial<Record<SupplierCode, boolean>>
-  packages?: Partial<Record<SupplierCode, PackageRow[]>>
+  // Either one row set per supplier (older callers) or a LIST of row sets — one per
+  // supplier instance, for templates that carry the same supplier twice.
+  packages?: Partial<Record<SupplierCode, PackageRow[] | PackageRow[][]>>
   supplierCurrencies?: Partial<Record<SupplierCode, string>>
   contractCurrencies?: Partial<Record<SupplierCode, string>>
   sbEnabled?: boolean
   assignmentTargets?: Partial<Record<SupplierCode, AssignmentTarget>>
+}
+
+/** Accept a flat row set or a list of them, always yielding one entry per instance. */
+function templateInstances(
+  packages: PackageRow[] | PackageRow[][] | undefined,
+  fallback: () => PackageRow[],
+): PackageRow[][] {
+  if (!packages || packages.length === 0) return [fallback()]
+  return Array.isArray(packages[0]) ? (packages as PackageRow[][]) : [packages as PackageRow[]]
 }
 
 interface Props {
@@ -114,13 +125,16 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
   // EXP contracts at different prices in one scenario), so each code holds a list
   // of package-row sets rather than a single set. Templates carry one set, which
   // becomes instance 1.
-  const [supplierPackages, setSupplierPackages] = useState<Record<SupplierCode, PackageRow[][]>>(() => ({
-    HBS: [initialTemplate?.packages?.HBS ?? defaultPackageRows(3)],
-    EXP: [initialTemplate?.packages?.EXP ?? defaultPackageRows(3)],
-    RHK: [initialTemplate?.packages?.RHK ?? defaultPackageRows(3)],
-    CHC: [initialTemplate?.packages?.CHC ?? defaultPackageRows(3)],
-    EXT: [initialTemplate?.packages?.EXT ?? defaultPackageRows(3)],
-  }))
+  const [supplierPackages, setSupplierPackages] = useState<Record<SupplierCode, PackageRow[][]>>(() => {
+    const rows = () => defaultPackageRows(3)
+    return {
+      HBS: templateInstances(initialTemplate?.packages?.HBS, rows),
+      EXP: templateInstances(initialTemplate?.packages?.EXP, rows),
+      RHK: templateInstances(initialTemplate?.packages?.RHK, rows),
+      CHC: templateInstances(initialTemplate?.packages?.CHC, rows),
+      EXT: templateInstances(initialTemplate?.packages?.EXT, rows),
+    }
+  })
   const [enabledSuppliers, setEnabledSuppliers] = useState<Record<SupplierCode, boolean>>(() => ({
     HBS: initialTemplate?.enabledSuppliers?.HBS ?? true,
     EXP: initialTemplate?.enabledSuppliers?.EXP ?? true,
@@ -130,13 +144,19 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
   }))
   // Which package row the Booking/GetOrder flow is built for, per supplier instance.
   // null = no booking flow (only search + package mocks created).
-  const [bookingRow, setBookingRow] = useState<Record<SupplierCode, (number | null)[]>>(() => ({
-    HBS: [null],
-    EXP: [null],
-    RHK: [null],
-    CHC: [null],
-    EXT: [null],
-  }))
+  // One slot per supplier instance — must stay the same length as supplierPackages,
+  // or toggling the Book radio on a template-loaded second instance would no-op.
+  const [bookingRow, setBookingRow] = useState<Record<SupplierCode, (number | null)[]>>(() => {
+    const slots = (code: SupplierCode) =>
+      templateInstances(initialTemplate?.packages?.[code], () => []).map(() => null)
+    return {
+      HBS: slots('HBS'),
+      EXP: slots('EXP'),
+      RHK: slots('RHK'),
+      CHC: slots('CHC'),
+      EXT: slots('EXT'),
+    }
+  })
   const [assignToBr, setAssignToBr] = useState(true)
   // SmartBooking: create the apiKey with SB enabled, and per-supplier route each
   // contract to the apiKey, the SB group, or both (default apikey).

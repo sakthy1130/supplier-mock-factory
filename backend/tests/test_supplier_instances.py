@@ -8,6 +8,7 @@ single-instance scenarios (and every already-stored record) keep their exact ids
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -160,6 +161,89 @@ async def test_two_contracts_are_created_with_distinct_uids():
     # Each contract must point at ITS OWN mocks, not the other entry's.
     assert bodies[0]["opt"]["overridePackagesUrl"] == "http://mock-server/qa-dup-001/package"
     assert bodies[1]["opt"]["overridePackagesUrl"] == "http://mock-server/qa-dup-001/exp-2/package"
+
+
+def test_per_instance_mutation_only_hits_its_own_instance():
+    """supplier_mutations is addressed by instance key. Keyed by bare code it would
+    apply to every entry of that code, which is what the engine used to do."""
+    from app.models.scenario import SupplierMutation
+
+    request = _two_exp_request()
+    request.supplier_mutations = {"EXP-2": SupplierMutation(room_name="Second Instance Room")}
+
+    built = ScenarioEngine().build_expectations(request)
+
+    def room_names(instance_key: str) -> str:
+        item = next(i for i in built if i.instance_key == instance_key and i.log_type == "Packages")
+        return json.dumps(item.expectation["httpResponse"]["body"])
+
+    assert "Second Instance Room" in room_names("EXP-2")
+    assert "Second Instance Room" not in room_names("EXP")
+
+
+def test_template_may_carry_the_same_supplier_twice():
+    """Templates used to reject duplicates outright ("each supplier can only appear
+    once per template"), which blocked saving a two-EXP scenario as a template."""
+    from app.models.scenario_template import (
+        ScenarioTemplateCreate,
+        SupplierTemplatePackages,
+        TemplatePackageRow,
+    )
+
+    def entry(price: float) -> SupplierTemplatePackages:
+        return SupplierTemplatePackages(
+            supplier="EXP",
+            packages=[TemplatePackageRow(room_name="Room", room_basis="RO", price=price)],
+        )
+
+    created = ScenarioTemplateCreate(
+        label="two exp",
+        atg_hotel_id="1446194",
+        suppliers=[entry(150.0), entry(250.0)],
+    )
+
+    assert [e.supplier for e in created.suppliers] == ["EXP", "EXP"]
+    assert [e.packages[0].price for e in created.suppliers] == [150.0, 250.0]
+
+
+def test_automation_api_turns_a_duplicate_template_into_two_instances():
+    from datetime import datetime
+
+    from app.api.routes.run_template import build_scenario_request_from_template
+    from app.models.run_template import RunTemplateRequest
+    from app.models.scenario_template import (
+        ScenarioTemplate,
+        SupplierTemplatePackages,
+        TemplatePackageRow,
+    )
+
+    def entry(price: float) -> SupplierTemplatePackages:
+        return SupplierTemplatePackages(
+            supplier="EXP",
+            packages=[TemplatePackageRow(room_name="Room", room_basis="RO", price=price)],
+        )
+
+    template = ScenarioTemplate(
+        id="tmpl-dup",
+        label="two exp",
+        description="",
+        atg_hotel_id="1446194",
+        created_at=datetime(2026, 8, 18),
+        suppliers=[entry(150.0), entry(250.0)],
+    )
+
+    request = build_scenario_request_from_template(
+        template,
+        RunTemplateRequest(environment="stg"),
+        namespace="qa-auto-dup",
+        check_in="2026-09-10",
+        check_out="2026-09-14",
+        hotel_id="1446194",
+        template_id="tmpl-dup",
+    )
+
+    assert request.instance_keys() == ["EXP", "EXP-2"]
+    assert [s.packages.prices[0] for s in request.suppliers] == [150.0, 250.0]
 
 
 def test_single_supplier_scenario_is_unchanged():

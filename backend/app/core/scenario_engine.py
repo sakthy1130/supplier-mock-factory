@@ -99,6 +99,7 @@ class ScenarioEngine:
                 templates=templates,
                 request=request,
                 package_spec=supplier_scenario.packages,
+                supplier_scenario=supplier_scenario,
             )
             validation_spec = supplier_scenario.packages
             supplier_mutation = request.mutation_for(supplier_scenario)
@@ -160,8 +161,18 @@ class ScenarioEngine:
         templates: dict[str, dict],
         request: ScenarioRequest,
         package_spec,
+        supplier_scenario=None,
     ) -> dict[str, dict]:
         mutated: dict[str, dict] = {}
+        # Mutations are addressed per supplier ENTRY: with the same supplier added
+        # twice, looking them up by bare code would hand both instances the same
+        # mutation. Falls back to the code for the first instance.
+        supplier_mutation = (
+            request.mutation_for(supplier_scenario)
+            if supplier_scenario is not None
+            else request.supplier_mutations.get(plugin.code)
+        )
+        instance_key = supplier_scenario.instance_key if supplier_scenario is not None else plugin.code
         package_log_types = PACKAGE_MUTABLE_LOG_TYPES.get(plugin.code, {"Packages"})
 
         for log_type, template in templates.items():
@@ -183,7 +194,7 @@ class ScenarioEngine:
             mutated[log_type] = apply_namespace(
                 expectation,
                 request.namespace,
-                plugin.code,
+                instance_key,
                 log_type,
             )
             mutated[log_type] = apply_supplier_mutation(
@@ -191,7 +202,7 @@ class ScenarioEngine:
                 plugin.code,
                 log_type,
                 request.hotel_id_for_supplier(plugin.code),
-                request.supplier_mutations.get(plugin.code),
+                supplier_mutation,
             )
             if log_type in _OCCUPANCY_NORMALIZED_LOG_TYPES:
                 body = mutated[log_type].get("httpResponse", {}).get("body")

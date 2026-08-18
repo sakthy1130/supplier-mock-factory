@@ -269,11 +269,8 @@ function App() {
     setImportError(null)
     setImportBusy(true)
     try {
-      const codes = importSuppliers.map((b) => b.supplier)
-      const duplicate = codes.find((code, i) => codes.indexOf(code) !== i)
-      if (duplicate) {
-        throw new Error(`${duplicate} is added more than once — each supplier can only appear once per template`)
-      }
+      // A supplier may be added more than once: each block becomes its own
+      // contract + mock set when the template runs ("EXP", then "EXP-2").
       const suppliers = importSuppliers.map((block) => ({
         supplier: block.supplier,
         supplier_currency: block.supplier_currency.toUpperCase().slice(0, 3),
@@ -348,20 +345,25 @@ function App() {
   }
 
   const openCustomTemplate = (item: ApiScenarioTemplate) => {
-    const packages: Partial<Record<SupplierCode, PackageRow[]>> = {}
+    // A code may appear more than once in the template, so collect a LIST of row
+    // sets per code — assigning would drop every entry but the last.
+    const packages: Partial<Record<SupplierCode, PackageRow[][]>> = {}
     const enabledSuppliers: Partial<Record<SupplierCode, boolean>> = { HBS: false, EXP: false, RHK: false, CHC: false, EXT: false }
     const supplierCurrencies: Partial<Record<SupplierCode, string>> = {}
     const contractCurrencies: Partial<Record<SupplierCode, string>> = {}
     const assignmentTargets: Partial<Record<SupplierCode, 'apikey' | 'sbgroup' | 'both'>> = {}
     for (const entry of item.suppliers) {
       const code = entry.supplier as SupplierCode
-      packages[code] = entry.packages.map((p) => ({
+      const rows = entry.packages.map((p) => ({
         roomName: p.room_name,
         roomBasis: p.room_basis,
         price: String(p.price),
         refundable: p.refundable,
       }))
+      packages[code] = [...(packages[code] ?? []), rows]
       enabledSuppliers[code] = true
+      // Currencies and assignment target are per supplier CODE in the wizard, not
+      // per instance — with repeated entries the last one wins.
       supplierCurrencies[code] = entry.supplier_currency
       contractCurrencies[code] = entry.contract_currency
       assignmentTargets[code] = entry.assignment_target ?? 'apikey'

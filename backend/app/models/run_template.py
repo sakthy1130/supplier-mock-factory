@@ -113,7 +113,12 @@ class RunTemplateResponse(BaseModel):
     scenario_id: Optional[str] = None
     api_key: Optional[str] = None
     api_key_id: Optional[str] = None
+    # First contract only, kept for existing callers — see contract_ids for all of
+    # them. A template may carry the same supplier twice, which yields one contract
+    # per entry.
     contract_id: Optional[str] = None
+    # {instance_key: contract_id}, e.g. {"EXP": "...", "EXP-2": "...", "HBS": "..."}.
+    contract_ids: Optional[dict] = None
     search_id: Optional[str] = None
     package_id: Optional[str] = None
     # Core poll statuses so a caller can see how far the run got.

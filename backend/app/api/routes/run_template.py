@@ -312,10 +312,13 @@ async def run_template_endpoint(
         response.check_out = check_out
         response.hotel_id = hotel_id
 
-        # Extract contract/SID/PID from record
+        # Extract contract/SID/PID from record. contracts_json is
+        # {instance_key: contract_id} — a template carrying the same supplier twice
+        # produces two entries, so surface the whole map and keep contract_id as the
+        # first value for callers that already read it.
         if record.contracts_json and isinstance(record.contracts_json, dict):
-            # contracts_json is a dict, get the first value
-            response.contract_id = next(iter(record.contracts_json.values())) if record.contracts_json else None
+            response.contract_ids = dict(record.contracts_json)
+            response.contract_id = next(iter(record.contracts_json.values()))
 
         # SmartBooking outcome: whether SB ran, the created group id, and the
         # apiKey/SB-group contract routing that was applied.
