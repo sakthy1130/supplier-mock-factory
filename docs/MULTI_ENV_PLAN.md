@@ -34,7 +34,7 @@ Everything env-specific flows through **one file** — `backend/.env` — loaded
 | Hardcoded URL defaults (2) | [config.py:25-26](../backend/app/config.py#L25) | `core_app_url`, `business_rules_url` default to `…tajawal-staging.internal` |
 | Creds / keys | `backend/.env` | `BACKOFFICE_USERNAME/PASSWORD`, `MAPPING_API_KEY`, `CRAWLA_API_KEY`, `TENANT_ID` |
 | Reference IDs | `backend/.env` | `HBS/EXP/RHK/CHC_REFERENCE_CONTRACT_ID`, `API_KEY_TEMPLATE_UID` |
-| **Hardcoded staging data** | [supplier_registry.py](../backend/app/core/supplier_registry.py) (`supplier_id`, `auto_id`), [quickwit_indices.py](../backend/app/core/quickwit_indices.py) (index naming), SQLite `smf.db` | Baked into code, not env |
+| **Hardcoded staging data** | [supplier_registry.py](../backend/app/core/supplier_registry.py) (`supplier_id`, `auto_id`), [quickwit_indices.py](../backend/app/core/quickwit_indices.py) (index naming), the scenario store (SQLite `smf.db`, now MongoDB) | Baked into code, not env |
 
 Two traps beyond URLs:
 - **`supplier_registry.py`** — supplier_id/auto_id are staging Mongo ids; dev almost certainly differs. Must become env-aware or provisioning creates broken contracts.

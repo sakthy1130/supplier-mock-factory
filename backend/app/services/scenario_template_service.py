@@ -5,10 +5,9 @@ from __future__ import annotations
 import uuid
 
 from fastapi import HTTPException
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from app.db.models import ScenarioTemplateRecord
+from app.db.repository import MongoStore
 from app.env_context import get_current_env
 from app.integrations.business_rules import has_template_child_condition
 from app.models.scenario_template import ScenarioTemplate, ScenarioTemplateCreate
@@ -40,11 +39,8 @@ def _record_to_model(record: ScenarioTemplateRecord) -> ScenarioTemplate:
     )
 
 
-def list_templates(db: Session) -> list[ScenarioTemplate]:
-    records = db.scalars(
-        select(ScenarioTemplateRecord).order_by(ScenarioTemplateRecord.created_at.desc())
-    ).all()
-    return [_record_to_model(r) for r in records]
+def list_templates(db: MongoStore) -> list[ScenarioTemplate]:
+    return [_record_to_model(r) for r in db.templates.list()]
 
 
 def _apply_payload(record: ScenarioTemplateRecord, payload: ScenarioTemplateCreate) -> None:
@@ -68,28 +64,24 @@ def _apply_payload(record: ScenarioTemplateRecord, payload: ScenarioTemplateCrea
     ]
 
 
-def create_template(db: Session, payload: ScenarioTemplateCreate) -> ScenarioTemplate:
+def create_template(db: MongoStore, payload: ScenarioTemplateCreate) -> ScenarioTemplate:
     record = ScenarioTemplateRecord(id=str(uuid.uuid4()))
     _apply_payload(record, payload)
-    db.add(record)
-    db.commit()
-    db.refresh(record)
+    db.templates.save(record)
     return _record_to_model(record)
 
 
-def update_template(db: Session, template_id: str, payload: ScenarioTemplateCreate) -> ScenarioTemplate:
-    record = db.get(ScenarioTemplateRecord, template_id)
+def update_template(db: MongoStore, template_id: str, payload: ScenarioTemplateCreate) -> ScenarioTemplate:
+    record = db.templates.get(template_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Template not found")
     _apply_payload(record, payload)
-    db.commit()
-    db.refresh(record)
+    db.templates.save(record)
     return _record_to_model(record)
 
 
-def delete_template(db: Session, template_id: str) -> None:
-    record = db.get(ScenarioTemplateRecord, template_id)
+def delete_template(db: MongoStore, template_id: str) -> None:
+    record = db.templates.get(template_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Template not found")
-    db.delete(record)
-    db.commit()
+    db.templates.delete(record)

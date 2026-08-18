@@ -56,7 +56,15 @@ class Settings(BaseSettings):
     ext_reference_contract_id: str = ""
     api_key_template_uid: str = ""
 
-    database_url: str = "sqlite:///./smf.db"
+    # MongoDB persistence. Per-env like every other setting, so dev and stg can
+    # point at different databases (or different clusters) without code changes.
+    # The URL carries credentials, so it lives only in the git-ignored .env files.
+    mongo_url: str = ""
+    mongo_db_name: str = "smf"
+    # Prefix applied to collection names. Empty in normal use; tests set a unique
+    # prefix so a run is isolated WITHOUT needing a second database — the app user
+    # is typically granted rights on one database only.
+    mongo_collection_prefix: str = ""
     cors_origins: str = "http://localhost:5173"
     log_level: str = "INFO"
 

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.db.repository import MongoStore
 from app.env_context import get_current_env, use_env
 from app.integrations.crawla import CrawlaApiError, CrawlaClient
 from app.integrations.core_app import CoreAppClient
@@ -48,7 +48,7 @@ async def anchor_packages(request: CrawlaAnchorRequest) -> CrawlaAnchorPackagesR
 async def create_crawla_scenario(
     request: CrawlaScenarioRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> ScenarioBundle:
     env = get_current_env()
     base_request = _build_scenario_request(request)
@@ -61,7 +61,7 @@ async def create_crawla_scenario(
 @router.post("/scenarios/{scenario_id}/run", response_model=CrawlaRunScenarioResponse)
 async def run_crawla_scenario(
     scenario_id: str,
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> CrawlaRunScenarioResponse:
     record = scenario_service.get_record(db, scenario_id)
     bundle = scenario_service.record_to_bundle(record)

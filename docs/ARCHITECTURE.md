@@ -44,7 +44,7 @@ supplier-mock-factory/
 │   ├── plugins/             # hbs.py, exp.py
 │   ├── ingest/              # template_ingestor, field_map_generator
 │   ├── models/              # Pydantic ScenarioRequest, ScenarioBundle
-│   └── db/                  # SQLite scenario history
+│   └── db/                  # MongoDB scenario history (records + repositories)
 ├── frontend/                # React wizard + dashboard
 ├── templates/{HBS,EXP}/     # MockServer expectation JSON per log type
 ├── field-maps/              # Per-supplier mutable field paths
@@ -129,7 +129,7 @@ created_at, expires_at: ...
 | P2 | Scenario engine + linkage validator + plugins | Pending |
 | P3 | BookingId injector + MockServer register | Pending |
 | P4 | Contract + apiKey provisioner + orchestrator | Pending |
-| P5 | Full REST API + SQLite persistence | Pending |
+| P5 | Full REST API + persistence (MongoDB; SQLite until Aug 2026) | Pending |
 | P6 | React UI (wizard, progress, results, list) | Done |
 | P7 | Teardown, docker-compose, runbook | Done |
 | P8 | Crawla Mocks tab, Crawla anchors, export JSON | Done |

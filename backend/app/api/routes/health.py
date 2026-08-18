@@ -2,9 +2,10 @@
 
 import logging
 from fastapi import APIRouter, Request
-from sqlalchemy import text
 
-from app.db.database import get_engine
+from app.config import get_settings
+from app.db.database import get_database, ping
+from app.db.repository import collection_names
 from app.env_context import normalize_env
 
 logger = logging.getLogger(__name__)
@@ -12,13 +13,9 @@ router = APIRouter(tags=["health"])
 
 
 def check_database() -> dict:
-    """Verify database connectivity and basic functionality."""
+    """Verify MongoDB connectivity."""
     try:
-        engine = get_engine()
-        with engine.connect() as conn:
-            # Execute simple query to verify connection
-            result = conn.execute(text("SELECT 1"))
-            result.fetchone()
+        ping()
         return {
             "status": "ok",
             "message": "Database connected",
@@ -32,14 +29,14 @@ def check_database() -> dict:
 
 
 def check_core_services() -> dict:
-    """Verify core application services are functioning."""
+    """Verify the scenarios collection is queryable.
+
+    Mongo creates collections lazily, so an empty/absent collection is healthy —
+    what matters is that the query round-trips.
+    """
     try:
-        # Check if scenario-related tables exist
-        engine = get_engine()
-        with engine.connect() as conn:
-            # Query to check if scenarios table has data (optional)
-            result = conn.execute(text("SELECT COUNT(*) FROM scenarios LIMIT 1"))
-            result.fetchone()
+        scenarios_name, _ = collection_names(get_settings().mongo_collection_prefix)
+        get_database()[scenarios_name].estimated_document_count()
         return {
             "status": "ok",
             "message": "Core services operational",
