@@ -309,35 +309,65 @@ class CrawlaBusinessRulesProvisioner:
         async with self.client:
             for input_value in input_values:
                 for payload in payloads:
-                    # Deliberately not _run_step: it merges results into
-                    # setup["rules"][rule_id], so several conditions on one rule would
-                    # overwrite each other's condition_id and teardown would leak them.
-                    try:
-                        created = await self._create_contract_condition(payload, input_value)
-                        if created.get("condition_id"):
-                            setup["contract_condition_ids"].append(created["condition_id"])
-                    except Exception as exc:  # noqa: BLE001 - BR setup is non-blocking by design
-                        logger.exception("BR contract condition failed value=%s", input_value)
-                        setup["errors"].append({"step": "contract_condition", "message": str(exc)})
+                    await self._create_condition_tree(setup, payload, input_value)
             await self._run_step(setup, "refresh", self.client.refresh)
         if setup["errors"]:
             setup["status"] = "FAILED"
             setup["warning"] = "BR contract setup failed"
         return setup
 
-    async def _create_contract_condition(
+    async def _create_condition_tree(
         self,
+        setup: dict[str, Any],
         payload: dict[str, Any],
         input_value: str,
-    ) -> dict[str, Any]:
-        body = {**payload, "inputValue": input_value}
-        response = await self.client.create_condition_raw(body)
+        parent_condition_id: str | None = None,
+    ) -> None:
+        """Create one configured condition, then any children beneath it.
+
+        Rule 4 needs a chain: a root "marketPrice is NOT NULL" condition, then the
+        contractId-IN condition hanging off the id BR returns for it. Children are
+        created with parentRuleValueMappingId set to the LIVE parent id, never a value
+        stored in config — the same rule the per-template child conditions follow.
+
+        Ids are appended in creation order (parents before children); cleanup deletes
+        them in reverse, because BR refuses to delete a parent while a child points at it.
+        """
+        children = payload.get("children") or []
+        # A condition may opt out of inputValue injection: the marketPrice parent is an
+        # operator-only test ("NOT EQUAL TO" with no value == is-not-null), so injecting
+        # a contract list there would change what it matches.
+        body = {key: value for key, value in payload.items() if key != "children"}
+        if body.pop("inject_input_value", True):
+            body["inputValue"] = input_value
+        if parent_condition_id is not None:
+            # BR ids are numeric; send an int when it is one, but don't crash the whole
+            # step on an unexpected id format — pass it through and let BR judge.
+            raw_parent = str(parent_condition_id)
+            body["parentRuleValueMappingId"] = int(raw_parent) if raw_parent.isdigit() else raw_parent
+
+        try:
+            response = await self.client.create_condition_raw(body)
+        except Exception as exc:  # noqa: BLE001 - BR setup is non-blocking by design
+            logger.exception("BR contract condition failed rule=%s", body.get("ruleId"))
+            setup["errors"].append({"step": "contract_condition", "message": str(exc)})
+            return
+
         condition_id = _extract_id(response)
-        return {
-            "rule_id": body.get("ruleId"),
-            "condition_id": condition_id,
-            "input_value": input_value,
-        }
+        if condition_id:
+            setup["contract_condition_ids"].append(condition_id)
+        elif children:
+            setup["errors"].append({
+                "step": "contract_condition",
+                "message": (
+                    f"rule {body.get('ruleId')} parent condition returned no id — "
+                    "cannot attach its child conditions"
+                ),
+            })
+            return
+
+        for child in children:
+            await self._create_condition_tree(setup, child, input_value, condition_id)
 
     async def cleanup(self, setup: dict[str, Any] | None, api_key: str | None) -> dict[str, Any]:
         if not setup and not api_key:
@@ -347,7 +377,10 @@ class CrawlaBusinessRulesProvisioner:
 
         # contract_br scenarios have no apiKey rule-configs to unpick — just the
         # contract conditions this scenario created.
-        contract_condition_ids = list((setup or {}).get("contract_condition_ids") or [])
+        # REVERSED: ids were appended parents-first, and BR refuses to delete a parent
+        # while a child still references it (same constraint the template child
+        # conditions hit). Reverse creation order is therefore children-first.
+        contract_condition_ids = list(reversed((setup or {}).get("contract_condition_ids") or []))
         if contract_condition_ids:
             async with self.client:
                 for condition_id in contract_condition_ids:

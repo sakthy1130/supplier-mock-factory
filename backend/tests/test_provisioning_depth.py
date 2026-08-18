@@ -260,12 +260,15 @@ def test_writable_api_key_body_strips_read_only_fields_and_flattens_contracts():
 
 
 def _br_provisioner(env: str):
-    """Provisioner whose client records the bodies it would POST."""
+    """Provisioner whose client records the bodies it would POST, handing back a fresh
+    numeric condition id per call so parent/child chaining can be asserted."""
+    global _ids
+    _ids = iter(range(501, 600))
     client = MagicMock()
     client.settings = MagicMock(env=env)
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=False)
-    client.create_condition_raw = AsyncMock(return_value={"id": "cond-1"})
+    client.create_condition_raw = AsyncMock(side_effect=lambda body: {"id": next(_ids)})
     client.delete_condition = AsyncMock()
     client.refresh = AsyncMock()
     from app.integrations.business_rules import CrawlaBusinessRulesProvisioner
@@ -288,14 +291,14 @@ async def test_contract_condition_joins_auto_ids_into_one_in_list():
     setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
 
     assert setup["status"] == "SUCCESS"
-    assert client.create_condition_raw.await_count == 1
-    body = client.create_condition_raw.await_args.args[0]
-    assert body["inputValue"] == "10103,10106"
-    assert body["inputDetailId"] == 30
-    assert body["ruleId"] == "3"
+    # Rule 3 is one condition; rule 4 is a parent + child chain.
+    assert client.create_condition_raw.await_count == 3
+    bodies = [call.args[0] for call in client.create_condition_raw.await_args_list]
+    static = next(b for b in bodies if b["ruleId"] == "3")
+    assert static["inputValue"] == "10103,10106"
+    assert static["inputDetailId"] == 30
     # The rest of the configured body is passed through untouched.
-    assert body["parentRuleValueMapping"] == {"id": 5, "description": "apikey IN"}
-    assert setup["contract_condition_ids"] == ["cond-1"]
+    assert static["parentRuleValueMapping"] == {"id": 5, "description": "apikey IN"}
 
 
 @pytest.mark.asyncio
@@ -333,7 +336,8 @@ async def test_contract_conditions_are_deleted_on_cleanup():
     )
 
     assert result["status"] == "SUCCESS"
-    assert [c.args[0] for c in client.delete_condition.await_args_list] == ["cond-1", "cond-2"]
+    # Reversed: children were created after their parents, so they must go first.
+    assert [c.args[0] for c in client.delete_condition.await_args_list] == ["cond-2", "cond-1"]
 
 
 @pytest.mark.asyncio
@@ -354,3 +358,62 @@ async def test_auto_ids_are_read_back_from_backoffice():
     )
 
     assert auto_ids == {"HBS": "10103", "EXP": "10106"}
+
+
+@pytest.mark.asyncio
+async def test_rule_4_is_a_parent_child_chain():
+    """Dynamic Markup needs the root "marketPrice is NOT NULL" test first, with the
+    contractId condition hanging off the id BR returns for it. The parent must NOT
+    receive an inputValue — its operator is NOT EQUAL TO with no value."""
+    provisioner, client = _br_provisioner("stg")
+
+    setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
+
+    bodies = [call.args[0] for call in client.create_condition_raw.await_args_list]
+    rule4 = [b for b in bodies if b["ruleId"] == "4"]
+    assert len(rule4) == 2
+    parent, child = rule4
+
+    assert parent["inputDetailId"] == 22 and parent["description"] == "marketPrice is NOT NULL"
+    assert "inputValue" not in parent, "the marketPrice test must stay operator-only"
+    assert parent.get("parentRuleValueMapping") is None
+
+    assert child["inputDetailId"] == 30
+    assert child["inputValue"] == "10103,10106"
+    # Chained to the LIVE parent id, not a value from config.
+    assert child["parentRuleValueMappingId"] == 501 + bodies.index(parent)
+
+    # Config-only keys must never reach BR.
+    for body in bodies:
+        assert "children" not in body and "inject_input_value" not in body
+
+    assert setup["status"] == "SUCCESS"
+    assert len(setup["contract_condition_ids"]) == 3
+
+
+@pytest.mark.asyncio
+async def test_cleanup_deletes_children_before_parents():
+    """BR refuses to delete a parent while a child points at it, so cleanup walks the
+    creation order backwards."""
+    provisioner, client = _br_provisioner("stg")
+    setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
+    created = list(setup["contract_condition_ids"])
+
+    await provisioner.cleanup(setup, None)
+
+    deleted = [call.args[0] for call in client.delete_condition.await_args_list]
+    assert deleted == list(reversed(created))
+
+
+@pytest.mark.asyncio
+async def test_a_parent_returning_no_id_skips_its_children():
+    """Without the parent id the child would be created at the root of the rule, where
+    it would match every request rather than just this scenario's contracts."""
+    provisioner, client = _br_provisioner("stg")
+    client.create_condition_raw = AsyncMock(side_effect=[{"id": 501}, {}, {"id": 503}])
+
+    setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
+
+    assert client.create_condition_raw.await_count == 2  # rule 3, then the failed parent
+    assert setup["status"] == "FAILED"
+    assert any("cannot attach its child" in e["message"] for e in setup["errors"])

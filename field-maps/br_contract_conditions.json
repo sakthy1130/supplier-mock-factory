@@ -25,9 +25,20 @@
     "particular. Do not copy the stg block to dev without checking the ids there; a wrong",
     "parent id makes the BR step fail loudly rather than silently.",
     "",
-    "To add Dynamic Markup (rule 4), append a second entry with ruleId '4' and that",
-    "rule's own 'apikey IN' parent id. inputDetailId stays 30 (the input field is the",
-    "same); only the rule and its parent change.",
+    "Rule 4 (Dynamic Markup) is a CHAIN, not a single condition: the root",
+    "'marketPrice is NOT NULL' test (inputDetailId 22, operator NOT EQUAL TO with no",
+    "value) is created first, and the contractId-IN condition hangs off whatever id BR",
+    "returns for it. Two knobs make that expressible:",
+    "",
+    "  children             : nested conditions. Each is created with",
+    "                         parentRuleValueMappingId set to the LIVE id of its parent,",
+    "                         never a value hardcoded here.",
+    "  inject_input_value   : false means 'do not put the contract list in this body'.",
+    "                         The marketPrice parent is an operator-only test, so giving",
+    "                         it an inputValue would change what it matches.",
+    "",
+    "Teardown deletes these in reverse creation order, because BR refuses to delete a",
+    "parent while a child still points at it.",
     "",
     "To disable for an env, set it to {} — contract_br then still creates the mocks and",
     "contract and reports the BR step as NOT_CONFIGURED."
@@ -48,6 +59,30 @@
         "overwrite": false,
         "parentRuleValueMapping": { "id": 5, "description": "apikey IN" },
         "parentRuleValueMappingId": null
+      },
+      {
+        "ruleId": "4",
+        "description": "marketPrice is NOT NULL",
+        "executionOrder": 1,
+        "inputDetailId": 22,
+        "outputDetail": null,
+        "outputValue": "",
+        "outputType": "",
+        "overwrite": true,
+        "parentRuleValueMapping": null,
+        "inject_input_value": false,
+        "children": [
+          {
+            "ruleId": "4",
+            "description": "Contract ID IN the List",
+            "executionOrder": 4,
+            "inputDetailId": 30,
+            "outputDetail": null,
+            "outputValue": "",
+            "outputType": "",
+            "overwrite": false
+          }
+        ]
       }
     ]
   }
