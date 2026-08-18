@@ -19,34 +19,35 @@ async def register_built_expectations(
 ) -> dict[str, str]:
     """
     Inject per-supplier booking ids into book/getOrder/cancel, then register all expectations.
-    Returns supplier_code -> booking_id map.
+    Returns instance_key -> booking_id map (instance_key == supplier_code unless the
+    scenario carries the same supplier more than once).
     """
     injector = BookingIdInjector()
     assigned_ids: dict[str, str] = {}
     grouped: dict[str, list[BuiltExpectation]] = {}
     for item in built:
-        grouped.setdefault(item.supplier_code, []).append(item)
+        grouped.setdefault(item.instance_key, []).append(item)
 
     client = mock_client or MockServerClient()
     if mock_client is not None:
-        for supplier_code, items in grouped.items():
-            assigned_ids[supplier_code] = await _inject_and_register_supplier(
+        for instance_key, items in grouped.items():
+            assigned_ids[instance_key] = await _inject_and_register_supplier(
                 injector,
                 client,
-                supplier_code,
+                items[0].supplier_code,
                 items,
-                (booking_ids or {}).get(supplier_code),
+                (booking_ids or {}).get(instance_key),
             )
         return assigned_ids
 
     async with client:
-        for supplier_code, items in grouped.items():
-            assigned_ids[supplier_code] = await _inject_and_register_supplier(
+        for instance_key, items in grouped.items():
+            assigned_ids[instance_key] = await _inject_and_register_supplier(
                 injector,
                 client,
-                supplier_code,
+                items[0].supplier_code,
                 items,
-                (booking_ids or {}).get(supplier_code),
+                (booking_ids or {}).get(instance_key),
             )
     return assigned_ids
 
@@ -62,16 +63,16 @@ async def refresh_booking_flow_expectations(
     for item in built:
         if item.log_type not in BOOKING_FLOW_LOG_TYPES:
             continue
-        grouped.setdefault(item.supplier_code, []).append(item)
+        grouped.setdefault(item.instance_key, []).append(item)
 
     client = mock_client or MockServerClient()
 
     async def _run() -> None:
-        for supplier_code, items in grouped.items():
-            assigned_ids[supplier_code] = await _inject_and_register_supplier(
+        for instance_key, items in grouped.items():
+            assigned_ids[instance_key] = await _inject_and_register_supplier(
                 injector,
                 client,
-                supplier_code,
+                items[0].supplier_code,
                 items,
                 booking_id=None,
             )

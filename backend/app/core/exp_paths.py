@@ -77,9 +77,13 @@ PRICE_CHECK_CANONICAL_PREFIX = "/v3/properties/"
 
 def apply_namespace_to_price_check_hrefs(
     expectation: dict[str, Any],
-    namespace: str,
+    path_prefix: str,
 ) -> dict[str, Any]:
-    """Namespace-prefix every ``links.price_check.href`` in the response body.
+    """Prefix every ``links.price_check.href`` in the response body with `path_prefix`.
+
+    `path_prefix` is the same leading segment(s) the mock path gets — ``/{namespace}``,
+    plus an instance segment when the supplier appears twice in one scenario. Pass a
+    bare namespace and it is treated as that single segment.
 
     The EXP adapter reaches price-check by following the href embedded in the
     Search/Packages response, not via a contract URL. ``apply_namespace_path_prefix``
@@ -90,8 +94,8 @@ def apply_namespace_to_price_check_hrefs(
 
     Idempotent: an already-prefixed href no longer starts with ``/v3/properties/``.
     """
-    safe = safe_namespace_path_segment(namespace)
-    if not safe:
+    prefix = _normalized_prefix(path_prefix)
+    if not prefix:
         return expectation
     http_response = expectation.get("httpResponse")
     if not isinstance(http_response, dict):
@@ -99,16 +103,32 @@ def apply_namespace_to_price_check_hrefs(
     for node in _walk_nodes(http_response.get("body")):
         if not isinstance(node, dict):
             continue
-        _prefix_price_check(node.get("links"), safe)
+        _prefix_price_check(node.get("links"), prefix)
         bed_groups = node.get("bed_groups")
         if isinstance(bed_groups, dict):
             for bed_group in bed_groups.values():
                 if isinstance(bed_group, dict):
-                    _prefix_price_check(bed_group.get("links"), safe)
+                    _prefix_price_check(bed_group.get("links"), prefix)
     return expectation
 
 
-def _prefix_price_check(links: Any, safe_namespace: str) -> None:
+def _normalized_prefix(path_prefix: str) -> str:
+    """Accept either a leading-slash path prefix ("/ns/exp-2") or a bare namespace
+    ("ns"), and return it as a clean "/a/b" with no trailing slash."""
+    raw = (path_prefix or "").strip()
+    if not raw:
+        return ""
+    segments = [
+        safe_namespace_path_segment(segment)
+        for segment in raw.split("/")
+        if segment.strip()
+    ]
+    if not segments:
+        return ""
+    return "/" + "/".join(segments)
+
+
+def _prefix_price_check(links: Any, prefix: str) -> None:
     if not isinstance(links, dict):
         return
     price_check = links.get("price_check")
@@ -116,7 +136,7 @@ def _prefix_price_check(links: Any, safe_namespace: str) -> None:
         return
     href = price_check.get("href")
     if isinstance(href, str) and href.startswith(PRICE_CHECK_CANONICAL_PREFIX):
-        price_check["href"] = f"/{safe_namespace}{href}"
+        price_check["href"] = f"{prefix}{href}"
 
 
 def _walk_nodes(node: Any) -> list[Any]:

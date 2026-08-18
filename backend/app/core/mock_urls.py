@@ -29,11 +29,16 @@ EXP_LOG_TYPE_TO_OVERRIDE_FIELD: dict[str, str] = {
 
 
 def extract_paths_from_built(built: list[BuiltExpectation]) -> dict[str, dict[str, str]]:
+    """Registered mock paths, keyed by supplier INSTANCE key then log type.
+
+    Keyed by instance rather than code so a scenario carrying the same supplier
+    twice yields two path sets, and each contract points at its own mocks.
+    """
     paths: dict[str, dict[str, str]] = {}
     for item in built:
         http_path = item.expectation.get("httpRequest", {}).get("path")
         if isinstance(http_path, str) and http_path:
-            paths.setdefault(item.supplier_code, {})[item.log_type] = http_path
+            paths.setdefault(item.instance_key, {})[item.log_type] = http_path
     return paths
 
 

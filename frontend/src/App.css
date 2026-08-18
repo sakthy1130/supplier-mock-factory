@@ -807,6 +807,27 @@
   gap: 0.75rem;
 }
 
+/* One block per supplier entry. Only shown as a bordered card when a supplier is
+   added more than once, so single-supplier tiles look exactly as before. */
+.supplier-instance {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.supplier-instance:not(:only-child) {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem;
+}
+
+.supplier-instance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+}
+
 .supplier-tile-field {
   display: block;
   font-size: 0.72rem;

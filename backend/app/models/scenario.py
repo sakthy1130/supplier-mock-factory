@@ -141,8 +141,25 @@ class PackageSpec(BaseModel):
         return self
 
 
+def instance_key_for(supplier_code: str, instance: int) -> str:
+    """Key that identifies one supplier ENTRY in a scenario.
+
+    A scenario may carry the same supplier more than once (e.g. two EXP contracts
+    at different prices), so supplier code alone can no longer key contracts,
+    expectation ids or mock paths. The first instance keeps the bare code, which
+    means every single-instance scenario — including every record already stored —
+    keeps byte-identical ids, paths and contract uids.
+    """
+    if instance <= 1:
+        return supplier_code
+    return f"{supplier_code}-{instance}"
+
+
 class SupplierScenario(BaseModel):
     code: SupplierCode
+    # Assigned server-side by ScenarioRequest._assign_supplier_instances: 1 for the
+    # first entry of a code, 2 for the second, and so on. Callers do not set it.
+    instance: int = Field(default=1, ge=1, description="Occurrence of this supplier code (1-based)")
     packages: PackageSpec
     contract_currency: str = Field(
         default="USD",
@@ -163,6 +180,10 @@ class SupplierScenario(BaseModel):
     @classmethod
     def _upper_contract_currency(cls, value: str) -> str:
         return value.strip().upper()
+
+    @property
+    def instance_key(self) -> str:
+        return instance_key_for(self.code.value, self.instance)
 
 
 class SupplierMutation(BaseModel):
@@ -226,6 +247,21 @@ class ScenarioRequest(BaseModel):
     )
 
     @model_validator(mode="after")
+    def _assign_supplier_instances(self) -> "ScenarioRequest":
+        """Number repeated supplier codes 1, 2, 3… in the order they were sent.
+
+        Always recomputed from position so a caller cannot hand us colliding
+        instance numbers, and so an old payload (no instance field) still lands on
+        instance=1 and keeps its existing keys.
+        """
+        seen: dict[str, int] = {}
+        for supplier in self.suppliers:
+            code = supplier.code.value
+            seen[code] = seen.get(code, 0) + 1
+            supplier.instance = seen[code]
+        return self
+
+    @model_validator(mode="after")
     def _resolve_smart_booking(self) -> "ScenarioRequest":
         # Materialize a default SB config when the simple toggle is on.
         if self.sb_enabled and self.sb_config is None:
@@ -254,20 +290,31 @@ class ScenarioRequest(BaseModel):
         behavior). With SB on, only apikey/both targets do.
         """
         if self.sb_config is None:
-            return [s.code.value for s in self.suppliers]
+            return [s.instance_key for s in self.suppliers]
         return [
-            s.code.value
+            s.instance_key
             for s in self.suppliers
             if s.assignment_target in (AssignmentTarget.apikey, AssignmentTarget.both)
         ]
 
     def sbgroup_contract_codes(self) -> list[str]:
-        """Supplier codes whose contract should attach to the SB group."""
+        """Instance keys whose contract should attach to the SB group."""
         return [
-            s.code.value
+            s.instance_key
             for s in self.suppliers
             if s.assignment_target in (AssignmentTarget.sbgroup, AssignmentTarget.both)
         ]
+
+    def instance_keys(self) -> list[str]:
+        """Every supplier entry's key, for teardown and persistence."""
+        return [s.instance_key for s in self.suppliers]
+
+    def mutation_for(self, supplier: SupplierScenario) -> Optional[SupplierMutation]:
+        """Crawla mutations are addressed by instance key, falling back to the bare
+        supplier code so existing single-instance callers keep working."""
+        return self.supplier_mutations.get(supplier.instance_key) or (
+            self.supplier_mutations.get(supplier.code.value) if supplier.instance == 1 else None
+        )
 
 
 class ScenarioBundle(BaseModel):

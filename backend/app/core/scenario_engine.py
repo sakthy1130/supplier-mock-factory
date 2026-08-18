@@ -63,6 +63,13 @@ class BuiltExpectation:
     supplier_code: str
     log_type: str
     expectation: dict
+    # Identifies WHICH entry of this supplier code the expectation belongs to.
+    # Equals supplier_code for the first (usually only) instance.
+    instance_key: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.instance_key:
+            self.instance_key = self.supplier_code
 
 
 class ScenarioEngine:
@@ -78,6 +85,7 @@ class ScenarioEngine:
         built: list[BuiltExpectation] = []
         for supplier_scenario in request.suppliers:
             supplier_code = supplier_scenario.code.value
+            instance_key = supplier_scenario.instance_key
             plugin = PLUGINS[supplier_code]
             # When no package is selected for the booking flow, only build
             # search/package (+ prebooking/cancellation-policy) mocks — skip
@@ -93,7 +101,7 @@ class ScenarioEngine:
                 package_spec=supplier_scenario.packages,
             )
             validation_spec = supplier_scenario.packages
-            supplier_mutation = request.supplier_mutations.get(supplier_code)
+            supplier_mutation = request.mutation_for(supplier_scenario)
             if supplier_mutation and supplier_mutation.room_basis:
                 # model_copy() bypasses validators, so build the per-package list
                 # explicitly rather than relying on PackageSpec's str-coercion.
@@ -113,12 +121,14 @@ class ScenarioEngine:
                 built.append(
                     BuiltExpectation(
                         supplier_code=supplier_code,
+                        instance_key=instance_key,
                         log_type=log_type,
                         expectation=finalize_expectation_for_register(
                             expectation,
                             request.namespace,
                             supplier_code,
                             log_type,
+                            instance_key=instance_key,
                         ),
                     )
                 )
