@@ -1,0 +1,62 @@
+curl --location 'http://localhost:8000/api/scenarios' \
+--header 'Content-Type: application/json' \
+--header 'X-SMF-Env: stg' \
+--data '{
+    "namespace": "qa-20260819-s14",
+    "check_in": "2026-09-01",
+    "check_out": "2026-09-03",
+    "atg_hotel_id": "1446194",
+    "provisioning_depth": "full",
+    "suppliers": [
+        {
+            "code": "HBS",
+            "contract_currency": "USD",
+            "packages": {
+                "count": 2,
+                "room_basis": [
+                    "RO",
+                    "RO"
+                ],
+                "room_names": [
+                    "1 Double Bed, Nonsmoking 1",
+                    "1 Double Bed, Nonsmoking 2"
+                ],
+                "supplier_currency": "USD",
+                "prices": [
+                    150.0,
+                    250.0
+                ],
+                "refundable": [
+                    true,
+                    false
+                ],
+                "booking_package_index": 0
+            }
+        },
+        {
+            "code": "EXP",
+            "contract_currency": "USD",
+            "packages": {
+                "count": 2,
+                "room_basis": [
+                    "RO",
+                    "RO"
+                ],
+                "room_names": [
+                    "1 Double Bed, Nonsmoking 1",
+                    "1 Double Bed, Nonsmoking 2"
+                ],
+                "supplier_currency": "USD",
+                "prices": [
+                    160.0,
+                    260.0
+                ],
+                "refundable": [
+                    true,
+                    false
+                ],
+                "booking_package_index": 1
+            }
+        }
+    ]
+}'

@@ -204,8 +204,9 @@ class SupplierMockScenarioOrchestrator:
 
         # Step 6: BR provisioning. `full` assigns the apiKey (for crawla_export, all SB
         # scenarios, and plain scenarios that opted in via assign_to_br). contract_br
-        # assigns the CONTRACTS instead — never the apiKey, even when the caller
-        # supplied one, because the depth is what decides.
+        # keys its CONDITIONS on the contracts, and additionally assigns an existing
+        # apiKey to the two markup rules when the caller named one — the conditions
+        # still have to be evaluated under some apiKey.
         br_setup: dict | None = None
         if request.provisioning_depth is ProvisioningDepth.contract_br:
             logger.info("Provisioning Business Rules for contracts=%s", list(bundle.contracts))
@@ -214,8 +215,18 @@ class SupplierMockScenarioOrchestrator:
             auto_ids = await self.contract_provisioner.fetch_contract_auto_ids(bundle.contracts)
             plog.append(f"[contracts] autoIds: {auto_ids}")
             br_setup = await self.br_provisioner.provision_for_contracts(
-                _contract_refs(request, bundle.contracts, auto_ids)
+                _contract_refs(request, bundle.contracts, auto_ids),
+                api_key=api_key,
             )
+            if api_key:
+                rule_configs = {
+                    rule_id: data.get("rule_config_id")
+                    for rule_id, data in (br_setup.get("rules") or {}).items()
+                }
+                plog.append(
+                    f"[br] existing apiKey {api_key} assigned to the markup rules → "
+                    f"ruleConfigs={rule_configs}"
+                )
         elif request.provisioning_depth is ProvisioningDepth.full and (
             request.crawla_export or request.sb_config is not None or request.assign_to_br
         ):

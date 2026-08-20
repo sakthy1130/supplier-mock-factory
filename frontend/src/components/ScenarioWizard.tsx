@@ -641,6 +641,10 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
             <p className="hint">
               Leave blank to create no apiKey at all. If given, this scenario's contracts are added
               to it — SMF never deletes an apiKey it didn't create, so teardown only detaches them.
+              {depth === 'contract_br' &&
+                ' It is also assigned to Room Static Markup In Percentage (3) and Room Dynamic Markup' +
+                  ' In Percentage (4), so the contract conditions evaluate under it; only that' +
+                  ' assignment is removed on teardown.'}
             </p>
           </div>
         )}
@@ -682,7 +686,11 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
               {depth === 'full'
                 ? 'Contracts + a new apiKey. '
                 : depth === 'contract_br'
-                  ? `Contracts + BR${existingApiKey.trim() ? `, added to ${existingApiKey.trim()}` : ', no apiKey'}. `
+                  ? `Contracts + BR${
+                      existingApiKey.trim()
+                        ? `, added to ${existingApiKey.trim()} (also assigned to rules 3 + 4)`
+                        : ', no apiKey'
+                    }. `
                   : `Contracts only${existingApiKey.trim() ? `, added to ${existingApiKey.trim()}` : ', no apiKey'}. `}
               {(() => {
                 const withBooking = supplierEntries.filter(

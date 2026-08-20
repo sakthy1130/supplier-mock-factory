@@ -116,9 +116,9 @@ async def test_contract_only_creates_no_api_key_and_no_br(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_contract_br_assigns_contracts_not_the_api_key(monkeypatch):
-    """Even with an existing apiKey supplied, the depth decides: contract conditions
-    only. The apiKey is just somewhere to hang the contract."""
+async def test_contract_br_keys_conditions_on_contracts_and_passes_the_api_key(monkeypatch):
+    """The depth decides what the CONDITIONS match on — the contracts. An existing
+    apiKey is still handed to the BR step, which assigns it to the two markup rules."""
     monkeypatch.setattr("app.core.orchestrator.register_built_expectations", AsyncMock(return_value={}))
     orchestrator, stubs = _orchestrator({"HBS": "contract-1"})
 
@@ -128,6 +128,7 @@ async def test_contract_br_assigns_contracts_not_the_api_key(monkeypatch):
 
     stubs["br"].provision_for_contracts.assert_awaited_once()
     stubs["br"].provision.assert_not_awaited()
+    assert stubs["br"].provision_for_contracts.await_args.kwargs["api_key"] == "tj-htl-test-bookable"
     refs = stubs["br"].provision_for_contracts.await_args.args[0]
     # autoId rides along because the "contractId IN" condition matches on it.
     assert refs == [
@@ -331,13 +332,110 @@ async def test_no_field_map_entry_still_provisions():
 
 @pytest.mark.asyncio
 async def test_the_api_key_rule_config_assignment_is_not_attempted_for_contracts():
-    """POST /v1/apikeys/create-assign/rule/{id} is apiKey-only — there is no contract
-    equivalent, so it must not be called with a contract value."""
+    """POST /v1/apikeys/create-assign/rule/{id} is apiKey-only — with no existing apiKey
+    named there is nothing to assign, and a contract value must never be sent instead."""
     provisioner, client = _br_provisioner("stg")
 
     await provisioner.provision_for_contracts(_CONTRACT_REFS)
 
     client.add_and_assign_api_key.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_an_existing_api_key_is_assigned_to_both_markup_rules():
+    """contract_br + "Existing apiKey": the conditions still match on the contracts, but
+    the apiKey is assigned to rules 3 and 4 so those conditions evaluate under it."""
+    provisioner, client = _br_provisioner("stg")
+
+    setup = await provisioner.provision_for_contracts(_CONTRACT_REFS, api_key="tj-htl-test-bookable")
+
+    assert [c.args for c in client.add_and_assign_api_key.await_args_list] == [
+        (3, "tj-htl-test-bookable"),
+        (4, "tj-htl-test-bookable"),
+    ]
+    # The conditions are unchanged — still contract-keyed, not apiKey-keyed.
+    contract_calls = [c.kwargs for c in client.create_condition.await_args_list]
+    assert [(c["rule_id"], c["input_detail_id"], c["input_value"]) for c in contract_calls] == [
+        (3, 30, "10103,10106"),
+        (4, 30, "10103,10106"),
+    ]
+    assert setup["status"] == "SUCCESS"
+    assert setup["rules"]["3"]["rule_config_id"] == "rule-config-1"
+    assert setup["rules"]["4"]["rule_config_id"] == "rule-config-1"
+
+
+def _rule_config(config_id, api_key):
+    return {"id": config_id, "apiKey": {"name": api_key}}
+
+
+@pytest.mark.asyncio
+async def test_the_assignment_is_removed_on_teardown():
+    """The bug this guards: deleting only the id create-assign returned left the apiKey
+    still attached to the rules. Teardown deletes whatever appeared for that apiKey."""
+    provisioner, client = _br_provisioner("stg", condition_ids=[901, 902])
+    key = "tj-htl-test-bookable"
+    # Nothing on either rule before; one config each afterwards.
+    client.get_rule_configs = AsyncMock(side_effect=[[], [], [_rule_config("rc-3", key)], [_rule_config("rc-4", key)]])
+    setup = await provisioner.provision_for_contracts(_CONTRACT_REFS, api_key=key)
+
+    assert setup["preexisting_rule_config_ids"] == {"3": [], "4": []}
+
+    # api_key=None, exactly as teardown_scenario passes it for an external apiKey.
+    result = await provisioner.cleanup(setup, None)
+
+    assert result["status"] == "SUCCESS"
+    assert [c.args[0] for c in client.delete_rule_config.await_args_list] == ["rc-3", "rc-4"]
+
+
+@pytest.mark.asyncio
+async def test_a_rule_config_that_was_already_there_survives_teardown():
+    """The apiKey is someone else's: only what THIS scenario added comes off it."""
+    provisioner, client = _br_provisioner("stg", condition_ids=[901, 902])
+    key = "tj-htl-test-bookable"
+    theirs = _rule_config("rc-theirs", key)
+    client.get_rule_configs = AsyncMock(
+        side_effect=[
+            [theirs], [],                                  # snapshot: rule 3 already had one
+            [theirs, _rule_config("rc-ours", key)], [],    # teardown: ours is the new one
+        ]
+    )
+    setup = await provisioner.provision_for_contracts(_CONTRACT_REFS, api_key=key)
+
+    await provisioner.cleanup(setup, None)
+
+    deleted = [c.args[0] for c in client.delete_rule_config.await_args_list]
+    assert "rc-theirs" not in deleted
+    # Rule 4's diff is empty, so it falls back to the id create-assign returned.
+    assert deleted == ["rc-ours", "rule-config-1"]
+
+
+@pytest.mark.asyncio
+async def test_a_scenario_with_no_snapshot_falls_back_to_the_stored_id():
+    """Scenarios created before the snapshot existed still tear down: no snapshot means
+    the sweep cannot tell ours from theirs, so only the stored id is deleted."""
+    provisioner, client = _br_provisioner("stg")
+    setup = {
+        "mode": "contract",
+        "assigned_api_key": "tj-htl-test-bookable",
+        "contract_condition_ids": ["901"],
+        "rules": {"3": {"rule_config_id": "rc-3"}, "4": {"rule_config_id": "rc-4"}},
+        "errors": [],
+    }
+
+    await provisioner.cleanup(setup, None)
+
+    assert [c.args[0] for c in client.delete_rule_config.await_args_list] == ["rc-3", "rc-4"]
+    client.get_rule_configs.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_no_rule_configs_are_deleted_when_no_api_key_was_assigned():
+    provisioner, client = _br_provisioner("stg", condition_ids=[901, 902])
+    setup = await provisioner.provision_for_contracts(_CONTRACT_REFS)
+
+    await provisioner.cleanup(setup, None)
+
+    client.delete_rule_config.assert_not_awaited()
 
 
 @pytest.mark.asyncio

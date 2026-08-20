@@ -48,7 +48,9 @@ export const PROVISIONING_DEPTHS: { value: ProvisioningDepth; label: string; hin
   {
     value: 'contract_br',
     label: 'Mocks + contract, contract → BR',
-    hint: 'Also assigns the contract to the Static/Dynamic Markup rules. No apiKey is created.',
+    hint:
+      'Also assigns the contract to the Static/Dynamic Markup rules. No apiKey is created — ' +
+      'an existing one given below is assigned to those two rules as well.',
   },
   {
     value: 'full',

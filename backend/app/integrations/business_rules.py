@@ -259,7 +259,11 @@ class CrawlaBusinessRulesProvisioner:
                 created.append(child_id)
         return {"rule_id": DYNAMIC_MARKUP_RULE_ID, "template_child_condition_ids": created}
 
-    async def provision_for_contracts(self, contracts: list[dict[str, Any]]) -> dict[str, Any]:
+    async def provision_for_contracts(
+        self,
+        contracts: list[dict[str, Any]],
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
         """Assign CONTRACTS (not an apiKey) to the markup rules — the contract_br depth.
 
         Deliberately the SAME setup as provision(): the same two rules, the same parent
@@ -268,8 +272,15 @@ class CrawlaBusinessRulesProvisioner:
         inputDetailId CONTRACT_INPUT_DETAIL_ID (30, "contractId IN") with the contract id
         list as inputValue, instead of 26 with the apiKey.
 
-        The apiKey path's rule-CONFIG assignment (POST /v1/apikeys/create-assign/rule/...)
-        has no contract equivalent and is skipped; only the conditions differ per input.
+        The conditions match on the contracts, but the rules still have to KNOW the
+        apiKey the search will run under, so when the caller named an existing one
+        (`api_key`) it is also assigned to both rules via the apiKey path's rule-CONFIG
+        call (POST /v1/apikeys/create-assign/rule/...). Without an existing apiKey there
+        is nothing to assign and that step is skipped, as before.
+
+        Only the rule-configs THIS scenario created are torn down (by their stored ids) —
+        an existing apiKey may carry other people's rule-configs, so cleanup never sweeps
+        it by name the way the `full` depth does with its own apiKey.
 
         field-maps/br_contract_conditions.json remains an optional per-env OVERRIDE for
         sites whose ids differ from the constants; with no entry, the mirrored path above
@@ -283,6 +294,9 @@ class CrawlaBusinessRulesProvisioner:
             "status": "SUCCESS",
             "mode": "contract",
             "contracts": [c.get("uid") or c.get("id") for c in contracts],
+            # NOT "api_key": cleanup() falls back to setup["api_key"] and would then run
+            # the by-name rule-config sweep against an apiKey that isn't ours.
+            "assigned_api_key": api_key,
             "rules": {},
             "contract_condition_ids": [],
             "errors": [],
@@ -319,6 +333,16 @@ class CrawlaBusinessRulesProvisioner:
         input_values = [separator.join(values)] if value_mode == "join" else values
         setup["input_values"] = input_values
         async with self.client:
+            # Same first step as the apiKey path: put the apiKey on both markup rules,
+            # so the contract conditions below evaluate under it.
+            if api_key:
+                setup["preexisting_rule_config_ids"] = await self._snapshot_rule_configs(api_key)
+                await self._run_step(
+                    setup, "assign_static", self._assign_rule, STATIC_MARKUP_RULE_ID, api_key
+                )
+                await self._run_step(
+                    setup, "assign_dynamic", self._assign_rule, DYNAMIC_MARKUP_RULE_ID, api_key
+                )
             if payloads:
                 # Per-env override: raw bodies straight from the field-map.
                 for input_value in input_values:
@@ -470,11 +494,21 @@ class CrawlaBusinessRulesProvisioner:
         # while a child still references it (same constraint the template child
         # conditions hit). Reverse creation order is therefore children-first.
         contract_condition_ids = list(reversed((setup or {}).get("contract_condition_ids") or []))
-        if contract_condition_ids:
+        # The apiKey the contract path assigned to the markup rules. It is an EXISTING
+        # apiKey, so the rule-configs come off it on teardown even though the key itself
+        # survives — see _contract_rule_config_ids for which ones are ours to delete.
+        assigned_api_key = str((setup or {}).get("assigned_api_key") or "")
+        if contract_condition_ids or assigned_api_key:
             async with self.client:
                 for condition_id in contract_condition_ids:
                     await self._cleanup_step(
                         result, "delete_contract_condition", self.client.delete_condition, str(condition_id)
+                    )
+                for rule_config_id in await self._contract_rule_config_ids(
+                    result, setup or {}, assigned_api_key
+                ):
+                    await self._cleanup_step(
+                        result, "delete_rule_config", self.client.delete_rule_config, rule_config_id
                     )
                 await self._cleanup_step(result, "refresh", self.client.refresh)
             if result["errors"]:
@@ -513,6 +547,65 @@ class CrawlaBusinessRulesProvisioner:
             result["status"] = "FAILED"
             result["warning"] = "BR cleanup failed"
         return result
+
+    async def _contract_rule_config_ids(
+        self,
+        result: dict[str, Any],
+        setup: dict[str, Any],
+        api_key: str,
+    ) -> list[str]:
+        """Which rule-configs to delete for a contract_br scenario that assigned an
+        existing apiKey to the markup rules.
+
+        Preferred source is the diff against the pre-assign snapshot: whatever the rule
+        holds for this apiKey NOW that it did not hold before we ran. That is what makes
+        the deletion safe on a shared apiKey — a rule-config someone else put there is in
+        the snapshot and therefore never touched.
+
+        The id captured from the create-assign response is only a fallback, for a rule
+        with no snapshot (a scenario created before snapshots existed, or a failed read)
+        or one whose diff came back empty. It is a fallback rather than the primary
+        because BR's create-assign response does not reliably carry the ruleConfig id —
+        relying on it is what left the assignment behind.
+        """
+        if not api_key:
+            return []
+        snapshot = setup.get("preexisting_rule_config_ids") or {}
+        ids: list[str] = []
+        for rule_id in (STATIC_MARKUP_RULE_ID, DYNAMIC_MARKUP_RULE_ID):
+            added: list[str] = []
+            if str(rule_id) in snapshot:
+                before = {str(config_id) for config_id in snapshot[str(rule_id)] or []}
+                try:
+                    current = await self._find_rule_config_ids(rule_id, api_key)
+                except Exception as exc:  # noqa: BLE001 - teardown continues best-effort
+                    logger.exception("Could not list rule configs rule=%s", rule_id)
+                    result["errors"].append({"step": "find_rule_config", "message": str(exc)})
+                    current = []
+                added = [config_id for config_id in current if config_id not in before]
+            if not added:
+                stored = _rule_data(setup, rule_id).get("rule_config_id")
+                added = [str(stored)] if stored else []
+            ids.extend(added)
+        return list(dict.fromkeys(ids))
+
+    async def _snapshot_rule_configs(self, api_key: str) -> dict[str, list[str]]:
+        """What the (existing, not ours) apiKey ALREADY has on the two markup rules.
+
+        Teardown deletes today's list minus this one, so a rule-config that was on the
+        apiKey before this scenario ran is left exactly as we found it. A rule whose
+        read fails is simply left out of the snapshot — cleanup then falls back to the
+        id stored at assign time rather than guessing.
+        """
+        snapshot: dict[str, list[str]] = {}
+        for rule_id in (STATIC_MARKUP_RULE_ID, DYNAMIC_MARKUP_RULE_ID):
+            try:
+                snapshot[str(rule_id)] = await self._find_rule_config_ids(rule_id, api_key)
+            except Exception:  # noqa: BLE001 - a failed snapshot must not fail provisioning
+                logger.exception(
+                    "Could not snapshot existing rule configs rule=%s apiKey=%s", rule_id, api_key
+                )
+        return snapshot
 
     async def _assign_rule(self, rule_id: int, api_key: str) -> dict[str, Any]:
         response = await self.client.add_and_assign_api_key(rule_id, api_key)
@@ -553,6 +646,10 @@ class CrawlaBusinessRulesProvisioner:
             configured_api_key = config.get("apiKey")
             if isinstance(configured_api_key, dict):
                 name = str(configured_api_key.get("name") or configured_api_key.get("apikey") or "")
+            elif isinstance(configured_api_key, str) and configured_api_key:
+                # BR has also answered with apiKey as a bare name; missing it here made
+                # the config invisible to cleanup, which then deleted nothing.
+                name = configured_api_key
             else:
                 name = str(config.get("apiKeyName") or config.get("apikey") or "")
             if name.lower() == api_key.lower():
