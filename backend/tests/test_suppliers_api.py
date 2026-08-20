@@ -127,10 +127,11 @@ def test_seed_preserves_per_supplier_behaviour_flags(api_client):
 
 
 def test_seed_is_idempotent(api_client):
-    from app.db.database import get_session_factory
+    """Seeding runs on every boot, so a second pass must insert nothing."""
+    from app.db.database import get_store
     from app.db.seed_suppliers import seed_suppliers
 
-    assert seed_suppliers(get_session_factory()) == 0
+    assert seed_suppliers(get_store()) == 0
 
 
 # ── CRUD ───────────────────────────────────────────────────────────────────────
@@ -205,27 +206,25 @@ def test_delete_supplier_blocked_while_a_scenario_uses_it(api_client):
     """Deleting it would orphan the scenario's expectations and contracts."""
     import uuid
 
-    from app.db.database import get_session_factory
+    from app.db.database import get_store
     from app.db.models import ScenarioRecord
 
     api_client.post("/api/suppliers", json=NEW_SUPPLIER, headers=DEV)
-    with get_session_factory()() as session:
-        session.add(
-            ScenarioRecord(
-                id=str(uuid.uuid4()),
-                namespace="uses-tst",
-                status="READY",
-                env="dev",
-                request_json={},
-                contracts_json={},
-                booking_ids_json={},
-                suppliers_json=["TST"],
-                check_in="2026-09-01",
-                check_out="2026-09-03",
-                hotel_id="1446194",
-            )
+    get_store().scenarios.save(
+        ScenarioRecord(
+            id=str(uuid.uuid4()),
+            namespace="uses-tst",
+            status="READY",
+            env="dev",
+            request_json={},
+            contracts_json={},
+            booking_ids_json={},
+            suppliers_json=["TST"],
+            check_in="2026-09-01",
+            check_out="2026-09-03",
+            hotel_id="1446194",
         )
-        session.commit()
+    )
 
     response = api_client.delete("/api/suppliers/TST", headers=DEV)
     assert response.status_code == 409
@@ -289,10 +288,11 @@ def test_probe_builds_every_log_type_for_a_new_supplier(api_client, tst_template
     assert probe["plugin"] == "generic"
     assert {r["log_type"] for r in probe["log_types"]} == set(NEW_SUPPLIER["log_types"])
     paths = {r["log_type"]: r["path"] for r in probe["log_types"]}
-    # path_rewrite pins each log type onto canonical base + suffix.
-    assert paths["Search"] == "/tst/api/v1/distribution/search"
-    assert paths["Packages"] == "/tst/api/v1/distribution/details"
-    assert paths["CancelOrder"] == "/tst/api/v1/accommodation/cancel"
+    # path_rewrite pins each log type onto canonical base + suffix, and every mock path
+    # is then prefixed with the scenario namespace so concurrent scenarios stay apart.
+    assert paths["Search"] == "/smf-probe-tst/tst/api/v1/distribution/search"
+    assert paths["Packages"] == "/smf-probe-tst/tst/api/v1/distribution/details"
+    assert paths["CancelOrder"] == "/smf-probe-tst/tst/api/v1/accommodation/cancel"
 
 
 def test_probe_reports_the_failure_instead_of_raising(api_client):

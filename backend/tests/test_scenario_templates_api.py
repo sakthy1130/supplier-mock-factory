@@ -34,6 +34,26 @@ class TestScenarioTemplatesApi:
         assert len(items) == 1
         assert items[0]["id"] == created["id"]
 
+    def test_sb_fields_round_trip(self, api_client):
+        payload = _template_payload("SbTemplate")
+        payload["sb_enabled"] = True
+        payload["suppliers"][0]["assignment_target"] = "both"
+        payload["suppliers"][1]["assignment_target"] = "sbgroup"
+        created = api_client.post("/api/scenario-templates", json=payload).json()
+        assert created["sb_enabled"] is True
+        assert created["suppliers"][0]["assignment_target"] == "both"
+        assert created["suppliers"][1]["assignment_target"] == "sbgroup"
+
+        fetched = api_client.get("/api/scenario-templates").json()
+        row = next(t for t in fetched if t["id"] == created["id"])
+        assert row["sb_enabled"] is True
+        assert row["suppliers"][0]["assignment_target"] == "both"
+
+    def test_sb_defaults_when_absent(self, api_client):
+        created = api_client.post("/api/scenario-templates", json=_template_payload("Plain")).json()
+        assert created["sb_enabled"] is False
+        assert created["suppliers"][0]["assignment_target"] == "apikey"
+
     def test_create_rejects_empty_packages(self, api_client):
         payload = _template_payload()
         payload["suppliers"][0]["packages"] = []
@@ -46,11 +66,29 @@ class TestScenarioTemplatesApi:
         response = api_client.post("/api/scenario-templates", json=payload)
         assert response.status_code == 422
 
-    def test_create_rejects_duplicate_supplier(self, api_client):
+    def test_create_accepts_the_same_supplier_twice(self, api_client):
+        """A supplier may repeat: each entry becomes its own scenario instance
+        ("EXP" then "EXP-2") with its own packages and contract. This used to 422."""
         payload = _template_payload()
-        payload["suppliers"].append(dict(payload["suppliers"][0]))
+        original_count = len(payload["suppliers"])
+        second = dict(payload["suppliers"][0])
+        repeated_code = second["supplier"]
+        second["packages"] = [dict(row, price=row["price"] + 500) for row in second["packages"]]
+        payload["suppliers"].append(second)
+
         response = api_client.post("/api/scenario-templates", json=payload)
-        assert response.status_code == 422
+        assert response.status_code == 201, response.text
+
+        created = response.json()
+        assert len(created["suppliers"]) == original_count + 1
+        repeats = [e for e in created["suppliers"] if e["supplier"] == repeated_code]
+        assert len(repeats) == 2
+        assert repeats[1]["packages"][0]["price"] == repeats[0]["packages"][0]["price"] + 500
+
+        # And it survives a round-trip through storage.
+        fetched = api_client.get("/api/scenario-templates").json()
+        stored = next(t for t in fetched if t["id"] == created["id"])
+        assert [e["supplier"] for e in stored["suppliers"]].count(repeated_code) == 2
 
     def test_create_rejects_blank_hotel_id(self, api_client):
         # A silently-blank hotel id used to fall back to the wizard's default

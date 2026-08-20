@@ -46,14 +46,37 @@ class SupplierCode(str):
         return cls(code)
 
 
-class SBGroupConfiguration(BaseModel):
-    """Controls which attributes SB enforces when matching packages."""
+class AssignmentTarget(str, Enum):
+    """Where a supplier's contract is attached when SmartBooking is enabled."""
 
-    board: bool = Field(default=False, description="Enforce matching meal basis")
-    cancellation_policy: bool = Field(default=False, description="Enforce matching refundability")
+    apikey = "apikey"
+    sbgroup = "sbgroup"
+    both = "both"
+
+
+class ProvisioningDepth(str, Enum):
+    """How far scenario creation goes past the mocks and contracts.
+
+    ``full`` is the historical behaviour and stays the default, so existing callers
+    (wizard, automation API, saved templates) keep working with no payload change.
+    """
+
+    contract_only = "contract_only"  # mocks + contract
+    contract_br = "contract_br"      # mocks + contract, contract assigned to the BR rules
+    full = "full"                    # mocks + contract + a NEW apiKey (+ apiKey -> BR)
+
+
+class SBGroupConfiguration(BaseModel):
+    """Controls which attributes SB enforces when matching packages. These drive
+    the TOP-LEVEL config fields the SB engine reads; defaults mirror the known-
+    working reference config (survey type/view off so a differently-typed group
+    package can still be matched)."""
+
+    board: bool = Field(default=True, description="Enforce matching meal basis")
+    cancellation_policy: bool = Field(default=True, description="Enforce matching refundability")
     survey1_class: bool = Field(default=True)
-    survey1_type: bool = Field(default=True)
-    survey1_view: bool = Field(default=True)
+    survey1_type: bool = Field(default=False)
+    survey1_view: bool = Field(default=False)
     survey1_bedding: bool = Field(default=True)
 
 
@@ -62,13 +85,15 @@ class SBScenarioConfig(BaseModel):
 
     enable_profitable_sb: bool = Field(default=True, description="Enable SB feature on the apiKey")
     enable_retry_sb: bool = Field(default=False, description="Configure retry SB error codes")
-    forfeit_amount: float = Field(default=50.0, description="ignoreDeltaProfitAmount — flat forfeit threshold")
-    price_margin_percentage: str = Field(default="0", description="priceMarginPercentage")
-    consider_original_package: bool = Field(default=False)
+    forfeit_amount: float = Field(default=0.0, description="ignoreDeltaProfitAmount — flat forfeit threshold")
+    price_margin_percentage: str = Field(default="50", description="priceMarginPercentage")
+    consider_original_package: bool = Field(default=True)
     winning_packages_enabled: bool = Field(default=False)
     fetch_cancellation_policy_for_excluded: bool = Field(default=True)
     consider_same_vat_groups: str = Field(default="")
     enable_new_session: bool = Field(default=True)
+    include_new_session: bool = Field(default=False, description="includeNewSession (distinct from enableNewSession)")
+    price_margin_to_upgrade: str = Field(default="50", description="priceMarginToUpgrade (nested price block)")
     group_configuration: SBGroupConfiguration = Field(default_factory=SBGroupConfiguration)
     retry_error_codes: list[str] = Field(
         default_factory=list,
@@ -117,6 +142,15 @@ class PackageSpec(BaseModel):
         default_factory=list,
         description="Refundable flag per package; defaults to false if shorter than count",
     )
+    booking_package_index: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description=(
+            "0-based index of the package the Booking/GetOrder flow links to. "
+            "None means no booking flow is created for this supplier — only "
+            "Search/Packages (and PreBooking/CancellationPolicy where present)."
+        ),
+    )
     # Occupancy the mocked rates advertise. Derby BTS drops every rate whose occupancy
     # does not match the search request (adultCount + childCount + childAges), returning
     # zero results and no error, so this has to line up with how the search is run.
@@ -160,9 +194,35 @@ class PackageSpec(BaseModel):
             return [value]
         return value
 
+    @model_validator(mode="after")
+    def _validate_booking_package_index(self) -> "PackageSpec":
+        if self.booking_package_index is not None and self.booking_package_index >= self.count:
+            raise ValueError(
+                f"booking_package_index {self.booking_package_index} out of range "
+                f"for {self.count} package(s)"
+            )
+        return self
+
+
+def instance_key_for(supplier_code: str, instance: int) -> str:
+    """Key that identifies one supplier ENTRY in a scenario.
+
+    A scenario may carry the same supplier more than once (e.g. two EXP contracts
+    at different prices), so supplier code alone can no longer key contracts,
+    expectation ids or mock paths. The first instance keeps the bare code, which
+    means every single-instance scenario — including every record already stored —
+    keeps byte-identical ids, paths and contract uids.
+    """
+    if instance <= 1:
+        return supplier_code
+    return f"{supplier_code}-{instance}"
+
 
 class SupplierScenario(BaseModel):
     code: SupplierCode = Field(description="Supplier code as configured in the suppliers table")
+    # Assigned server-side by ScenarioRequest._assign_supplier_instances: 1 for the
+    # first entry of a code, 2 for the second, and so on. Callers do not set it.
+    instance: int = Field(default=1, ge=1, description="Occurrence of this supplier code (1-based)")
     packages: PackageSpec
     contract_currency: str = Field(
         default="USD",
@@ -170,11 +230,23 @@ class SupplierScenario(BaseModel):
         max_length=3,
         description="ISO 4217 currency code for the contract; defaults to USD",
     )
+    assignment_target: AssignmentTarget = Field(
+        default=AssignmentTarget.apikey,
+        description=(
+            "Where this supplier's contract is attached when SmartBooking is on: "
+            "apikey (only the apiKey), sbgroup (only the SB group), or both. "
+            "Ignored when SB is off (contract always goes to the apiKey)."
+        ),
+    )
 
     @field_validator("contract_currency")
     @classmethod
     def _upper_contract_currency(cls, value: str) -> str:
         return value.strip().upper()
+
+    @property
+    def instance_key(self) -> str:
+        return instance_key_for(self.code.value, self.instance)
 
 
 
@@ -209,10 +281,34 @@ class ScenarioRequest(BaseModel):
     suppliers: list[SupplierScenario] = Field(min_length=1)
     supplier_mutations: dict[str, SupplierMutation] = Field(default_factory=dict)
     crawla_export: Optional[dict[str, Any]] = None
+    # Simple UI toggle: when true (and sb_config is not explicitly supplied), a
+    # default SBScenarioConfig is materialized so the existing sb_config-gated
+    # provisioning path runs. Advanced callers can still pass a full sb_config.
+    sb_enabled: bool = Field(
+        default=False,
+        description="Create the apiKey with SmartBooking enabled (materializes a default sb_config).",
+    )
     # SB config — Optional. When absent, existing flow runs unchanged.
     sb_config: Optional[SBScenarioConfig] = Field(
         default=None,
         description="Smart Booking provisioning config. Omit for non-SB scenarios.",
+    )
+    provisioning_depth: ProvisioningDepth = Field(
+        default=ProvisioningDepth.full,
+        description=(
+            "How far provisioning goes: contract_only (mocks + contract), contract_br "
+            "(also assigns the contract to the BR rules), or full (also creates a new "
+            "apiKey and assigns THAT to BR). Default full = historical behaviour."
+        ),
+    )
+    existing_api_key: Optional[str] = Field(
+        default=None,
+        description=(
+            "Optional apiKey (uid) that already exists: the scenario's contracts are "
+            "attached to it instead of creating a new apiKey. Only used by the "
+            "contract_only / contract_br depths; ignored for full. SMF never deletes "
+            "an apiKey it did not create — teardown just detaches the contracts."
+        ),
     )
     assign_to_br: bool = Field(
         default=True,
@@ -222,9 +318,107 @@ class ScenarioRequest(BaseModel):
             "regardless of this flag; it only gates the plain scenario-wizard flow."
         ),
     )
+    template_id: Optional[str] = Field(
+        default=None,
+        description=(
+            "Scenario template id this request originated from, if any (set by the "
+            "run-template automation API or the UI's create-from-custom-template flow). "
+            "Used to look up per-template child BR conditions in field-maps/br_child_conditions.json."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _assign_supplier_instances(self) -> "ScenarioRequest":
+        """Number repeated supplier codes 1, 2, 3… in the order they were sent.
+
+        Always recomputed from position so a caller cannot hand us colliding
+        instance numbers, and so an old payload (no instance field) still lands on
+        instance=1 and keeps its existing keys.
+        """
+        seen: dict[str, int] = {}
+        for supplier in self.suppliers:
+            code = supplier.code.value
+            seen[code] = seen.get(code, 0) + 1
+            supplier.instance = seen[code]
+        return self
+
+    @model_validator(mode="after")
+    def _validate_provisioning_depth(self) -> "ScenarioRequest":
+        """Reject depth/flag combinations that cannot be honoured.
+
+        Silently ignoring them is worse than failing: a dropped sb_enabled reads as
+        "SmartBooking is broken" rather than "that depth has no apiKey to put it on".
+        """
+        if self.provisioning_depth is not ProvisioningDepth.full:
+            if self.sb_enabled or self.sb_config is not None:
+                raise ValueError(
+                    "SmartBooking needs a new apiKey to attach to — it requires "
+                    "provisioning_depth='full'."
+                )
+            if self.crawla_export:
+                # Crawla scenarios drive BR off the apiKey (see orchestrator step 6).
+                raise ValueError("Crawla-exported scenarios require provisioning_depth='full'.")
+        elif self.existing_api_key:
+            raise ValueError(
+                "existing_api_key only applies to provisioning_depth "
+                "'contract_only' or 'contract_br' — 'full' creates its own apiKey."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _resolve_smart_booking(self) -> "ScenarioRequest":
+        # Materialize a default SB config when the simple toggle is on.
+        if self.sb_enabled and self.sb_config is None:
+            self.sb_config = SBScenarioConfig()
+        # When SB is active, at least one supplier must feed the SB group, or the
+        # group would be created empty.
+        if self.sb_config is not None:
+            has_group_member = any(
+                supplier.assignment_target in (AssignmentTarget.sbgroup, AssignmentTarget.both)
+                for supplier in self.suppliers
+            )
+            if not has_group_member:
+                raise ValueError(
+                    "SmartBooking is enabled but no supplier targets the SB group; "
+                    "set at least one supplier's assignment_target to 'sbgroup' or 'both'."
+                )
+        return self
 
     def hotel_id_for_supplier(self, supplier_code: str) -> str:
         return self.supplier_hotel_ids.get(supplier_code, self.atg_hotel_id)
+
+    def apikey_contract_codes(self) -> list[str]:
+        """Supplier codes whose contract should attach to the apiKey.
+
+        With SB off, every supplier's contract goes to the apiKey (unchanged
+        behavior). With SB on, only apikey/both targets do.
+        """
+        if self.sb_config is None:
+            return [s.instance_key for s in self.suppliers]
+        return [
+            s.instance_key
+            for s in self.suppliers
+            if s.assignment_target in (AssignmentTarget.apikey, AssignmentTarget.both)
+        ]
+
+    def sbgroup_contract_codes(self) -> list[str]:
+        """Instance keys whose contract should attach to the SB group."""
+        return [
+            s.instance_key
+            for s in self.suppliers
+            if s.assignment_target in (AssignmentTarget.sbgroup, AssignmentTarget.both)
+        ]
+
+    def instance_keys(self) -> list[str]:
+        """Every supplier entry's key, for teardown and persistence."""
+        return [s.instance_key for s in self.suppliers]
+
+    def mutation_for(self, supplier: SupplierScenario) -> Optional[SupplierMutation]:
+        """Crawla mutations are addressed by instance key, falling back to the bare
+        supplier code so existing single-instance callers keep working."""
+        return self.supplier_mutations.get(supplier.instance_key) or (
+            self.supplier_mutations.get(supplier.code.value) if supplier.instance == 1 else None
+        )
 
 
 class ScenarioBundle(BaseModel):
@@ -234,6 +428,10 @@ class ScenarioBundle(BaseModel):
     status: ScenarioStatus = ScenarioStatus.PENDING
     api_key: Optional[str] = None
     api_key_id: Optional[str] = None
+    # True when api_key refers to a PRE-EXISTING apiKey the scenario only attached its
+    # contracts to. Teardown must then detach instead of deleting — this flag is the
+    # only thing standing between a cleanup and someone else's shared apiKey.
+    api_key_is_external: bool = False
     contracts: dict[str, str] = Field(default_factory=dict)
     booking_ids: dict[str, str] = Field(default_factory=dict)
     check_in: str

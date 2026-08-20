@@ -172,7 +172,11 @@ def test_hbs_propagate_package_linkage_syncs_prebook_price():
     assert prebook["httpRequest"]["body"]["json"]["rooms"][0]["rateKey"] == pkg_rate_key
     assert prebook_rate["rateKey"] == pkg_rate_key
     assert prebook_rate["net"] == "100.0"
-    assert prebook_rate["cancellationPolicies"][0]["amount"] == "100.0"
+    # PreBooking CP must be identical to the selected Packages rate CP (zero drift),
+    # so the adapter's prebooking-vs-packages CP check passes. For a refundable rate
+    # that means amount "0" (free cancellation), not the net.
+    pkg_rate = packages["httpResponse"]["body"]["hotels"]["hotels"][0]["rooms"][0]["rates"][0]
+    assert prebook_rate["cancellationPolicies"] == pkg_rate["cancellationPolicies"]
 
 
 def test_hbs_applies_uniform_room_name_on_search_packages_prebook():

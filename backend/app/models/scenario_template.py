@@ -7,7 +7,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.models.scenario import SupplierCode
+from app.models.scenario import AssignmentTarget, SupplierCode
 
 
 class TemplatePackageRow(BaseModel):
@@ -27,6 +27,7 @@ class SupplierTemplatePackages(BaseModel):
     supplier_currency: str = Field(default="SAR", min_length=3, max_length=3)
     contract_currency: str = Field(default="USD", min_length=3, max_length=3)
     packages: list[TemplatePackageRow] = Field(min_length=1)
+    assignment_target: AssignmentTarget = AssignmentTarget.apikey
 
 
 class ScenarioTemplateCreate(BaseModel):
@@ -37,7 +38,11 @@ class ScenarioTemplateCreate(BaseModel):
     # default when the template is opened, which reads as "the hotel id I gave
     # didn't import" rather than "I never set one" — reject it up front instead.
     atg_hotel_id: str = Field(min_length=1)
+    # A supplier MAY appear more than once: each entry becomes its own scenario
+    # supplier instance ("EXP" then "EXP-2"), with its own packages and contract.
+    # See app.models.scenario.instance_key_for.
     suppliers: list[SupplierTemplatePackages] = Field(min_length=1)
+    sb_enabled: bool = False
 
     @field_validator("atg_hotel_id")
     @classmethod
@@ -47,14 +52,6 @@ class ScenarioTemplateCreate(BaseModel):
             raise ValueError("atg_hotel_id must not be blank")
         return stripped
 
-    @field_validator("suppliers")
-    @classmethod
-    def _unique_suppliers(cls, value: list[SupplierTemplatePackages]) -> list[SupplierTemplatePackages]:
-        codes = [entry.supplier for entry in value]
-        if len(set(codes)) != len(codes):
-            raise ValueError("each supplier can only appear once per template")
-        return value
-
 
 class ScenarioTemplate(BaseModel):
     id: str
@@ -63,4 +60,9 @@ class ScenarioTemplate(BaseModel):
     function: Optional[str] = None
     atg_hotel_id: str
     suppliers: list[SupplierTemplatePackages]
+    sb_enabled: bool = False
     created_at: datetime
+    has_br_child_condition: bool = Field(
+        default=False,
+        description="True if this template has a per-template child BR condition configured for the current env.",
+    )

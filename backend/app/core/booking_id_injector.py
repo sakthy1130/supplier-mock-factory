@@ -122,7 +122,14 @@ class BookingIdInjector:
 
     @staticmethod
     def _apply_get_order_path(expectation: dict, supplier_code: str, booking_id: str) -> None:
-        """Retarget a GetOrder mock whose path carries the booking id (<base>/<id>)."""
+        """Retarget a GetOrder mock whose path carries the booking id (<base>/<id>).
+
+        Which suppliers do this, and on which segment, comes from the registry rather
+        than a hardcoded HBS branch. The path is already namespace-prefixed by the time
+        this runs (/{namespace}/hotel-api/1.2/bookings/GetOrderBooking), so match on the
+        trailing segment instead of the configured base — comparing against the base
+        would never hit. A path that already carries an id has it replaced, not appended.
+        """
         from app.services.supplier_service import UnknownSupplierError, get_supplier_config
 
         try:
@@ -132,8 +139,13 @@ class BookingIdInjector:
         if not mock_config.booking_id_in_get_order_path:
             return
 
-        base = mock_config.mock_path("GetOrder")
-        if not base:
+        # The segment the id hangs off: the configured suffix, else the last segment of
+        # the canonical GetOrder path.
+        suffix = (mock_config.mock_path_suffix.get("GetOrder") or "").strip("/")
+        if not suffix:
+            base_path = (mock_config.mock_path("GetOrder") or "").rstrip("/")
+            suffix = base_path.rsplit("/", 1)[-1] if base_path else ""
+        if not suffix:
             return
 
         http_request = expectation.get("httpRequest")
@@ -143,6 +155,10 @@ class BookingIdInjector:
         if not isinstance(path, str) or not path:
             return
 
-        suffix = mock_config.mock_path_suffix.get("GetOrder", "")
-        if path == base or (suffix and path.endswith(f"/{suffix}")) or path.startswith(f"{base}/"):
-            http_request["path"] = f"{base}/{booking_id}"
+        marker = f"/{suffix}"
+        if path.endswith(marker):
+            http_request["path"] = f"{path}/{booking_id}"
+            return
+        index = path.find(f"{marker}/")
+        if index != -1:
+            http_request["path"] = f"{path[: index + len(marker)]}/{booking_id}"

@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { resolveHotelMapping } from '../api/hotels'
-import type { ScenarioRequest, SupplierCode } from '../types/scenario'
-import { DEFAULT_ROOM_BASIS, DEFAULT_ROOM_NAME } from '../types/scenario'
+import { PROVISIONING_DEPTHS } from '../types/scenario'
+import type {
+  AssignmentTarget,
+  ProvisioningDepth,
+  ScenarioRequest,
+  SupplierCode,
+} from '../types/scenario'
+import { DEFAULT_ROOM_BASIS, DEFAULT_ROOM_NAME, DEFAULT_SUPPLIER_CURRENCIES } from '../types/scenario'
 import type { SupplierListItem } from '../api/client'
 
 function defaultNamespace() {
@@ -66,9 +72,22 @@ const DEFAULT_ENABLED_COUNT = 2
 export interface ScenarioWizardTemplate {
   atgHotelId?: string
   enabledSuppliers?: Partial<Record<SupplierCode, boolean>>
-  packages?: Partial<Record<SupplierCode, PackageRow[]>>
+  // Either one row set per supplier (older callers) or a LIST of row sets — one per
+  // supplier instance, for templates that carry the same supplier twice.
+  packages?: Partial<Record<SupplierCode, PackageRow[] | PackageRow[][]>>
   supplierCurrencies?: Partial<Record<SupplierCode, string>>
   contractCurrencies?: Partial<Record<SupplierCode, string>>
+  sbEnabled?: boolean
+  assignmentTargets?: Partial<Record<SupplierCode, AssignmentTarget>>
+}
+
+/** Accept a flat row set or a list of them, always yielding one entry per instance. */
+function templateInstances(
+  packages: PackageRow[] | PackageRow[][] | undefined,
+  fallback: () => PackageRow[],
+): PackageRow[][] {
+  if (!packages || packages.length === 0) return [fallback()]
+  return Array.isArray(packages[0]) ? (packages as PackageRow[][]) : [packages as PackageRow[]]
 }
 
 interface Props {
@@ -109,11 +128,15 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
       ]),
     ),
   )
-  const [supplierPackages, setSupplierPackages] = useState<Record<SupplierCode, PackageRow[]>>(() =>
+  // One entry per supplier INSTANCE: a supplier can be added more than once (two
+  // EXP contracts at different prices in one scenario), so each code holds a list
+  // of package-row sets rather than a single set. Templates carry one set, which
+  // becomes instance 1.
+  const [supplierPackages, setSupplierPackages] = useState<Record<SupplierCode, PackageRow[][]>>(() =>
     Object.fromEntries(
       availableSuppliers.map((s) => [
         s.code,
-        initialTemplate?.packages?.[s.code] ?? defaultPackageRows(3),
+        templateInstances(initialTemplate?.packages?.[s.code], () => defaultPackageRows(3)),
       ]),
     ),
   )
@@ -125,12 +148,54 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
       ]),
     ),
   )
+  // Which package row the Booking/GetOrder flow is built for, per supplier instance.
+  // null = no booking flow (only search + package mocks created).
+  // One slot per supplier instance — must stay the same length as supplierPackages,
+  // or toggling the Book radio on a template-loaded second instance would no-op.
+  const [bookingRow, setBookingRow] = useState<Record<SupplierCode, (number | null)[]>>(() =>
+    Object.fromEntries(
+      availableSuppliers.map((s) => [
+        s.code,
+        templateInstances(initialTemplate?.packages?.[s.code], () => []).map(() => null),
+      ]),
+    ),
+  )
   const [assignToBr, setAssignToBr] = useState(true)
+  // How far provisioning goes. 'full' keeps the historical behaviour.
+  const [depth, setDepth] = useState<ProvisioningDepth>('full')
+  const [existingApiKey, setExistingApiKey] = useState('')
+  // SmartBooking: create the apiKey with SB enabled, and per-supplier route each
+  // contract to the apiKey, the SB group, or both (default apikey).
+  const [sbEnabled, setSbEnabled] = useState(() => initialTemplate?.sbEnabled ?? false)
+  const [assignmentTargets, setAssignmentTargets] = useState<Record<SupplierCode, AssignmentTarget>>(() =>
+    Object.fromEntries(
+      availableSuppliers.map((s) => [s.code, initialTemplate?.assignmentTargets?.[s.code] ?? 'apikey']),
+    ),
+  )
   const [formError, setFormError] = useState<string | null>(null)
 
   const suppliers = useMemo(
     () => supplierCodes.filter((code) => enabledSuppliers[code]),
     [enabledSuppliers, supplierCodes],
+  )
+
+  // Flattened supplier entries in submit order. `label` mirrors the instance key the
+  // backend derives ("EXP", then "EXP-2"), so the summary line names what will
+  // actually be created.
+  const supplierEntries = useMemo(
+    () =>
+      suppliers.flatMap((code) =>
+        supplierPackages[code].map((_rows, instance) => ({
+          code,
+          instance,
+          label: instance === 0 ? code : `${code}-${instance + 1}`,
+        })),
+      ),
+    [suppliers, supplierPackages],
+  )
+  const supplierEntryLabels = useMemo(
+    () => supplierEntries.map((entry) => entry.label),
+    [supplierEntries],
   )
 
   useEffect(() => {
@@ -181,26 +246,82 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
     setContractCurrencies((prev) => ({ ...prev, [code]: value.toUpperCase().slice(0, 3) }))
   }
 
-  const updateRow = (code: SupplierCode, index: number, patch: Partial<PackageRow>) => {
-    setSupplierPackages((prev) => {
-      const rows = (prev[code] ?? []).map((row, i) => (i === index ? { ...row, ...patch } : row))
-      return { ...prev, [code]: rows }
-    })
+  const updateAssignmentTarget = (code: SupplierCode, value: AssignmentTarget) => {
+    setAssignmentTargets((prev) => ({ ...prev, [code]: value }))
   }
 
-  const addRow = (code: SupplierCode) => {
-    setSupplierPackages((prev) => {
-      const rows = prev[code] ?? []
+  // Replace one instance's row list, leaving the code's other instances untouched.
+  const setInstanceRows = (
+    code: SupplierCode,
+    instance: number,
+    next: (rows: PackageRow[]) => PackageRow[],
+  ) => {
+    setSupplierPackages((prev) => ({
+      ...prev,
+      [code]: prev[code].map((rows, i) => (i === instance ? next(rows) : rows)),
+    }))
+  }
+
+  const updateRow = (
+    code: SupplierCode,
+    instance: number,
+    index: number,
+    patch: Partial<PackageRow>,
+  ) => {
+    setInstanceRows(code, instance, (rows) =>
+      rows.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    )
+  }
+
+  const addRow = (code: SupplierCode, instance: number) => {
+    setInstanceRows(code, instance, (rows) => {
       const last = rows[rows.length - 1] ?? defaultPackageRow(rows.length)
-      return { ...prev, [code]: [...rows, { ...last }] }
+      return [...rows, { ...last }]
     })
   }
 
-  const removeRow = (code: SupplierCode, index: number) => {
+  const removeRow = (code: SupplierCode, instance: number, index: number) => {
+    setInstanceRows(code, instance, (rows) =>
+      rows.length <= 1 ? rows : rows.filter((_, i) => i !== index),
+    )
+    // Keep the booking selection pointing at the same row after removal.
+    setBookingRow((prev) => ({
+      ...prev,
+      [code]: prev[code].map((selected, i) => {
+        if (i !== instance || selected === null) return selected
+        if (selected === index) return null
+        if (selected > index) return selected - 1
+        return selected
+      }),
+    }))
+  }
+
+  // Radio-style selection: picking a row sets it; clicking the selected row
+  // again clears it (so "no booking flow" stays reachable).
+  const toggleBookingRow = (code: SupplierCode, instance: number, index: number) => {
+    setBookingRow((prev) => ({
+      ...prev,
+      [code]: prev[code].map((selected, i) =>
+        i === instance ? (selected === index ? null : index) : selected,
+      ),
+    }))
+  }
+
+  // A second (third, …) entry for the same supplier: its own package rows and its
+  // own booking selection, sharing the code's currencies and assignment target.
+  const addSupplierInstance = (code: SupplierCode) => {
+    setSupplierPackages((prev) => ({ ...prev, [code]: [...prev[code], defaultPackageRows(3)] }))
+    setBookingRow((prev) => ({ ...prev, [code]: [...prev[code], null] }))
+  }
+
+  const removeSupplierInstance = (code: SupplierCode, instance: number) => {
     setSupplierPackages((prev) => {
-      const rows = prev[code] ?? []
-      if (rows.length <= 1) return prev
-      return { ...prev, [code]: rows.filter((_, i) => i !== index) }
+      if ((prev[code] ?? []).length <= 1) return prev
+      return { ...prev, [code]: prev[code].filter((_, i) => i !== instance) }
+    })
+    setBookingRow((prev) => {
+      if ((prev[code] ?? []).length <= 1) return prev
+      return { ...prev, [code]: prev[code].filter((_, i) => i !== instance) }
     })
   }
 
@@ -211,6 +332,12 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
       setFormError('Select at least one supplier')
       return
     }
+    // SmartBooking needs at least one supplier feeding the SB group, else the
+    // group would be created empty (mirrors the backend guard).
+    if (depth === 'full' && sbEnabled && !suppliers.some((code) => assignmentTargets[code] !== 'apikey')) {
+      setFormError('SmartBooking is on — set at least one supplier to SbGroup or Both')
+      return
+    }
     try {
       const request: ScenarioRequest = {
         namespace: namespace.trim(),
@@ -218,23 +345,36 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
         check_out: checkOut,
         atg_hotel_id: atgHotelId.trim(),
         supplier_hotel_ids: supplierHotelIds,
-        suppliers: suppliers.map((code) => {
-          const rows = supplierPackages[code] ?? []
-          const parsed = parseRows(code, rows)
-          return {
-            code,
-            contract_currency: contractCurrencies[code] || 'USD',
-            packages: {
-              count: rows.length,
-              room_basis: parsed.room_basis,
-              room_names: parsed.room_names,
-              supplier_currency: supplierCurrencies[code] || 'USD',
-              prices: parsed.prices,
-              refundable: parsed.refundable,
-            },
-          }
-        }),
-        assign_to_br: assignToBr,
+        // One entry per supplier instance, in order — the backend numbers repeated
+        // codes 1, 2, 3… from this ordering and keys contracts/mocks accordingly.
+        suppliers: suppliers.flatMap((code) =>
+          (supplierPackages[code] ?? []).map((rows, instance) => {
+            const parsed = parseRows(code, rows)
+            return {
+              code,
+              contract_currency: contractCurrencies[code] || 'USD',
+              assignment_target: assignmentTargets[code] ?? 'apikey',
+              packages: {
+                count: rows.length,
+                room_basis: parsed.room_basis,
+                room_names: parsed.room_names,
+                // Configured suppliers carry their own default; the per-code constant
+                // only covers the built-in five.
+                supplier_currency:
+                  supplierCurrencies[code] || DEFAULT_SUPPLIER_CURRENCIES[code] || 'USD',
+                prices: parsed.prices,
+                refundable: parsed.refundable,
+                booking_package_index: bookingRow[code]?.[instance] ?? null,
+              },
+            }
+          }),
+        ),
+        provisioning_depth: depth,
+        // The backend rejects these outside 'full' rather than ignoring them, so don't
+        // send stale values from a depth the user switched away from.
+        assign_to_br: depth === 'full' ? assignToBr : false,
+        sb_enabled: depth === 'full' ? sbEnabled : false,
+        existing_api_key: depth === 'full' ? null : existingApiKey.trim() || null,
       }
       await onSubmit(request)
     } catch (err) {
@@ -313,7 +453,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
         <div className="supplier-tiles supplier-tiles-wide">
           {availableSuppliers.map((meta) => {
             const enabled = enabledSuppliers[meta.code] ?? false
-            const rows = supplierPackages[meta.code] ?? []
+            const instances = supplierPackages[meta.code] ?? []
             return (
               <div
                 key={meta.code}
@@ -359,51 +499,107 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                       </select>
                     </label>
 
-                    <div className="package-rows">
-                      <div className="package-row package-row-head">
-                        <span>Room basis</span>
-                        <span>Room name</span>
-                        <span>Price</span>
-                        <span>Refundable</span>
-                        <span />
-                      </div>
-                      {rows.map((row, index) => (
-                        <div key={index} className="package-row">
-                          <input
-                            value={row.roomBasis}
-                            onChange={(e) => updateRow(meta.code, index, { roomBasis: e.target.value.toUpperCase() })}
-                            placeholder="RO"
-                          />
-                          <input
-                            value={row.roomName}
-                            onChange={(e) => updateRow(meta.code, index, { roomName: e.target.value })}
-                            placeholder={DEFAULT_ROOM_NAME}
-                          />
-                          <input
-                            type="number"
-                            value={row.price}
-                            onChange={(e) => updateRow(meta.code, index, { price: e.target.value })}
-                            placeholder="100"
-                          />
-                          <input
-                            type="checkbox"
-                            checked={row.refundable}
-                            onChange={(e) => updateRow(meta.code, index, { refundable: e.target.checked })}
-                          />
-                          <button
-                            type="button"
-                            className="btn ghost package-row-remove"
-                            onClick={() => removeRow(meta.code, index)}
-                            disabled={rows.length <= 1}
-                            title="Remove package"
-                          >
-                            ×
-                          </button>
+                    {sbEnabled && (
+                      <label className="supplier-tile-field" style={{ maxWidth: '160px' }}>
+                        Contract goes to
+                        <select
+                          value={assignmentTargets[meta.code]}
+                          onChange={(e) => updateAssignmentTarget(meta.code, e.target.value as AssignmentTarget)}
+                        >
+                          <option value="apikey">ApiKey</option>
+                          <option value="sbgroup">SB Group</option>
+                          <option value="both">Both</option>
+                        </select>
+                      </label>
+                    )}
+
+                    {instances.map((rows, instance) => (
+                      <div key={instance} className="supplier-instance">
+                        {instances.length > 1 && (
+                          <div className="supplier-instance-header">
+                            <strong>
+                              {meta.name} #{instance + 1}
+                            </strong>
+                            <button
+                              type="button"
+                              className="btn ghost package-row-remove"
+                              onClick={() => removeSupplierInstance(meta.code, instance)}
+                              title={`Remove this ${meta.name} entry`}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )}
+                        <div className="package-rows">
+                          <div className="package-row package-row-head">
+                            <span title="Build the Booking/GetOrder flow for this package">Book</span>
+                            <span>Room basis</span>
+                            <span>Room name</span>
+                            <span>Price</span>
+                            <span>Refundable</span>
+                            <span />
+                          </div>
+                          {rows.map((row, index) => (
+                            <div key={index} className="package-row">
+                              <input
+                                type="radio"
+                                name={`booking-${meta.code}-${instance}`}
+                                checked={bookingRow[meta.code][instance] === index}
+                                // Toggle on click (clears when the selected row is re-clicked);
+                                // onChange is a no-op required for a controlled radio.
+                                onChange={() => {}}
+                                onClick={() => toggleBookingRow(meta.code, instance, index)}
+                                title="Select this package for the Booking/GetOrder flow (click again to clear)"
+                              />
+                              <input
+                                value={row.roomBasis}
+                                onChange={(e) =>
+                                  updateRow(meta.code, instance, index, { roomBasis: e.target.value.toUpperCase() })
+                                }
+                                placeholder="RO"
+                              />
+                              <input
+                                value={row.roomName}
+                                onChange={(e) => updateRow(meta.code, instance, index, { roomName: e.target.value })}
+                                placeholder={DEFAULT_ROOM_NAME}
+                              />
+                              <input
+                                type="number"
+                                value={row.price}
+                                onChange={(e) => updateRow(meta.code, instance, index, { price: e.target.value })}
+                                placeholder="100"
+                              />
+                              <input
+                                type="checkbox"
+                                checked={row.refundable}
+                                onChange={(e) =>
+                                  updateRow(meta.code, instance, index, { refundable: e.target.checked })
+                                }
+                              />
+                              <button
+                                type="button"
+                                className="btn ghost package-row-remove"
+                                onClick={() => removeRow(meta.code, instance, index)}
+                                disabled={rows.length <= 1}
+                                title="Remove package"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <button type="button" className="btn ghost" onClick={() => addRow(meta.code)}>
-                      + Add package
+                        <button type="button" className="btn ghost" onClick={() => addRow(meta.code, instance)}>
+                          + Add package
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      onClick={() => addSupplierInstance(meta.code)}
+                      title={`Add a second ${meta.name} contract to this scenario`}
+                    >
+                      + Add another {meta.name}
                     </button>
                   </div>
                 )}
@@ -414,20 +610,110 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
       </div>
 
       <div className="wizard-section">
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500 }}>
-          <input type="checkbox" checked={assignToBr} onChange={(e) => setAssignToBr(e.target.checked)} />
-          Assign apiKey to BR (Static + Dynamic Markup rules)
-        </label>
-        <p className="hint" style={{ marginTop: '0.35rem' }}>
-          On by default. Cleaned up automatically on teardown. Uncheck to skip BR assignment for this scenario.
+        <div className="wizard-section-title">Provisioning</div>
+        <p className="hint" style={{ marginBottom: '0.6rem' }}>
+          How far to go past the mocks. Mocks and contracts are always created.
         </p>
+        {PROVISIONING_DEPTHS.map((option) => (
+          <label key={option.value} className="depth-option">
+            <input
+              type="radio"
+              name="provisioning-depth"
+              checked={depth === option.value}
+              onChange={() => setDepth(option.value)}
+            />
+            <span>
+              <strong>{option.label}</strong>
+              <span className="hint">{option.hint}</span>
+            </span>
+          </label>
+        ))}
+
+        {depth !== 'full' && (
+          <div className="depth-field">
+            {/* Deliberately NOT .supplier-tile-field: that class uppercases both label and
+                input, which would render an apiKey uid (lowercase by convention) as
+                something other than what gets sent. */}
+            <label htmlFor="existing-api-key">Existing apiKey (optional)</label>
+            <input
+              id="existing-api-key"
+              value={existingApiKey}
+              onChange={(e) => setExistingApiKey(e.target.value)}
+              placeholder="tj-htl-test-bookable"
+              spellCheck={false}
+              autoComplete="off"
+            />
+            <p className="hint">
+              Leave blank to create no apiKey at all. If given, this scenario's contracts are added
+              to it — SMF never deletes an apiKey it didn't create, so teardown only detaches them.
+              {depth === 'contract_br' &&
+                ' It is also assigned to Room Static Markup In Percentage (3) and Room Dynamic Markup' +
+                  ' In Percentage (4), so the contract conditions evaluate under it; only that' +
+                  ' assignment is removed on teardown.'}
+            </p>
+          </div>
+        )}
+
+        {/* BR + SmartBooking only apply to the full depth: both hang off a new apiKey. */}
+        {depth === 'full' && (
+          <>
+            <label
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}
+            >
+              <input type="checkbox" checked={assignToBr} onChange={(e) => setAssignToBr(e.target.checked)} />
+              Assign apiKey to BR (Static + Dynamic Markup rules)
+            </label>
+            <p className="hint" style={{ marginTop: '0.35rem' }}>
+              On by default. Cleaned up automatically on teardown. Uncheck to skip BR assignment for
+              this scenario.
+            </p>
+
+            <label
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}
+            >
+              <input type="checkbox" checked={sbEnabled} onChange={(e) => setSbEnabled(e.target.checked)} />
+              Create apiKey with SmartBooking (creates an SB group)
+            </label>
+            <p className="hint" style={{ marginTop: '0.35rem' }}>
+              {sbEnabled
+                ? 'An SB group is created first, then attached to the apiKey. Choose per supplier (above) whether its contract goes to the ApiKey, the SB Group, or Both — at least one must be SB Group or Both.'
+                : 'Off by default. When on, each supplier can route its contract to the apiKey, the SB group, or both.'}
+            </p>
+          </>
+        )}
       </div>
 
       <div className="form-footer">
         <p className="hint">
-          {suppliers.length > 0
-            ? `Will create mocks for ${suppliers.join(' + ')}`
-            : 'Select at least one supplier'}
+          {suppliers.length > 0 ? (
+            <>
+              Will create mocks for {supplierEntryLabels.join(' + ')}.{' '}
+              {depth === 'full'
+                ? 'Contracts + a new apiKey. '
+                : depth === 'contract_br'
+                  ? `Contracts + BR${
+                      existingApiKey.trim()
+                        ? `, added to ${existingApiKey.trim()} (also assigned to rules 3 + 4)`
+                        : ', no apiKey'
+                    }. `
+                  : `Contracts only${existingApiKey.trim() ? `, added to ${existingApiKey.trim()}` : ', no apiKey'}. `}
+              {(() => {
+                const withBooking = supplierEntries.filter(
+                  ({ code, instance }) => bookingRow[code][instance] !== null,
+                )
+                return withBooking.length > 0
+                  ? `Booking flow: ${withBooking
+                      .map(
+                        ({ code, instance, label }) =>
+                          `${label} (package #${(bookingRow[code][instance] ?? 0) + 1})`,
+                      )
+                      .join(', ')}.`
+                  : 'No booking flow — search + package mocks only. Pick a "Book" package to add it.'
+              })()}
+            </>
+          ) : (
+            'Select at least one supplier'
+          )}
         </p>
         <button type="submit" className="btn primary" disabled={busy || suppliers.length === 0}>
           {busy ? 'Provisioning…' : 'Create scenario →'}

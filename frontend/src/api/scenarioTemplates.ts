@@ -12,6 +12,7 @@ export interface ApiSupplierTemplatePackages {
   supplier_currency: string
   contract_currency: string
   packages: ApiTemplatePackageRow[]
+  assignment_target?: 'apikey' | 'sbgroup' | 'both'
 }
 
 export interface ApiScenarioTemplate {
@@ -20,7 +21,9 @@ export interface ApiScenarioTemplate {
   description: string
   atg_hotel_id: string
   suppliers: ApiSupplierTemplatePackages[]
+  sb_enabled?: boolean
   created_at: string
+  has_br_child_condition?: boolean
 }
 
 export interface ScenarioTemplateCreatePayload {
@@ -28,6 +31,7 @@ export interface ScenarioTemplateCreatePayload {
   description?: string
   atg_hotel_id: string
   suppliers: ApiSupplierTemplatePackages[]
+  sb_enabled?: boolean
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

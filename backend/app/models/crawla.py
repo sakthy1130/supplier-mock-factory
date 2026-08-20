@@ -114,3 +114,12 @@ class CrawlaRunScenarioResponse(BaseModel):
     package_status: str
     error_message: Optional[str] = None
     logs: list[dict[str, str]] = Field(default_factory=list)
+    # Booking-flow results — populated only when the scenario has a selected
+    # booking package (otherwise the run stops after search + packages).
+    booking_b_id: Optional[str] = None
+    booking_status: Optional[str] = None
+    order_status: Optional[str] = None
+    order_price: Optional[float] = None
+    selected_package_id: Optional[str] = None
+    booking_match: Optional[bool] = None
+    booking_message: Optional[str] = None

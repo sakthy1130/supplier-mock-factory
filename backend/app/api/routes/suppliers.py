@@ -9,9 +9,9 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException
-from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.db.repository import MongoStore
 from app.env_context import get_current_env
 from app.models.supplier import (
     IngestRequest,
@@ -29,12 +29,12 @@ router = APIRouter(prefix="/suppliers", tags=["suppliers"])
 
 
 @router.get("", response_model=list[SupplierListItem])
-def list_suppliers(db: Session = Depends(get_db)) -> list[SupplierListItem]:
+def list_suppliers(db: MongoStore = Depends(get_db)) -> list[SupplierListItem]:
     return supplier_service.list_items(db)
 
 
 @router.get("/configs", response_model=list[SupplierConfig])
-def list_supplier_configs(db: Session = Depends(get_db)) -> list[SupplierConfig]:
+def list_supplier_configs(db: MongoStore = Depends(get_db)) -> list[SupplierConfig]:
     """Full configs for the Suppliers screen (the list endpoint stays lightweight)."""
     return supplier_service.list_configs(db)
 
@@ -42,13 +42,13 @@ def list_supplier_configs(db: Session = Depends(get_db)) -> list[SupplierConfig]
 @router.post("", response_model=SupplierConfig, status_code=201)
 def create_supplier(
     payload: SupplierConfigCreate,
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> SupplierConfig:
     return supplier_service.create_config(db, payload)
 
 
 @router.get("/{code}", response_model=SupplierConfig)
-def get_supplier(code: str, db: Session = Depends(get_db)) -> SupplierConfig:
+def get_supplier(code: str, db: MongoStore = Depends(get_db)) -> SupplierConfig:
     return supplier_service.get_config(db, code)
 
 
@@ -56,18 +56,18 @@ def get_supplier(code: str, db: Session = Depends(get_db)) -> SupplierConfig:
 def update_supplier(
     code: str,
     payload: SupplierConfigCreate,
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> SupplierConfig:
     return supplier_service.update_config(db, code, payload)
 
 
 @router.delete("/{code}", status_code=204)
-def delete_supplier(code: str, db: Session = Depends(get_db)) -> None:
+def delete_supplier(code: str, db: MongoStore = Depends(get_db)) -> None:
     supplier_service.delete_config(db, code)
 
 
 @router.get("/{code}/readiness", response_model=SupplierReadiness)
-def get_supplier_readiness(code: str, db: Session = Depends(get_db)) -> SupplierReadiness:
+def get_supplier_readiness(code: str, db: MongoStore = Depends(get_db)) -> SupplierReadiness:
     return supplier_service.get_readiness(db, code)
 
 
@@ -76,7 +76,7 @@ def upload_supplier_template(
     code: str,
     log_type: str,
     expectation: dict[str, Any] = Body(...),
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> TemplateUploadResult:
     """Save a MockServer expectation as templates/{CODE}/{LogType}/v1.json."""
     config = supplier_service.get_config(db, code)
@@ -93,7 +93,7 @@ def upload_supplier_template(
 async def ingest_supplier_templates(
     code: str,
     payload: IngestRequest,
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> IngestResultModel:
     """Build this supplier's templates from a SID's adapter logs.
 
@@ -165,7 +165,7 @@ async def ingest_supplier_templates(
 
 
 @router.post("/{code}/field-map/generate")
-def generate_supplier_field_map(code: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+def generate_supplier_field_map(code: str, db: MongoStore = Depends(get_db)) -> dict[str, Any]:
     """Infer field-map paths from the templates already on disk and save them."""
     import json
 
@@ -185,7 +185,7 @@ def generate_supplier_field_map(code: str, db: Session = Depends(get_db)) -> dic
 
 
 @router.post("/{code}/probe", response_model=ProbeResult)
-def probe_supplier(code: str, db: Session = Depends(get_db)) -> ProbeResult:
+def probe_supplier(code: str, db: MongoStore = Depends(get_db)) -> ProbeResult:
     """Build expectations for a throwaway 2-package scenario without registering them.
 
     This is the screen's "Test scenario" button: it exercises template loading,
@@ -216,6 +216,10 @@ def probe_supplier(code: str, db: Session = Depends(get_db)) -> ProbeResult:
                     supplier_currency=config.default_supplier_currency,
                     prices=[100.0, 200.0],
                     refundable=[True, False],
+                    # Ask for the booking flow: the engine skips Booking/GetOrder/
+                    # CancelOrder when no package is selected, and the point of the
+                    # probe is to exercise every log type the supplier serves.
+                    booking_package_index=0,
                 ),
             )
         ],

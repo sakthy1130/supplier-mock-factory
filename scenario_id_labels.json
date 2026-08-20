@@ -1,0 +1,78 @@
+[
+  {
+    "id": "b0af7d0d-a108-426f-b908-f611e0e94c8d",
+    "label": "SC 1: HBS Standalone \u2014 1.1 Without Markup \u2014 Net package cloned \u2192 2 parent PackageIds"
+  },
+  {
+    "id": "2c30db6c-3571-4ef1-8db9-7cb9433d1559",
+    "label": "SC 6: Initiative-Specific Tiers \u2014 CheapL2 \u2014 Net package with Dynamic Markup (CheapL2), 1 group (only Net), 1 parent"
+  },
+  {
+    "id": "bde84924-ecc3-40e4-b8cb-4ca85eb2ed0d",
+    "label": "SC 5: Supplier Priority Tie-Break \u2014 HBS (parent PackageId) and EXT have equal price in the same group"
+  },
+  {
+    "id": "9d2a20d3-1308-4c5a-98df-8b06d0b7e6d6",
+    "label": "SC 4: BR Price Outcome Checks \u2014 Cloned PackageId becomes expensive after BR"
+  },
+  {
+    "id": "148ad27a-78c8-4674-917c-d919cca1e009",
+    "label": "SC 4: BR Price Outcome Checks \u2014 Parent PackageId becomes expensive after BR"
+  },
+  {
+    "id": "99046d1e-2ad6-47f1-b0d2-d828ed630dc2",
+    "label": "SC 3: Dynamic Markup (Gross-sourced) \u2014 3.2 Cloned into 2 groups \u2014 Mix of Gross and Net packages in group"
+  },
+  {
+    "id": "7aef3d07-a5bd-4067-b9ca-48b2873a4199",
+    "label": "SC 3: Dynamic Markup (Gross-sourced) \u2014 3.2 Cloned into 2 groups \u2014 Only Gross packages in group"
+  },
+  {
+    "id": "e0bb7100-4589-4837-8379-815317d970c2",
+    "label": "SC 3: Dynamic Markup (Gross-sourced) \u2014 3.2 Cloned into 2 groups \u2014 Only Net packages in group"
+  },
+  {
+    "id": "70f82da0-ec86-4cc6-80d3-315588562f6c",
+    "label": "SC 3: Dynamic Markup (Gross-sourced) \u2014 3.1 Cloned into 1 group \u2014 Mix of Gross and Net packages in group"
+  },
+  {
+    "id": "36d61714-d37e-4278-9e80-142667e6cd3d",
+    "label": "SC 3: Dynamic Markup (Gross-sourced) \u2014 3.1 Cloned into 1 group \u2014 Only Gross packages in group"
+  },
+  {
+    "id": "aac366fc-7872-4457-9289-dadd1e9a1da8",
+    "label": "SC 3: Dynamic Markup (Gross-sourced) \u2014 3.1 Cloned into 1 group \u2014 Only Net packages in group"
+  },
+  {
+    "id": "821f29f0-fbec-48ce-8cfc-65de8c3c532e",
+    "label": "SC 2: Dynamic Markup (Net-sourced) \u2014 2.2 Cloned into 2 groups \u2014 Mix of Gross and Net packages in group"
+  },
+  {
+    "id": "febea512-530a-4477-b5ea-cb11a5fc47d8",
+    "label": "SC 2: Dynamic Markup (Net-sourced) \u2014 2.2 Cloned into 2 groups \u2014 Only Gross packages in group"
+  },
+  {
+    "id": "1f13df17-a4a2-453d-9841-9c17d12a22f9",
+    "label": "SC 2: Dynamic Markup (Net-sourced) \u2014 2.2 Cloned into 2 groups \u2014 Only Net packages in group"
+  },
+  {
+    "id": "1e50ac5e-a9f0-43a0-b1ef-7c84ddd91e52",
+    "label": "SC 2: Dynamic Markup (Net-sourced) \u2014 2.1 Cloned into 1 group \u2014 Mix of Gross and Net packages in group"
+  },
+  {
+    "id": "38c571be-ae1d-4f36-934b-ccb18aedff56",
+    "label": "SC 2: Dynamic Markup (Net-sourced) \u2014 2.1 Cloned into 1 group \u2014 Only Gross packages in group"
+  },
+  {
+    "id": "29600822-d559-4ffc-988f-1f55b343e3e0",
+    "label": "SC 2: Dynamic Markup (Net-sourced) \u2014 2.1 Cloned into 1 group \u2014 Only Net packages in group"
+  },
+  {
+    "id": "26ee11a5-a6cd-4b73-9b57-2b697f0c2e08",
+    "label": "SC 1: HBS Standalone \u2014 1.1 Without Markup \u2014 Net package cloned \u2192 2 groups, 1 parent PackageId"
+  },
+  {
+    "id": "8c18c47f-9bed-4439-880d-78a661bac64e",
+    "label": "SC 1: HBS Standalone \u2014 1.1 Without Markup \u2014 Net package cloned \u2192 1 group, 1 parent PackageId"
+  }
+]

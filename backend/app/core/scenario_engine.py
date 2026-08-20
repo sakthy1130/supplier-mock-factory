@@ -7,6 +7,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.core.booking_id_injector import BOOKING_FLOW_LOG_TYPES
 from app.core.expectation_utils import finalize_expectation_for_register
 from app.core.crawla_mutations import apply_supplier_mutation
 from app.core.linkage_validator import LinkageValidator
@@ -32,12 +33,51 @@ def _package_log_types(supplier_code: str) -> set[str]:
     except UnknownSupplierError:
         return {"Packages"}
 
+# Supplier templates were ingested at differing occupancies (HBS/RHK=1, EXT/CHC=2),
+# and adapters drop packages whose occupancy != the request — so a 2-adult search
+# silently returns nothing for a 1-adult mock (this is why EXT dropped out of the SB
+# search). Every Search/Packages mock is normalized to the scenario's adult count.
+#
+# The count now comes from PackageSpec.adults, which defaults to 2 — the occupancy
+# every SMF search runs (see CoreAppClient search payload). This is the per-scenario
+# occupancy the constant here used to stand in for.
+SEARCH_ADULTS = 2
+_ADULT_OCCUPANCY_KEYS = frozenset(
+    {"adults", "adultCount", "adultsCount", "numberAdults", "numberOfAdults", "requestedNumberAdults"}
+)
+_OCCUPANCY_NORMALIZED_LOG_TYPES = frozenset({"Search", "Packages"})
+
+
+def _force_adult_occupancy(node: object, adults: int) -> None:
+    """Recursively set adult-count occupancy fields to `adults`, preserving each
+    field's int/str type. Children/other fields are left untouched."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if (
+                key in _ADULT_OCCUPANCY_KEYS
+                and isinstance(value, (int, str))
+                and not isinstance(value, bool)
+            ):
+                node[key] = type(value)(adults)
+            else:
+                _force_adult_occupancy(value, adults)
+    elif isinstance(node, list):
+        for item in node:
+            _force_adult_occupancy(item, adults)
+
 
 @dataclass
 class BuiltExpectation:
     supplier_code: str
     log_type: str
     expectation: dict
+    # Identifies WHICH entry of this supplier code the expectation belongs to.
+    # Equals supplier_code for the first (usually only) instance.
+    instance_key: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.instance_key:
+            self.instance_key = self.supplier_code
 
 
 class ScenarioEngine:
@@ -53,16 +93,26 @@ class ScenarioEngine:
         built: list[BuiltExpectation] = []
         for supplier_scenario in request.suppliers:
             supplier_code = str(supplier_scenario.code)
+            instance_key = supplier_scenario.instance_key
+            # From the suppliers table, not a hardcoded registry: a supplier added from
+            # the Suppliers screen gets the generic mutator built from its own config.
             plugin = resolve_plugin(supplier_code)
-            templates = self._load_supplier_templates(supplier_code, plugin.log_types)
+            # When no package is selected for the booking flow, only build
+            # search/package (+ prebooking/cancellation-policy) mocks — skip
+            # Booking/GetOrder/CancelOrder entirely for this supplier.
+            log_types = plugin.log_types
+            if supplier_scenario.packages.booking_package_index is None:
+                log_types = [lt for lt in log_types if lt not in BOOKING_FLOW_LOG_TYPES]
+            templates = self._load_supplier_templates(supplier_code, log_types)
             mutated = self._mutate_supplier_templates(
                 plugin=plugin,
                 templates=templates,
                 request=request,
                 package_spec=supplier_scenario.packages,
+                supplier_scenario=supplier_scenario,
             )
             validation_spec = supplier_scenario.packages
-            supplier_mutation = request.supplier_mutations.get(supplier_code)
+            supplier_mutation = request.mutation_for(supplier_scenario)
             if supplier_mutation and supplier_mutation.room_basis:
                 # model_copy() bypasses validators, so build the per-package list
                 # explicitly rather than relying on PackageSpec's str-coercion.
@@ -82,12 +132,14 @@ class ScenarioEngine:
                 built.append(
                     BuiltExpectation(
                         supplier_code=supplier_code,
+                        instance_key=instance_key,
                         log_type=log_type,
                         expectation=finalize_expectation_for_register(
                             expectation,
                             request.namespace,
                             supplier_code,
                             log_type,
+                            instance_key=instance_key,
                         ),
                     )
                 )
@@ -119,8 +171,20 @@ class ScenarioEngine:
         templates: dict[str, dict],
         request: ScenarioRequest,
         package_spec,
+        supplier_scenario=None,
     ) -> dict[str, dict]:
         mutated: dict[str, dict] = {}
+        # Mutations are addressed per supplier ENTRY: with the same supplier added
+        # twice, looking them up by bare code would hand both instances the same
+        # mutation. Falls back to the code for the first instance.
+        supplier_mutation = (
+            request.mutation_for(supplier_scenario)
+            if supplier_scenario is not None
+            else request.supplier_mutations.get(plugin.code)
+        )
+        instance_key = supplier_scenario.instance_key if supplier_scenario is not None else plugin.code
+        # PACKAGE_MUTABLE_LOG_TYPES was a hardcoded per-code map; the suppliers table
+        # owns this now, so a UI-added supplier declares its own mutable log types.
         package_log_types = _package_log_types(plugin.code)
 
         for log_type, template in templates.items():
@@ -142,7 +206,7 @@ class ScenarioEngine:
             mutated[log_type] = apply_namespace(
                 expectation,
                 request.namespace,
-                plugin.code,
+                instance_key,
                 log_type,
             )
             mutated[log_type] = apply_supplier_mutation(
@@ -150,6 +214,9 @@ class ScenarioEngine:
                 plugin.code,
                 log_type,
                 request.hotel_id_for_supplier(plugin.code),
-                request.supplier_mutations.get(plugin.code),
+                supplier_mutation,
             )
+            if log_type in _OCCUPANCY_NORMALIZED_LOG_TYPES:
+                body = mutated[log_type].get("httpResponse", {}).get("body")
+                _force_adult_occupancy(body, package_spec.adults)
         return mutated

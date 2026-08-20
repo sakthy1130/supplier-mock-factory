@@ -166,6 +166,46 @@ export function ScenarioResult({
                 <CopyRow label="Packages pId" value={crawlaRunResult.package_p_id} />
                 <CopyRow label="Packages status" value={crawlaRunResult.package_status} />
               </div>
+
+              {crawlaRunResult.booking_b_id == null && crawlaRunResult.booking_message && (
+                <>
+                  <div className="data-section-title">Booking flow</div>
+                  <p className="hint" style={{ marginTop: '0.35rem' }}>
+                    {crawlaRunResult.booking_message}
+                  </p>
+                </>
+              )}
+
+              {crawlaRunResult.booking_b_id != null && (
+                <>
+                  <div className="data-section-title">
+                    Booking flow{' '}
+                    {crawlaRunResult.booking_match != null && (
+                      <span
+                        className={`badge ${crawlaRunResult.booking_match ? 'badge-ok' : 'badge-fail'}`}
+                        title={crawlaRunResult.booking_message ?? ''}
+                      >
+                        {crawlaRunResult.booking_match ? '✓ package match' : '✗ mismatch'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="data-grid">
+                    <CopyRow label="Booking bId" value={crawlaRunResult.booking_b_id} />
+                    <CopyRow label="Booking status" value={crawlaRunResult.booking_status ?? ''} />
+                    <CopyRow label="Order status" value={crawlaRunResult.order_status ?? ''} />
+                    <CopyRow
+                      label="Order price"
+                      value={crawlaRunResult.order_price != null ? String(crawlaRunResult.order_price) : ''}
+                    />
+                    <CopyRow label="Selected package" value={crawlaRunResult.selected_package_id ?? ''} />
+                  </div>
+                  {crawlaRunResult.booking_message && (
+                    <p className="hint" style={{ marginTop: '0.35rem' }}>
+                      {crawlaRunResult.booking_message}
+                    </p>
+                  )}
+                </>
+              )}
               {showLogs && (
                 <>
                   <div className="data-section-title">SMF logs</div>
@@ -290,8 +330,20 @@ export function ScenarioResult({
         <>
           <div className="data-section-title">Credentials</div>
           <div className="data-grid">
-            {bundle.api_key && <CopyRow label="ApiKey" value={bundle.api_key} stacked />}
+            {bundle.api_key && (
+              <CopyRow
+                label={bundle.api_key_is_external ? 'ApiKey (existing)' : 'ApiKey'}
+                value={bundle.api_key}
+                stacked
+              />
+            )}
             {bundle.api_key_id && <CopyRow label="Key ID" value={bundle.api_key_id} stacked />}
+            {!bundle.api_key && (
+              <p className="hint">
+                No apiKey — this scenario created mocks and contracts only. Attach the contract to
+                an apiKey of your own to search with it.
+              </p>
+            )}
           </div>
 
           {Object.keys(bundle.contracts).length > 0 && (

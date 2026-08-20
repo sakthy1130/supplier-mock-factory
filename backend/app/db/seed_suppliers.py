@@ -17,7 +17,6 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select
 
 from app.config import get_settings
 from app.core.chc_paths import CHC_CONTRACT_OPT_DEFAULTS
@@ -328,44 +327,44 @@ SEED_SUPPLIERS: list[dict[str, Any]] = [
 ]
 
 
-def seed_suppliers(session_factory) -> int:
-    """Insert any missing (code, env) supplier rows. Returns how many were added."""
+def seed_suppliers(store=None) -> int:
+    """Insert any missing (code, env) supplier documents. Returns how many were added.
+
+    Only ever inserts: a document edited on the Suppliers screen is left exactly as it
+    is, so seeding is safe to run on every boot. Called from init_db.
+    """
+    from app.db.database import get_store
+
+    resolved = store if store is not None else get_store()
     added = 0
-    with session_factory() as session:
-        existing = {
-            (code, env)
-            for code, env in session.execute(
-                select(SupplierRecord.code, SupplierRecord.env)
-            ).all()
-        }
-        for env in SEED_ENVS:
-            for spec in SEED_SUPPLIERS:
-                code = spec["code"]
-                if (code, env) in existing:
-                    continue
-                supplier_id, auto_id = _BACKOFFICE_IDS[env][code]
-                session.add(
-                    SupplierRecord(
-                        id=str(uuid.uuid4()),
-                        code=code,
-                        env=env,
-                        name=spec["name"],
-                        supplier_type=spec["supplier_type"],
-                        supplier_id=supplier_id,
-                        auto_id=auto_id,
-                        reference_contract_id=_reference_contract_id(code, env),
-                        default_supplier_currency=spec["default_supplier_currency"],
-                        default_contract_currency=spec["default_contract_currency"],
-                        log_types_json=list(spec["log_types"]),
-                        package_log_types_json=list(spec["package_log_types"]),
-                        ui_color=spec["ui_color"],
-                        mock_config_json=dict(spec["mock_config"]),
-                        mutation_config_json=dict(spec["mutation_config"]),
-                        field_map_json=_field_map(code),
-                    )
+    existing = {(record.code, record.env) for record in resolved.suppliers.list()}
+    for env in SEED_ENVS:
+        for spec in SEED_SUPPLIERS:
+            code = spec["code"]
+            if (code, env) in existing:
+                continue
+            supplier_id, auto_id = _BACKOFFICE_IDS[env][code]
+            resolved.suppliers.save(
+                SupplierRecord(
+                    id=str(uuid.uuid4()),
+                    code=code,
+                    env=env,
+                    name=spec["name"],
+                    supplier_type=spec["supplier_type"],
+                    supplier_id=supplier_id,
+                    auto_id=auto_id,
+                    reference_contract_id=_reference_contract_id(code, env),
+                    default_supplier_currency=spec["default_supplier_currency"],
+                    default_contract_currency=spec["default_contract_currency"],
+                    log_types_json=list(spec["log_types"]),
+                    package_log_types_json=list(spec["package_log_types"]),
+                    ui_color=spec["ui_color"],
+                    mock_config_json=dict(spec["mock_config"]),
+                    mutation_config_json=dict(spec["mutation_config"]),
+                    field_map_json=_field_map(code),
                 )
-                added += 1
-        if added:
-            session.commit()
-            log.info("Seed: added %d supplier rows", added)
+            )
+            added += 1
+    if added:
+        log.info("Seed: added %d supplier documents", added)
     return added

@@ -24,6 +24,9 @@ HBS_MOCK_PATH_SUFFIX: dict[str, str] = {
     "CancelOrder": "cancelBooking",
 }
 
+# HBS serves every log type on the standard opt fields (no CancellationPolicy entry —
+# its policies come back on the PreBooking response). Read by the supplier seed to
+# populate the HBS row's opt_field_map.
 HBS_LOG_TYPE_TO_OPT_FIELD: dict[str, str] = {
     "Search": "searchUrl",
     "Packages": "availabilityUrl",
@@ -85,16 +88,4 @@ def apply_hbs_contract_opt_defaults(opt: dict[str, Any], mock_base_url: str) -> 
         "cancellationPoliciesTimeoutSeconds"
     ]
     opt["mockServerUrl"] = f"{mock_base_url.rstrip('/')}/"
-    return opt
-
-
-def build_hbs_contract_opt_urls(mock_base_url: str) -> dict[str, str]:
-    """HBS contract opt URLs on MockServer — canonical roots + disambiguation suffix."""
-    base = mock_base_url.rstrip("/")
-    opt: dict[str, str] = {}
-    for log_type, field in HBS_LOG_TYPE_TO_OPT_FIELD.items():
-        mock_path = build_hbs_mock_path(log_type)
-        if mock_path:
-            opt[field] = f"{base}{mock_path}"
-    apply_hbs_contract_opt_defaults(opt, mock_base_url)
     return opt

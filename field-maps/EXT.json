@@ -19,6 +19,7 @@
       "httpResponse.body.stayRange.checkout"
     ],
     "booking_id": [
+      "httpResponse.body.body.bookingId",
       "httpResponse.body.bookingId",
       "httpResponse.body.reservationId",
       "httpResponse.body.reservations[0].reservationId",

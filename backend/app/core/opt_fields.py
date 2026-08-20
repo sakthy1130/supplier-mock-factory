@@ -21,6 +21,10 @@ LOG_TYPE_TO_OPT_FIELD: dict[str, str] = {
 EXP_LOG_TYPE_TO_OVERRIDE_FIELD: dict[str, str] = {
     "Search": "overrideSearchUrl",
     "Packages": "overridePackagesUrl",
+    # Note the field is "Prebook", not "PreBooking" — this is the backoffice
+    # contract key, confirmed against a working EXP contract. Without it the EXP
+    # adapter never routes price-check at the mock and booking fails.
+    "PreBooking": "overridePrebookUrl",
     "Booking": "overrideBookingUrl",
     "GetOrder": "overrideRetrieveBookingUrl",
     "CancelOrder": "overrideCancelBookingUrl",

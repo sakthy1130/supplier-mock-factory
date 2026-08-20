@@ -27,6 +27,7 @@ def _request(**overrides) -> ScenarioRequest:
                     room_basis="RO",
                     prices=[100.0, 200.0],
                     refundable=[True, False],
+                    booking_package_index=0,
                 ),
             )
         ],
@@ -64,14 +65,14 @@ def test_scenario_engine_builds_hbs_expectations_with_namespace():
         assert "headers" not in http_request
 
     search = next(item for item in built if item.log_type == "Search")
-    assert search.expectation["httpRequest"]["path"] == "/hotel-api/1.0/hotels/search"
+    assert search.expectation["httpRequest"]["path"] == "/qa-test-001/hotel-api/1.0/hotels/search"
     search_hotels = search.expectation["httpResponse"]["body"]["hotels"]["hotels"]
     assert len(search_hotels) == 1
     assert search_hotels[0]["code"] == 99999
     prebook = next(item for item in built if item.log_type == "PreBooking")
-    assert prebook.expectation["httpRequest"]["path"] == "/hotel-api/1.0/checkrates/preBooking"
+    assert prebook.expectation["httpRequest"]["path"] == "/qa-test-001/hotel-api/1.0/checkrates/preBooking"
     booking = next(item for item in built if item.log_type == "Booking")
-    assert booking.expectation["httpRequest"]["path"] == "/hotel-api/1.2/bookings/booking"
+    assert booking.expectation["httpRequest"]["path"] == "/qa-test-001/hotel-api/1.2/bookings/booking"
 
 
 def test_scenario_engine_builds_hbs_expectations_with_per_package_room_basis():
@@ -141,7 +142,7 @@ def test_scenario_engine_builds_exp_expectations():
         suppliers=[
             SupplierScenario(
                 code=SupplierCode.EXP,
-                packages=PackageSpec(count=2, room_basis="RO", prices=[150.0, 250.0], refundable=[True, False]),
+                packages=PackageSpec(count=2, room_basis="RO", prices=[150.0, 250.0], refundable=[True, False], booking_package_index=0),
             )
         ],
     )
@@ -164,15 +165,19 @@ def test_scenario_engine_builds_exp_expectations():
     room_id = package_properties[0]["rooms"][0]["id"]
     rate_id = rates[0]["id"]
     assert prebook.expectation["httpRequest"]["path"] == (
-        f"/v3/properties/{property_id}/rooms/{room_id}/rates/{rate_id}"
+        f"/qa-exp-001/v3/properties/{property_id}/rooms/{room_id}/rates/{rate_id}"
     )
-    assert booking.expectation["httpRequest"]["path"] == "/v3/itineraries"
-    assert get_order.expectation["httpRequest"]["path"].startswith("/v3/itineraries/")
+    assert booking.expectation["httpRequest"]["path"] == "/qa-exp-001/v3/itineraries"
+    assert get_order.expectation["httpRequest"]["path"].startswith("/qa-exp-001/v3/itineraries/")
     bed_group = next(iter(rates[0]["bed_groups"].values()))
     price_check_href = bed_group["links"]["price_check"]["href"]
+    # The adapter follows this href to reach price-check, so it must resolve to the
+    # namespaced path the PreBooking mock is actually registered at — the href lives
+    # in the response body, which the httpRequest.path prefixer never touches.
     assert price_check_href.startswith(
-        f"/v3/properties/{property_id}/rooms/{room_id}/rates/{rate_id}"
+        f"/qa-exp-001/v3/properties/{property_id}/rooms/{room_id}/rates/{rate_id}"
     )
+    assert price_check_href.split("?", 1)[0] == prebook.expectation["httpRequest"]["path"]
     assert rates[0]["sale_scenario"]["distribution"] is True
     assert len(search.expectation["httpResponse"]["body"][0]["rooms"][0]["rates"]) == 1
 
@@ -180,8 +185,20 @@ def test_scenario_engine_builds_exp_expectations():
     opt = build_mock_opt_urls("http://mock-server", paths, "EXP")
     assert opt["overrideSearchUrl"] == "http://mock-server/qa-exp-001/search"
     assert opt["overridePackagesUrl"] == "http://mock-server/qa-exp-001/package"
-    assert opt["overrideBookingUrl"] == "http://mock-server/v3/itineraries"
-    assert opt["overrideRetrieveBookingUrl"].startswith("http://mock-server/v3/itineraries/")
+    assert opt["overrideBookingUrl"] == "http://mock-server/qa-exp-001/v3/itineraries"
+    assert opt["overrideRetrieveBookingUrl"].startswith("http://mock-server/qa-exp-001/v3/itineraries/")
+    price_check_url = (
+        f"http://mock-server/qa-exp-001/v3/properties/{property_id}/rooms/{room_id}/rates/{rate_id}"
+    )
+    # The EXP adapter routes price-check via overridePrebookUrl — without it the
+    # booking fails even though the PreBooking mock is registered correctly.
+    assert opt["overridePrebookUrl"] == price_check_url
+    assert opt["cancellationPolicyUrl"] == price_check_url
+    # Standard fields must all point at the mock: a cloned EXP contract inherits
+    # real-Expedia URLs, and core's blocked-url check reads these, not the overrides.
+    assert opt["prebookingUrl"] == price_check_url
+    for field in ("searchUrl", "availabilityUrl", "cancellationPolicyUrl", "bookingUrl", "orderUrl"):
+        assert opt[field].startswith("http://mock-server/qa-exp-001/"), field
 
 
 @pytest.mark.skipif(

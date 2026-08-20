@@ -807,6 +807,77 @@
   gap: 0.75rem;
 }
 
+/* One block per supplier entry. Only shown as a bordered card when a supplier is
+   added more than once, so single-supplier tiles look exactly as before. */
+.supplier-instance {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.supplier-instance:not(:only-child) {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem;
+}
+
+.supplier-instance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+}
+
+.depth-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.depth-option > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.depth-option .hint {
+  margin: 0;
+}
+
+/* Existing-apiKey field under the depth radios. Its own class rather than
+   .supplier-tile-field, which uppercases label AND input — an apiKey uid is lowercase,
+   so uppercasing it would show something other than what is sent. */
+.depth-field {
+  margin-top: 0.85rem;
+  max-width: 26rem;
+}
+
+.depth-field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+
+.depth-field input {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.85rem;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-strong);
+}
+
+.depth-field .hint {
+  margin: 0.35rem 0 0;
+}
+
 .supplier-tile-field {
   display: block;
   font-size: 0.72rem;
@@ -836,7 +907,7 @@
 
 .package-row {
   display: grid;
-  grid-template-columns: 0.6fr 2fr 0.7fr 0.6fr auto;
+  grid-template-columns: 0.45fr 0.6fr 2fr 0.7fr 0.6fr auto;
   gap: 0.5rem;
   align-items: center;
 }
@@ -859,7 +930,8 @@
   font-size: 0.85rem;
 }
 
-.package-row input[type='checkbox'] {
+.package-row input[type='checkbox'],
+.package-row input[type='radio'] {
   justify-self: center;
   width: 16px;
   height: 16px;
@@ -874,6 +946,25 @@
 .package-row-remove:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.badge-ok {
+  background: rgba(34, 197, 94, 0.18);
+  color: #16a34a;
+}
+
+.badge-fail {
+  background: rgba(239, 68, 68, 0.18);
+  color: #dc2626;
 }
 
 .supplier-tile.hbs { --tile-color: var(--hbs); }

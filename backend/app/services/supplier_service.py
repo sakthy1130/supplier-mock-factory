@@ -13,13 +13,12 @@ import uuid
 from pathlib import Path
 
 from fastapi import HTTPException
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from pymongo.errors import PyMongoError
 
 from app.core.namespace import ALL_SCENARIO_LOG_TYPES
-from app.db.database import get_session_factory
+from app.db.database import DatabaseNotConfigured, get_store
 from app.db.models import SupplierRecord
+from app.db.repository import MongoStore
 from app.env_context import get_current_env
 from app.ingest.expectation_builder import OPTIONAL_TEMPLATE_LOG_TYPES
 from app.models.supplier import (
@@ -95,7 +94,7 @@ def _apply_payload(record: SupplierRecord, payload: SupplierConfigCreate) -> Non
 # ── Reads ──────────────────────────────────────────────────────────────────────
 
 
-def list_configs(db: Session, env: str | None = None) -> list[SupplierConfig]:
+def list_configs(db: MongoStore, env: str | None = None) -> list[SupplierConfig]:
     """Configured suppliers for the env.
 
     Falls back to the built-in seed definitions when the table can't answer (a database
@@ -104,13 +103,8 @@ def list_configs(db: Session, env: str | None = None) -> list[SupplierConfig]:
     """
     resolved = env or get_current_env()
     try:
-        records = db.scalars(
-            select(SupplierRecord)
-            .where(SupplierRecord.env == resolved)
-            .order_by(SupplierRecord.created_at.asc(), SupplierRecord.code.asc())
-        ).all()
-    except SQLAlchemyError:
-        db.rollback()
+        records = db.suppliers.list(resolved)
+    except PyMongoError:
         records = []
     if records:
         return [_record_to_model(r) for r in records]
@@ -123,7 +117,7 @@ def _seed_codes() -> list[str]:
     return [spec["code"] for spec in SEED_SUPPLIERS]
 
 
-def list_items(db: Session, env: str | None = None) -> list[SupplierListItem]:
+def list_items(db: MongoStore, env: str | None = None) -> list[SupplierListItem]:
     """The GET /api/suppliers payload — a superset of the old hardcoded list."""
     items: list[SupplierListItem] = []
     for config in list_configs(db, env):
@@ -146,13 +140,9 @@ def list_items(db: Session, env: str | None = None) -> list[SupplierListItem]:
     return items
 
 
-def get_config(db: Session, code: str, env: str | None = None) -> SupplierConfig:
+def get_config(db: MongoStore, code: str, env: str | None = None) -> SupplierConfig:
     resolved = env or get_current_env()
-    record = db.scalars(
-        select(SupplierRecord).where(
-            SupplierRecord.code == code.upper(), SupplierRecord.env == resolved
-        )
-    ).first()
+    record = db.suppliers.get_by_code(code, resolved)
     if record is None:
         raise HTTPException(
             status_code=404, detail=f"Supplier {code.upper()} is not configured in {resolved}"
@@ -203,9 +193,8 @@ def _config_from_seed(code: str, env: str) -> SupplierConfig | None:
 def get_supplier_config(code: str, env: str | None = None) -> SupplierConfig:
     """Cached config lookup for the scenario-build hot path.
 
-    Opens its own short-lived session so core modules don't need a request-scoped
-    ``Session`` threaded through them, exactly as ``get_supplier_registry`` needed
-    no session at all.
+    Builds its own store so core modules don't need a request-scoped one threaded
+    through them, exactly as ``get_supplier_registry`` needed no session at all.
     """
     resolved = env or get_current_env()
     upper = code.upper()
@@ -216,16 +205,11 @@ def get_supplier_config(code: str, env: str | None = None) -> SupplierConfig:
 
     config: SupplierConfig | None = None
     try:
-        with get_session_factory()() as session:
-            record = session.scalars(
-                select(SupplierRecord).where(
-                    SupplierRecord.code == upper, SupplierRecord.env == resolved
-                )
-            ).first()
-            if record is not None:
-                config = _record_to_model(record)
-    except SQLAlchemyError:
-        # No database (or no suppliers table yet) — fall through to the seed.
+        record = get_store().suppliers.get_by_code(upper, resolved)
+        if record is not None:
+            config = _record_to_model(record)
+    except (PyMongoError, DatabaseNotConfigured):
+        # No database reachable, or MONGO_URL unset — fall through to the seed.
         config = None
 
     if config is None:
@@ -246,15 +230,8 @@ def configured_codes(env: str | None = None) -> list[str]:
         return cached
     codes: list[str] = []
     try:
-        with get_session_factory()() as session:
-            codes = list(
-                session.scalars(
-                    select(SupplierRecord.code)
-                    .where(SupplierRecord.env == resolved)
-                    .order_by(SupplierRecord.created_at.asc())
-                ).all()
-            )
-    except SQLAlchemyError:
+        codes = get_store().suppliers.codes(resolved)
+    except (PyMongoError, DatabaseNotConfigured):
         codes = []
     if not codes:
         from app.db.seed_suppliers import SEED_SUPPLIERS
@@ -370,45 +347,35 @@ def readiness_for(config: SupplierConfig) -> SupplierReadiness:
     )
 
 
-def get_readiness(db: Session, code: str, env: str | None = None) -> SupplierReadiness:
+def get_readiness(db: MongoStore, code: str, env: str | None = None) -> SupplierReadiness:
     return readiness_for(get_config(db, code, env))
 
 
 # ── Writes ─────────────────────────────────────────────────────────────────────
 
 
-def create_config(db: Session, payload: SupplierConfigCreate, env: str | None = None) -> SupplierConfig:
+def create_config(db: MongoStore, payload: SupplierConfigCreate, env: str | None = None) -> SupplierConfig:
     resolved = env or get_current_env()
-    clash = db.scalars(
-        select(SupplierRecord).where(
-            SupplierRecord.code == payload.code, SupplierRecord.env == resolved
-        )
-    ).first()
+    clash = db.suppliers.get_by_code(payload.code, resolved)
     if clash is not None:
         raise HTTPException(
             status_code=409, detail=f"Supplier {payload.code} already exists in {resolved}"
         )
-    record = SupplierRecord(id=str(uuid.uuid4()), env=resolved)
+    record = SupplierRecord(id=str(uuid.uuid4()), code=payload.code, name=payload.name, env=resolved)
     _apply_payload(record, payload)
-    db.add(record)
-    db.commit()
-    db.refresh(record)
+    db.suppliers.save(record)
     invalidate_cache(resolved)
     return _record_to_model(record)
 
 
 def update_config(
-    db: Session,
+    db: MongoStore,
     code: str,
     payload: SupplierConfigCreate,
     env: str | None = None,
 ) -> SupplierConfig:
     resolved = env or get_current_env()
-    record = db.scalars(
-        select(SupplierRecord).where(
-            SupplierRecord.code == code.upper(), SupplierRecord.env == resolved
-        )
-    ).first()
+    record = db.suppliers.get_by_code(code, resolved)
     if record is None:
         raise HTTPException(
             status_code=404, detail=f"Supplier {code.upper()} is not configured in {resolved}"
@@ -419,36 +386,27 @@ def update_config(
             detail="Supplier code cannot be changed — delete and re-add instead",
         )
     _apply_payload(record, payload)
-    db.commit()
-    db.refresh(record)
+    db.suppliers.save(record)
     invalidate_cache(resolved)
     return _record_to_model(record)
 
 
-def delete_config(db: Session, code: str, env: str | None = None) -> None:
-    from app.db.models import ScenarioRecord
-
+def delete_config(db: MongoStore, code: str, env: str | None = None) -> None:
     resolved = env or get_current_env()
-    record = db.scalars(
-        select(SupplierRecord).where(
-            SupplierRecord.code == code.upper(), SupplierRecord.env == resolved
-        )
-    ).first()
+    record = db.suppliers.get_by_code(code, resolved)
     if record is None:
         raise HTTPException(
             status_code=404, detail=f"Supplier {code.upper()} is not configured in {resolved}"
         )
 
     # A scenario still referencing this code would lose its teardown path — the
-    # expectation ids and contracts are keyed by supplier code.
+    # expectation ids and contracts are keyed by supplier code. Repeated entries are
+    # stored as instance keys ("EXP-2"), so match the code before any dash too.
     in_use = [
         r.namespace
-        for r in db.scalars(
-            select(ScenarioRecord).where(
-                ScenarioRecord.env == resolved, ScenarioRecord.status != "TORN_DOWN"
-            )
-        ).all()
-        if record.code in (r.suppliers_json or [])
+        for r in db.scenarios.list(env=resolved)
+        if r.status != "TORN_DOWN"
+        and record.code in {str(k).split("-", 1)[0] for k in (r.suppliers_json or [])}
     ]
     if in_use:
         raise HTTPException(
@@ -459,8 +417,7 @@ def delete_config(db: Session, code: str, env: str | None = None) -> None:
             ),
         )
 
-    db.delete(record)
-    db.commit()
+    db.suppliers.delete(record)
     invalidate_cache(resolved)
 
 

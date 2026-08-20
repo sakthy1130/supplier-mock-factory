@@ -3,9 +3,9 @@
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.db.repository import MongoStore
 from app.env_context import get_current_env, use_env
 from app.integrations.core_app import CoreAppClient
 from app.models.crawla import CrawlaRunScenarioResponse
@@ -28,7 +28,7 @@ router = APIRouter(prefix="/scenarios", tags=["scenarios"])
 async def create_scenario(
     request: ScenarioRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> ScenarioBundle:
     env = get_current_env()
     resolved = await resolve_scenario_hotel_ids(request)
@@ -39,7 +39,7 @@ async def create_scenario(
 
 @router.get("", response_model=list[ScenarioListItem])
 def list_scenarios(
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
     env: Optional[str] = Query(default=None, description="'dev', 'stg', or 'all' for no filter"),
 ) -> list[ScenarioListItem]:
     resolved_env = None if env == "all" else (env or get_current_env())
@@ -55,7 +55,7 @@ async def scenario_quickwit_logs(
     minutes: int = Query(default=60, ge=1, le=24 * 60),
     query: Optional[str] = Query(default=None, description="Override; default api_key or namespace"),
     max_hits: int = Query(default=3_000, ge=1, le=10_000),
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> QuickwitSearchResponse:
     """Search Quickwit console logs for this scenario's api_key / namespace."""
     record = scenario_service.get_record(db, scenario_id)
@@ -76,14 +76,14 @@ async def scenario_quickwit_logs(
 
 
 @router.get("/{scenario_id}", response_model=ScenarioBundle)
-def get_scenario(scenario_id: str, db: Session = Depends(get_db)) -> ScenarioBundle:
+def get_scenario(scenario_id: str, db: MongoStore = Depends(get_db)) -> ScenarioBundle:
     return scenario_service.record_to_bundle(scenario_service.get_record(db, scenario_id))
 
 
 @router.post("/{scenario_id}/run", response_model=CrawlaRunScenarioResponse)
 async def run_scenario(
     scenario_id: str,
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> CrawlaRunScenarioResponse:
     """Fire a real search + packages against the core app with this scenario's apiKey.
 
@@ -97,6 +97,10 @@ async def run_scenario(
     if not bundle.api_key:
         raise HTTPException(status_code=409, detail="Scenario has no apiKey")
 
+    # When the scenario picked a package for the booking flow, drive core all the
+    # way through book → getOrder and verify the retrieved order matches it.
+    booking_selection = _booking_selection(bundle.request)
+
     # Pin to the scenario's own env — its apiKey/contracts only exist there,
     # regardless of what env is currently selected in the UI.
     with use_env(record.env):
@@ -106,17 +110,50 @@ async def run_scenario(
                 check_in=bundle.check_in,
                 check_out=bundle.check_out,
                 hotel_id=bundle.atg_hotel_id,
+                booking_selection=booking_selection,
             )
 
     result.scenario_id = scenario_id
+    if booking_selection is None:
+        result.booking_message = (
+            "No package was selected for the booking flow when this scenario was "
+            "created, so only search + packages ran (no Booking/GetOrder mocks exist). "
+            "Re-create the scenario and pick a 'Book' package to exercise the booking flow."
+        )
     return result
+
+
+def _booking_selection(request: Optional[dict]) -> Optional[dict]:
+    """Derive the booking-flow package (price/board/room) to verify against, from
+    the first supplier in the stored request that has a selected package."""
+    if not isinstance(request, dict):
+        return None
+    for supplier in request.get("suppliers", []) or []:
+        if not isinstance(supplier, dict):
+            continue
+        packages = supplier.get("packages")
+        if not isinstance(packages, dict):
+            continue
+        idx = packages.get("booking_package_index")
+        if idx is None:
+            continue
+        prices = packages.get("prices") or []
+        room_basis = packages.get("room_basis") or []
+        room_names = packages.get("room_names") or []
+        return {
+            "supplier": supplier.get("code"),
+            "price": prices[idx] if idx < len(prices) else None,
+            "board": room_basis[idx] if idx < len(room_basis) else None,
+            "room_name": room_names[idx] if idx < len(room_names) else None,
+        }
+    return None
 
 
 @router.post("/{scenario_id}/refresh-booking-ids", response_model=ScenarioBundle, status_code=202)
 def refresh_booking_ids(
     scenario_id: str,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> ScenarioBundle:
     record = scenario_service.get_record(db, scenario_id)
     if record.status != ScenarioStatus.READY.value:
@@ -130,7 +167,7 @@ def refresh_booking_ids(
 @router.delete("/all", response_model=TeardownAllResponse, status_code=202)
 def teardown_all_scenarios(
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> TeardownAllResponse:
     # Scoped to the currently selected env — clearing dev's mess must not touch
     # stg's mocks/contracts (and vice versa); they live on different MockServer
@@ -146,7 +183,7 @@ def teardown_all_scenarios(
 def teardown_scenario(
     scenario_id: str,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: MongoStore = Depends(get_db),
 ) -> ScenarioBundle:
     record = scenario_service.get_record(db, scenario_id)
     if record.status == ScenarioStatus.TORN_DOWN.value:

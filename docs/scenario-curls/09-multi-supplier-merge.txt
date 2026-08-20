@@ -1,0 +1,96 @@
+curl --location 'http://localhost:8000/api/scenarios' \
+--header 'Content-Type: application/json' \
+--header 'X-SMF-Env: stg' \
+--data '{
+    "namespace": "qa-20260819-s09",
+    "check_in": "2026-09-01",
+    "check_out": "2026-09-03",
+    "atg_hotel_id": "1446194",
+    "provisioning_depth": "full",
+    "suppliers": [
+        {
+            "code": "HBS",
+            "contract_currency": "USD",
+            "packages": {
+                "count": 1,
+                "room_basis": [
+                    "RO"
+                ],
+                "room_names": [
+                    "1 Double Bed, Nonsmoking 1"
+                ],
+                "supplier_currency": "USD",
+                "prices": [
+                    200.0
+                ],
+                "refundable": [
+                    true
+                ],
+                "booking_package_index": null
+            }
+        },
+        {
+            "code": "EXP",
+            "contract_currency": "USD",
+            "packages": {
+                "count": 1,
+                "room_basis": [
+                    "RO"
+                ],
+                "room_names": [
+                    "1 Double Bed, Nonsmoking 1"
+                ],
+                "supplier_currency": "USD",
+                "prices": [
+                    190.0
+                ],
+                "refundable": [
+                    true
+                ],
+                "booking_package_index": null
+            }
+        },
+        {
+            "code": "CHC",
+            "contract_currency": "USD",
+            "packages": {
+                "count": 1,
+                "room_basis": [
+                    "RO"
+                ],
+                "room_names": [
+                    "1 Double Bed, Nonsmoking 1"
+                ],
+                "supplier_currency": "USD",
+                "prices": [
+                    210.0
+                ],
+                "refundable": [
+                    true
+                ],
+                "booking_package_index": null
+            }
+        },
+        {
+            "code": "EXT",
+            "contract_currency": "USD",
+            "packages": {
+                "count": 1,
+                "room_basis": [
+                    "RO"
+                ],
+                "room_names": [
+                    "1 Double Bed, Nonsmoking 1"
+                ],
+                "supplier_currency": "USD",
+                "prices": [
+                    180.0
+                ],
+                "refundable": [
+                    true
+                ],
+                "booking_package_index": 0
+            }
+        }
+    ]
+}'

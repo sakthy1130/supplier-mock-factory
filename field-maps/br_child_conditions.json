@@ -1,0 +1,19 @@
+{
+  "dev": {
+    "148ad27a-78c8-4674-917c-d919cca1e009": [
+      {
+        "name": "Room Dynamic Markup In percentage",
+        "description": "MergeBedding Parent Expensive",
+        "executionOrder": 151,
+        "inputDetailId": 115,
+        "outputDetailId": 8,
+        "outputValue": "1%-2%",
+        "overwrite": true,
+        "outputType": "PERCENTAGE",
+        "inputValue": "100334",
+        "ruleId": "4"
+      }
+    ]
+  },
+  "stg": {}
+}

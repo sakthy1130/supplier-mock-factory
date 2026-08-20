@@ -26,10 +26,13 @@ async def test_run_teardown_all_clears_mockserver_after_record_teardown(monkeypa
     monkeypatch.setattr(scenario_service, "_teardown_record", teardown_mock)
     monkeypatch.setattr(scenario_service, "MockServerClient", FakeMockServerClient)
 
-    session = SimpleNamespace(close=lambda: None, delete=lambda _record: None, commit=lambda: None)
-    monkeypatch.setattr(scenario_service, "get_session_factory_standalone", lambda: lambda: session)
+    deleted: list[object] = []
+    store = SimpleNamespace(scenarios=SimpleNamespace(delete=deleted.append))
+    monkeypatch.setattr(scenario_service, "get_store_standalone", lambda: store)
 
     await scenario_service.run_teardown_all()
 
     assert teardown_mock.await_count == 1
     assert delete_all_mock.await_count == 1
+    # The record is removed from the store even though teardown was stubbed out.
+    assert deleted == records
