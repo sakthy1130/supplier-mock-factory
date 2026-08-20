@@ -218,6 +218,73 @@ class TemplateIngestor:
                 filtered[canonical_type] = kept
         return filtered
 
+    async def _align_hotels_to_packages(
+        self,
+        plugin: SupplierMockPlugin,
+        buckets: dict[str, list[LogRowCandidate]],
+        detail_for: Any,
+    ) -> None:
+        """Put the row for the Packages hotel first in every other bucket.
+
+        An adapter that chunks search one hotel per call (Derby's chunkSizeForSearch=1)
+        writes one Search row per hotel, and only one of them is the hotel the session
+        actually drilled into. Taking whichever came first gives a Search template for
+        hotel A and a Packages template for hotel B, whose room ids have nothing in
+        common — and the packages transform keeps only rates whose roomId belongs to the
+        hotel, so every rate is filtered and the scenario returns zero packages with no
+        error. Reorders in place; selection still happens in _select_candidate.
+        """
+        packages = buckets.get("Packages")
+        if not packages:
+            return
+        try:
+            hotel_id = plugin.payload_hotel_id(await detail_for(packages[0].row.get("logUrl", "")))
+        except Exception:  # noqa: BLE001 - alignment is best-effort, never fatal
+            return
+        if not hotel_id:
+            return
+
+        for canonical_type, candidates in buckets.items():
+            if canonical_type == "Packages" or len(candidates) < 2:
+                continue
+            matching: list[LogRowCandidate] = []
+            others: list[LogRowCandidate] = []
+            saw_a_hotel = False
+            for candidate in candidates:
+                try:
+                    detail = await detail_for(candidate.row.get("logUrl", ""))
+                except Exception:  # noqa: BLE001
+                    others.append(candidate)
+                    continue
+                found = plugin.payload_hotel_id(detail)
+                saw_a_hotel = saw_a_hotel or bool(found)
+                target = matching if found == hotel_id else others
+                target.append(candidate)
+
+            if not saw_a_hotel:
+                # Reservation-scoped log types (GetOrder, CancelOrder) name no hotel.
+                # Nothing to align, and nothing worth reporting.
+                continue
+            if matching:
+                buckets[canonical_type] = matching + others
+                if others:
+                    logger.info(
+                        "%s ingest: %d %s row(s) matched hotel %s, %d for other hotels",
+                        plugin.code,
+                        len(matching),
+                        canonical_type,
+                        hotel_id,
+                        len(others),
+                    )
+            else:
+                logger.warning(
+                    "%s ingest: no %s row for hotel %s — its template will describe a "
+                    "different hotel, whose room ids the adapter will filter out",
+                    plugin.code,
+                    canonical_type,
+                    hotel_id,
+                )
+
     async def _ingest_supplier(
         self,
         plugin: SupplierMockPlugin,
@@ -243,6 +310,8 @@ class TemplateIngestor:
 
         if plugin.disambiguate_by_payload:
             buckets = await self._attribute_by_payload(plugin, buckets, detail_for)
+
+        await self._align_hotels_to_packages(plugin, buckets, detail_for)
 
         for canonical_type, candidates in buckets.items():
             selected = self._select_candidate(canonical_type, candidates)

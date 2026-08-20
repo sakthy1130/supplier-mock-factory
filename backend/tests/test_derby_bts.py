@@ -5,6 +5,8 @@ single search SID contains rows from both, so ingest has to separate them by
 ``header.supplierId`` or it writes one supplier's payload into the other's templates.
 """
 
+import asyncio
+
 import pytest
 
 from app.env_context import use_env
@@ -460,4 +462,71 @@ def test_search_and_packages_describe_the_same_cancel_policy():
     assert policy(s_rate) == policy(p_rate)
     # nights is numeric on both sides — one template stored it as a string.
     assert isinstance(p_rate["cancelPolicy"]["cancelPenalties"][0]["penaltyCharge"]["nights"], int)
+
+
+def test_ingest_keeps_search_on_the_packages_hotel():
+    """Derby chunks search one hotel per call, so a SID holds a Search row per hotel.
+
+    Taking whichever came first gives a Search template for one hotel and a Packages
+    template for another, whose room ids have nothing in common — and the packages
+    transform keeps only rates whose roomId belongs to the hotel, so every rate is
+    filtered and the scenario returns zero packages with no error.
+    """
+    import json as _json
+
+    from app.ingest.template_ingestor import TemplateIngestor
+
+    def search_detail(hotel: str, room: str) -> dict:
+        body = {
+            "header": {"version": "v1.2", "distributorId": "ALTAYYAR"},
+            "stayRange": {"checkin": "2026-09-01", "checkout": "2026-09-03"},
+            "availHotels": [
+                {
+                    "hotelId": hotel,
+                    "supplierId": "HILTON",
+                    "availRoomRates": [
+                        {"roomId": room, "rateId": "R1", "currency": "USD",
+                         "amountBeforeTax": [100.0], "amountAfterTax": [100.0],
+                         "mealPlan": "RO",
+                         "roomCriteria": {"roomCount": 1, "adultCount": 2,
+                                          "childCount": 0, "childAges": []},
+                         "cancelPolicy": {"code": "1D1N_1N", "cancelPenalties": []}}
+                    ],
+                }
+            ],
+        }
+        return {"request": {"url": "https://d/bts/api/shopping/multihotels", "body": body},
+                "response": {"body": body}}
+
+    listing = {"details": [
+        # The wrong hotel's row comes first, exactly as it did in the real SID.
+        {"logType": "Search", "source": DERBY_SOURCE, "logUrl": "logs/search_other.gz"},
+        {"logType": "Search", "source": DERBY_SOURCE, "logUrl": "logs/search_target.gz"},
+        {"logType": "Packages", "source": DERBY_SOURCE, "logUrl": "logs/packages.gz"},
+    ]}
+    details = {
+        "logs/search_other.gz": search_detail("DXBAL", "NKRR"),
+        "logs/search_target.gz": search_detail("DXBAS", "K3RRF2"),
+        "logs/packages.gz": _derby_detail("HILTON", room_id="K3RRF2"),
+    }
+    details["logs/packages.gz"]["response"]["body"]["hotelId"] = "DXBAS"
+    details["logs/packages.gz"]["request"]["body"]["hotelId"] = "DXBAS"
+
+    async def fetch(log_url: str) -> dict:
+        return details[log_url]
+
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        written = asyncio.run(
+            TemplateIngestor(templates_dir=root / "t", field_maps_dir=root / "f")
+            .ingest_from_list_json("HIL", "sid-1", listing, fetch)
+        )
+        assert written == 2
+        search = _json.loads((root / "t" / "HIL" / "Search" / "v1.json").read_text())
+        hotel = search["httpResponse"]["body"]["availHotels"][0]
+        assert hotel["hotelId"] == "DXBAS", "Search must follow the Packages hotel"
+        assert hotel["availRoomRates"][0]["roomId"] == "K3RRF2"
 

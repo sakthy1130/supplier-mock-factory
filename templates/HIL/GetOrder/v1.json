@@ -5,136 +5,77 @@
   },
   "httpResponse": {
     "headers": {
-      "Date": [
-        "Tue, 12 Aug 2025 12:02:13 GMT"
+      "date": [
+        "Fri, 20 Feb 2026 15:09:31 GMT"
       ],
-      "Content-Type": [
-        "application/json;charset=UTF-8"
+      "access-control-allow-origin": [
+        ""
       ],
-      "Transfer-Encoding": [
-        "chunked"
+      "access-control-allow-credentials": [
+        "false"
       ],
-      "Connection": [
-        "keep-alive"
+      "access-control-allow-methods": [
+        ""
       ],
-      "X-Frame-Options": [
-        "SAMEORIGIN"
+      "access-control-allow-headers": [
+        ""
       ],
-      "Server": [
-        "DGateway/2.0"
+      "access-control-expose-headers": [
+        ""
+      ],
+      "access-control-max-age": [
+        "0"
+      ],
+      "x-envoy-upstream-service-time": [
+        "1005"
+      ],
+      "server": [
+        "envoy"
+      ],
+      "content-length": [
+        "0"
+      ],
+      "content-type": [
+        "application/json"
       ]
     },
     "statusCode": 200,
     "body": {
-      "header": {
-        "supplierId": "HILTON",
-        "distributorId": "ALTAYYAR",
-        "version": "v1.2",
-        "token": "0a493bf0-7c71-433c-bb54-dd35f06ebbc5"
+      "exception": "com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input\n at [Source: (String)\"\"; line: 1, column: 0]\n\tat com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)\n\tat com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)\n\tat com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3548)\n\tat com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3516)\n\tat com.seera.connectivityshared.util.CommonUtils.jsonToObjectThrowingException(CommonUtils.java:191)\n\tat com.seera.sharedadapter.service.BaseSupplierProcessor.handleRawResponse(BaseSupplierProcessor.java:124)\n\tat com.seera.sharedadapter.service.BaseSupplierProcessor.lambda$getClientResponse$0(BaseSupplierProcessor.java:107)\n\tat reactor.core.publisher.MonoFlatMap$FlatMapMain.onNext(MonoFlatMap.java:125)\n\tat reactor.core.publisher.Operators$MonoSubscriber.complete(Operators.java:1815)\n\tat reactor.core.publisher.FluxDefaultIfEmpty$DefaultIfEmptySubscriber.onComplete(FluxDefaultIfEmpty.java:108)\n\tat reactor.core.publisher.FluxOnAssembly$OnAssemblySubscriber.onComplete(FluxOnAssembly.java:397)\n\tat reactor.core.publisher.FluxMapFuseable$MapFuseableSubscriber.onComplete(FluxMapFuseable.java:150)\n\tat reactor.core.publisher.FluxContextWrite$ContextWriteSubscriber.onComplete(FluxContextWrite.java:126)\n\tat reactor.core.publisher.FluxMapFuseable$MapFuseableConditionalSubscriber.onComplete(FluxMapFuseable.java:344)\n\tat reactor.core.publisher.FluxFilterFuseable$FilterFuseableConditionalSubscriber.onComplete(FluxFilterFuseable.java:391)\n\tat reactor.core.publisher.Operators$MonoSubscriber.complete(Operators.java:1816)\n\tat reactor.core.publisher.MonoCollect$CollectSubscriber.onComplete(MonoCollect.java:159)\n\tat reactor.core.publisher.FluxMap$MapSubscriber.onComplete(FluxMap.java:142)\n\tat org.springframework.cloud.sleuth.instrument.reactor.ScopePassingSpanSubscriber.onComplete(ScopePassingSpanSubscriber.java:102)\n\tat reactor.core.publisher.FluxPeek$PeekSubscriber.onComplete(FluxPeek.java:259)\n\tat org.springframework.cloud.sleuth.instrument.reactor.ScopePassingSpanSubscriber.onComplete(ScopePassingSpanSubscriber.java:102)\n\tat reactor.core.publisher.FluxMap$MapSubscriber.onComplete(FluxMap.java:142)\n\tat reactor.netty.channel.FluxReceive.onInboundComplete(FluxReceive.java:401)\n\tat reactor.netty.channel.ChannelOperations.onInboundComplete(ChannelOperations.java:416)\n\tat reactor.netty.channel.ChannelOperations.terminate(ChannelOperations.java:470)\n\tat reactor.netty.http.client.HttpClientOperations.onInboundNext(HttpClientOperations.java:685)\n\tat reactor.netty.channel.ChannelOperationsHandler.channelRead(ChannelOperationsHandler.java:94)\n\tat io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:379)\n\tat io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:365)\n\tat io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:357)\n\tat io.netty.handler.timeout.IdleStateHandler.channelRead(IdleStateHandler.java:286)\n\tat io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:379)\n\tat io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:365)\n\tat io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:357)\n\tat io.netty.handler.codec.MessageToMessageDecoder.channelRead(MessageToMessageDecoder.java:103)\n\tat io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:379)\n\tat io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:365)\n\tat io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:357)\n\tat io.netty.channel.CombinedChannelDuplexHandler$DelegatingChannelHandlerContext.fireChannelRead(CombinedChannelDuplexHandler.java:436)\n\tat io.netty.handler.codec.ByteToMessageDecoder.fireChannelRead(ByteToMessageDecoder.java:324)\n\tat io.netty.handler.codec.ByteToMessageDecoder.channelRead(ByteToMessageDecoder.java:296)\n\tat io.netty.channel.CombinedChannelDuplexHandler.channelRead(CombinedChannelDuplexHandler.java:251)\n\tat io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:379)\n\tat io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:365)\n\tat io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:357)\n\tat io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410)\n\tat io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:379)\n\tat io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:365)\n\tat io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919)\n\tat io.netty.channel.epoll.AbstractEpollStreamChannel$EpollStreamUnsafe.epollInReady(AbstractEpollStreamChannel.java:795)\n\tat io.netty.channel.epoll.EpollEventLoop.processReady(EpollEventLoop.java:480)\n\tat io.netty.channel.epoll.EpollEventLoop.run(EpollEventLoop.java:378)\n\tat io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:989)\n\tat io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)\n\tat io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)\n\tat java.base/java.lang.Thread.run(Unknown Source)\n",
+      "headers": {
+        "date": [
+          "Fri, 20 Feb 2026 15:09:31 GMT"
+        ],
+        "access-control-allow-origin": [
+          ""
+        ],
+        "access-control-allow-credentials": [
+          "false"
+        ],
+        "access-control-allow-methods": [
+          ""
+        ],
+        "access-control-allow-headers": [
+          ""
+        ],
+        "access-control-expose-headers": [
+          ""
+        ],
+        "access-control-max-age": [
+          "0"
+        ],
+        "x-envoy-upstream-service-time": [
+          "1005"
+        ],
+        "server": [
+          "envoy"
+        ],
+        "content-length": [
+          "0"
+        ]
       },
-      "reservations": [
-        {
-          "guests": [],
-          "comments": [
-            "Seera ID. BtmrbPTvqbVqiYJ-0-EJZnTK",
-            "Charge VCC for room/tax. Guest pays extras",
-            "E mail copy invoice to ap@seera.sa",
-            "This is a Majdi booking from Almosafer (Seera)"
-          ],
-          "roomRates": [
-            {
-              "roomId": "K1",
-              "rateId": "ODCC30",
-              "currency": "SAR",
-              "amountBeforeTax": [
-                564.2
-              ],
-              "amountAfterTax": [
-                681.27
-              ],
-              "mealPlan": "RO",
-              "fees": [
-                {
-                  "dateRange": {
-                    "startDate": "2025-11-01",
-                    "endDate": "2025-11-01"
-                  },
-                  "fee": {
-                    "name": "Tax1",
-                    "type": "Exclusive",
-                    "amount": 15.75,
-                    "amountType": "Percent",
-                    "chargeType": "PerRoomPerNight"
-                  }
-                },
-                {
-                  "dateRange": {
-                    "startDate": "2025-11-01",
-                    "endDate": "2025-11-01"
-                  },
-                  "fee": {
-                    "name": "Tax2",
-                    "type": "Exclusive",
-                    "amount": 5,
-                    "amountType": "Percent",
-                    "chargeType": "PerRoomPerNight"
-                  }
-                }
-              ],
-              "cancelPolicy": {
-                "code": "1D1N_1N",
-                "description": "CXL 1 DAY PRIOR TO ARRIVAL",
-                "cancelPenalties": [
-                  {
-                    "noShow": false,
-                    "cancellable": true,
-                    "cancelDeadline": {
-                      "offsetTimeDropType": "BeforeArrival",
-                      "offsetTimeUnit": "D",
-                      "offsetTimeValue": 1
-                    },
-                    "penaltyCharge": {
-                      "chargeBase": "NightBase",
-                      "nights": 1
-                    }
-                  },
-                  {
-                    "noShow": true,
-                    "penaltyCharge": {
-                      "chargeBase": "NightBase",
-                      "nights": 1
-                    }
-                  }
-                ]
-              }
-            }
-          ],
-          "productAddons": [],
-          "reservationIds": {
-            "distributorResId": "BtmrbPTvqbVqiYJ-0-EJZnTK",
-            "derbyResId": "2N8KS2G4CK1SX52Z6O3Z7",
-            "supplierResId": "3309725003"
-          },
-          "iata": "71200614",
-          "hotelId": "RUHSK",
-          "stayRange": {
-            "checkin": "2025-11-01",
-            "checkout": "2025-11-02"
-          },
-          "roomCriteria": {
-            "roomCount": 1,
-            "adultCount": 1,
-            "childCount": 0
-          },
-          "total": {
-            "amountBeforeTax": 564.2,
-            "amountAfterTax": 681.27
-          },
-          "status": "Cancelled",
-          "cancellationId": "1754501953",
-          "result": "Successful"
-        }
-      ]
+      "body": "",
+      "httpStatusCode": 404
     }
   },
   "priority": 1000

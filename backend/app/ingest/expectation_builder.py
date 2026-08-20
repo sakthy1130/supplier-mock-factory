@@ -224,6 +224,25 @@ def _supplier_id_from_body(body: dict) -> str | None:
     return None
 
 
+def _hotel_id_from_body(body: dict) -> str | None:
+    """``hotelId`` wherever this payload keeps it: per availHotels entry on the
+    multi-hotel Search, at body level on availability and prebook."""
+    hotels = body.get("availHotels")
+    if isinstance(hotels, list):
+        for hotel in hotels:
+            if isinstance(hotel, dict):
+                value = hotel.get("hotelId")
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+    value = body.get("hotelId")
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def payload_hotel_id(full_log: dict) -> str | None:
+    """The hotel a fetched log detail is about, response first then request."""
+    return _walk_log_bodies(full_log, _hotel_id_from_body)
+
+
 def payload_supplier_id(full_log: dict) -> str | None:
     """The supplier id a fetched log detail belongs to, response first then request.
 
@@ -231,6 +250,11 @@ def payload_supplier_id(full_log: dict) -> str | None:
     so this is the only thing in the payload that says which of them a row belongs to.
     Returns None when the log carries none — the caller decides what that means.
     """
+    return _walk_log_bodies(full_log, _supplier_id_from_body)
+
+
+def _walk_log_bodies(full_log: dict, extract) -> str | None:
+    """Run ``extract`` over each JSON body in a log detail, response before request."""
     if not isinstance(full_log, dict):
         return None
     for section in ("response", "request"):
@@ -244,7 +268,7 @@ def payload_supplier_id(full_log: dict) -> str | None:
                 continue
             if not isinstance(body, dict):
                 continue
-            found = _supplier_id_from_body(body)
+            found = extract(body)
             if found:
                 return found
     return None
@@ -338,6 +362,12 @@ def _normalize_path(path: str) -> str:
     text = path.strip()
     if not text.startswith("/"):
         text = f"/{text}"
+    # Collapse repeated slashes. A logged path is sometimes a join artefact
+    # ("//bts/api/reservation/detail"), and MockServer matches paths literally — an
+    # expectation registered on the doubled path never matches the single-slash request
+    # the adapter actually sends, so the mock is silently dead.
+    while "//" in text:
+        text = text.replace("//", "/")
     return text
 
 

@@ -6,7 +6,7 @@
   "httpResponse": {
     "headers": {
       "Date": [
-        "Tue, 12 Aug 2025 12:01:07 GMT"
+        "Mon, 21 Jul 2025 11:49:30 GMT"
       ],
       "Content-Type": [
         "application/json;charset=UTF-8"
@@ -30,12 +30,12 @@
         "supplierId": "HILTON",
         "distributorId": "ALTAYYAR",
         "version": "v1.2",
-        "token": "0a493bf0-7c71-433c-bb54-dd35f06ebbc5"
+        "token": "83a9e376-974f-4f0a-9acd-80ee5e3a3232"
       },
-      "hotelId": "RUHSK",
+      "hotelId": "DXBAS",
       "stayRange": {
-        "checkin": "2025-11-01",
-        "checkout": "2025-11-02"
+        "checkin": "2025-09-01",
+        "checkout": "2025-09-03"
       },
       "roomCriteria": {
         "roomCount": 1,
@@ -44,48 +44,63 @@
         "childAges": []
       },
       "productCandidate": {
-        "roomId": "K1",
-        "rateId": "ODCC30"
+        "roomId": "Q1DRD",
+        "rateId": "ODCC40"
       },
       "iata": "71200614",
       "roomRates": [
         {
-          "inventory": 9,
-          "roomId": "K1",
-          "rateId": "ODCC30",
-          "currency": "SAR",
+          "inventory": 6,
+          "roomId": "Q1DRD",
+          "rateId": "ODCC40",
+          "currency": "AED",
           "amountBeforeTax": [
-            564.2
+            114,
+            114
           ],
           "amountAfterTax": [
-            681.27
+            139.65,
+            139.65
           ],
           "mealPlan": "RO",
           "fees": [
             {
               "dateRange": {
-                "startDate": "2025-11-01",
-                "endDate": "2025-11-01"
+                "startDate": "2025-09-01",
+                "endDate": "2025-09-02"
               },
               "fee": {
                 "name": "Tax1",
                 "type": "Exclusive",
-                "amount": 15.75,
+                "amount": 7,
                 "amountType": "Percent",
                 "chargeType": "PerRoomPerNight"
               }
             },
             {
               "dateRange": {
-                "startDate": "2025-11-01",
-                "endDate": "2025-11-01"
+                "startDate": "2025-09-01",
+                "endDate": "2025-09-02"
               },
               "fee": {
                 "name": "Tax2",
                 "type": "Exclusive",
-                "amount": 5,
+                "amount": 5.5,
                 "amountType": "Percent",
                 "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-09-01",
+                "endDate": "2025-09-02"
+              },
+              "fee": {
+                "name": "Tax3",
+                "type": "Exclusive",
+                "amount": 10,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerStay"
               }
             }
           ],

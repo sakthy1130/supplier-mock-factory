@@ -23,6 +23,7 @@ from __future__ import annotations
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
 from app.plugins.room_names import normalized_room_basis
+from app.ingest.expectation_builder import payload_hotel_id as log_hotel_id
 from app.ingest.expectation_builder import payload_supplier_id as log_supplier_id
 from app.plugins.supplier_currency import apply_chc_supplier_currency
 from app.plugins.json_utils import deep_copy, update_fields_recursive
@@ -76,6 +77,10 @@ class DerbyBtsMockPlugin(SupplierMockPlugin):
         if not found or not self.payload_supplier_id:
             return False
         return found.strip().upper() == self.payload_supplier_id.upper()
+
+    def payload_hotel_id(self, full_log: dict) -> str | None:
+        """Derby keeps it on the hotel entry for Search and at body level elsewhere."""
+        return log_hotel_id(full_log)
 
     def mutate_dates(self, expectation: dict, check_in: str, check_out: str) -> dict:
         result = deep_copy(expectation)

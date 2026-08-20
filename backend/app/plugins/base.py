@@ -19,6 +19,17 @@ class SupplierMockPlugin(ABC):
     def matches_adapter_source(self, source: str) -> bool:
         """True if log list row source belongs to this supplier adapter."""
 
+    def payload_hotel_id(self, full_log: dict) -> str | None:
+        """The hotel a fetched log row is about, or None if the plugin can't tell.
+
+        Suppliers whose adapter chunks search one hotel per call (Derby's
+        chunkSizeForSearch=1) produce one Search row per hotel, only one of which is the
+        hotel the Packages row drilled into. Ingest uses this to keep the two templates
+        on the same hotel — mocking Search for hotel A and Packages for hotel B yields
+        room ids that belong to neither, and the adapter filters every rate away.
+        """
+        return None
+
     def claims_log_payload(self, full_log: dict) -> bool:
         """True if this fetched log detail is this supplier's, not a shared-adapter sibling's.
 
