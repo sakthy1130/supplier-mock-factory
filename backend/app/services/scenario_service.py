@@ -52,6 +52,7 @@ def record_to_bundle(record: ScenarioRecord) -> ScenarioBundle:
         status=ScenarioStatus(record.status),
         api_key=record.api_key,
         api_key_id=record.api_key_id,
+        api_key_is_external=bool(record.api_key_is_external),
         contracts=record.contracts_json or {},
         booking_ids=record.booking_ids_json or {},
         check_in=record.check_in,
@@ -139,6 +140,7 @@ def apply_bundle(db: MongoStore, record: ScenarioRecord, bundle: ScenarioBundle)
     record.status = bundle.status.value
     record.api_key = bundle.api_key
     record.api_key_id = bundle.api_key_id
+    record.api_key_is_external = bundle.api_key_is_external
     record.contracts_json = bundle.contracts
     record.booking_ids_json = bundle.booking_ids
     request_json = dict(record.request_json or {})
@@ -253,6 +255,7 @@ async def _teardown_record(session: MongoStore, record: ScenarioRecord) -> None:
             suppliers=supplier_codes,
             sb_config_id=record.sb_config_id,
             sb_group_id=record.sb_group_id,
+            api_key_is_external=bool(record.api_key_is_external),
         )
     bundle.id = record.id
     bundle.namespace = record.namespace

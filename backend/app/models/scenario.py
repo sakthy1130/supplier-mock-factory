@@ -23,6 +23,18 @@ class AssignmentTarget(str, Enum):
     both = "both"
 
 
+class ProvisioningDepth(str, Enum):
+    """How far scenario creation goes past the mocks and contracts.
+
+    ``full`` is the historical behaviour and stays the default, so existing callers
+    (wizard, automation API, saved templates) keep working with no payload change.
+    """
+
+    contract_only = "contract_only"  # mocks + contract
+    contract_br = "contract_br"      # mocks + contract, contract assigned to the BR rules
+    full = "full"                    # mocks + contract + a NEW apiKey (+ apiKey -> BR)
+
+
 class SBGroupConfiguration(BaseModel):
     """Controls which attributes SB enforces when matching packages. These drive
     the TOP-LEVEL config fields the SB engine reads; defaults mirror the known-
@@ -229,6 +241,23 @@ class ScenarioRequest(BaseModel):
         default=None,
         description="Smart Booking provisioning config. Omit for non-SB scenarios.",
     )
+    provisioning_depth: ProvisioningDepth = Field(
+        default=ProvisioningDepth.full,
+        description=(
+            "How far provisioning goes: contract_only (mocks + contract), contract_br "
+            "(also assigns the contract to the BR rules), or full (also creates a new "
+            "apiKey and assigns THAT to BR). Default full = historical behaviour."
+        ),
+    )
+    existing_api_key: Optional[str] = Field(
+        default=None,
+        description=(
+            "Optional apiKey (uid) that already exists: the scenario's contracts are "
+            "attached to it instead of creating a new apiKey. Only used by the "
+            "contract_only / contract_br depths; ignored for full. SMF never deletes "
+            "an apiKey it did not create — teardown just detaches the contracts."
+        ),
+    )
     assign_to_br: bool = Field(
         default=True,
         description=(
@@ -259,6 +288,29 @@ class ScenarioRequest(BaseModel):
             code = supplier.code.value
             seen[code] = seen.get(code, 0) + 1
             supplier.instance = seen[code]
+        return self
+
+    @model_validator(mode="after")
+    def _validate_provisioning_depth(self) -> "ScenarioRequest":
+        """Reject depth/flag combinations that cannot be honoured.
+
+        Silently ignoring them is worse than failing: a dropped sb_enabled reads as
+        "SmartBooking is broken" rather than "that depth has no apiKey to put it on".
+        """
+        if self.provisioning_depth is not ProvisioningDepth.full:
+            if self.sb_enabled or self.sb_config is not None:
+                raise ValueError(
+                    "SmartBooking needs a new apiKey to attach to — it requires "
+                    "provisioning_depth='full'."
+                )
+            if self.crawla_export:
+                # Crawla scenarios drive BR off the apiKey (see orchestrator step 6).
+                raise ValueError("Crawla-exported scenarios require provisioning_depth='full'.")
+        elif self.existing_api_key:
+            raise ValueError(
+                "existing_api_key only applies to provisioning_depth "
+                "'contract_only' or 'contract_br' — 'full' creates its own apiKey."
+            )
         return self
 
     @model_validator(mode="after")
@@ -324,6 +376,10 @@ class ScenarioBundle(BaseModel):
     status: ScenarioStatus = ScenarioStatus.PENDING
     api_key: Optional[str] = None
     api_key_id: Optional[str] = None
+    # True when api_key refers to a PRE-EXISTING apiKey the scenario only attached its
+    # contracts to. Teardown must then detach instead of deleting — this flag is the
+    # only thing standing between a cleanup and someone else's shared apiKey.
+    api_key_is_external: bool = False
     contracts: dict[str, str] = Field(default_factory=dict)
     booking_ids: dict[str, str] = Field(default_factory=dict)
     check_in: str

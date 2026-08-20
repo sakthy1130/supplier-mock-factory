@@ -1,0 +1,41 @@
+curl --location 'http://localhost:8000/api/scenarios' \
+--header 'Content-Type: application/json' \
+--header 'X-SMF-Env: stg' \
+--data '{
+    "namespace": "qa-20260819-s12",
+    "check_in": "2026-09-01",
+    "check_out": "2026-09-03",
+    "atg_hotel_id": "1446194",
+    "provisioning_depth": "full",
+    "suppliers": [
+        {
+            "code": "HBS",
+            "contract_currency": "USD",
+            "packages": {
+                "count": 3,
+                "room_basis": [
+                    "RO",
+                    "BB",
+                    "HB"
+                ],
+                "room_names": [
+                    "Room Only",
+                    "Bed & Breakfast",
+                    "Half Board"
+                ],
+                "supplier_currency": "USD",
+                "prices": [
+                    150.0,
+                    170.0,
+                    200.0
+                ],
+                "refundable": [
+                    true,
+                    true,
+                    true
+                ],
+                "booking_package_index": null
+            }
+        }
+    ]
+}'

@@ -828,6 +828,56 @@
   font-size: 0.78rem;
 }
 
+.depth-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.depth-option > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.depth-option .hint {
+  margin: 0;
+}
+
+/* Existing-apiKey field under the depth radios. Its own class rather than
+   .supplier-tile-field, which uppercases label AND input — an apiKey uid is lowercase,
+   so uppercasing it would show something other than what is sent. */
+.depth-field {
+  margin-top: 0.85rem;
+  max-width: 26rem;
+}
+
+.depth-field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+
+.depth-field input {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.85rem;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-strong);
+}
+
+.depth-field .hint {
+  margin: 0.35rem 0 0;
+}
+
 .supplier-tile-field {
   display: block;
   font-size: 0.72rem;

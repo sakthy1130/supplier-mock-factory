@@ -45,6 +45,9 @@ class ScenarioRecord:
     env: str = "stg"
     api_key: Optional[str] = None
     api_key_id: Optional[str] = None
+    # True when api_key is a pre-existing apiKey this scenario only attached contracts
+    # to. Teardown detaches instead of deleting — see orchestrator.teardown_scenario.
+    api_key_is_external: bool = False
     contracts_json: dict = field(default_factory=dict)
     booking_ids_json: dict = field(default_factory=dict)
     suppliers_json: list = field(default_factory=list)

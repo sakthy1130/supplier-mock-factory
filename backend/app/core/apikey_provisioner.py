@@ -100,6 +100,111 @@ class ApiKeyProvisioner:
             return api_key, api_key_id
 
 
+    async def attach_contracts(
+        self,
+        api_key: str,
+        contract_ids: list[str],
+        prov_log: list[str] | None = None,
+    ) -> str:
+        """Add contract ids to an EXISTING apiKey, returning its backoffice id.
+
+        Used by the contract_only / contract_br depths when the caller supplies an
+        apiKey instead of having one created. Contracts are unioned in, never
+        replaced — this is someone else's apiKey and it may already carry others.
+        """
+        return await self._rewrite_contracts(api_key, add=contract_ids, remove=[], prov_log=prov_log)
+
+    async def detach_contracts(
+        self,
+        api_key: str,
+        contract_ids: list[str],
+        prov_log: list[str] | None = None,
+    ) -> str:
+        """Remove contract ids from an existing apiKey (teardown counterpart).
+
+        Runs BEFORE the contracts themselves are deleted, so the apiKey is never
+        left referencing a contract that no longer exists.
+        """
+        return await self._rewrite_contracts(api_key, add=[], remove=contract_ids, prov_log=prov_log)
+
+    async def _rewrite_contracts(
+        self,
+        api_key: str,
+        add: list[str],
+        remove: list[str],
+        prov_log: list[str] | None = None,
+    ) -> str:
+        node_id = self.settings.tenant_id
+        if not node_id:
+            raise ValueError("TENANT_ID is required to update an apiKey")
+
+        def _plog(msg: str) -> None:
+            logger.info(msg)
+            if prov_log is not None:
+                prov_log.append(msg)
+
+        async with self.backoffice:
+            summary = await self.backoffice.find_api_key_by_uid(api_key)
+            if not summary or not summary.get("_id"):
+                raise BackofficeError(f"ApiKey not found: {api_key}")
+            api_key_id = str(summary["_id"])
+
+            config = await self.backoffice.get_api_key_config(api_key_id, node_id)
+            body, current = _writable_api_key_body(config)
+            updated = [cid for cid in current if cid not in set(remove)]
+            for contract_id in add:
+                if contract_id not in updated:
+                    updated.append(contract_id)
+            body["contracts"] = updated
+            _plog(
+                f"[apiKey ATTACH] uid={api_key} _id={api_key_id} "
+                f"contracts {current} -> {updated} (+{add} -{remove})"
+            )
+
+            await self.backoffice.update_api_key(api_key_id, node_id, body)
+            await self.config_manager.clear_api_key_cache(api_key)
+            _plog(f"[cache clear] POST /api/v1/cache/config/clear/{api_key} → 200 OK")
+        return api_key_id
+
+
+# Fields the GET config response carries that the PUT endpoint must NOT receive back.
+# Echoing the read shape verbatim corrupts the record — the portal then 500s on GET.
+# This list mirrors the proven recipe in qaBackend_Enigma's UpdateConfigForRebooker.
+_READ_ONLY_API_KEY_FIELDS = (
+    "_id",
+    "created_at",
+    "update_at",
+    "updated_at",
+    "createdBy",
+    "updatedBy",
+    "userDetail",
+    "nodeDetail",
+)
+
+
+def _writable_api_key_body(config: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """(PUT-safe body, current contract ids) from a GET apiKey config response.
+
+    The GET response expands `contracts` into full objects; the PUT endpoint expects
+    a plain list of ids. Returning the ids separately keeps the caller's union/remove
+    logic honest about what was already there.
+    """
+    body = copy.deepcopy(config)
+    for field in _READ_ONLY_API_KEY_FIELDS:
+        body.pop(field, None)
+
+    current: list[str] = []
+    for entry in config.get("contracts") or []:
+        if isinstance(entry, dict):
+            contract_id = entry.get("_id") or entry.get("id")
+            if contract_id:
+                current.append(str(contract_id))
+        elif entry:
+            current.append(str(entry))
+    body["contracts"] = current
+    return body, current
+
+
 def _api_key_value(namespace: str) -> str:
     return f"smf-{namespace}".lower().replace(" ", "-")
 

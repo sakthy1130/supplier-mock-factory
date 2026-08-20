@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BR_CHILD_CONDITIONS_PATH = REPO_ROOT / "field-maps" / "br_child_conditions.json"
+BR_CONTRACT_CONDITIONS_PATH = REPO_ROOT / "field-maps" / "br_contract_conditions.json"
 
 
 STATIC_MARKUP_RULE_ID = 3
@@ -22,6 +24,10 @@ DYNAMIC_MARKUP_RULE_ID = 4
 STATIC_MARKUP_PARENT_CONDITION_ID = 178
 DYNAMIC_MARKUP_PARENT_CONDITION_ID = 176
 API_KEY_INPUT_DETAIL_ID = 26
+# "contractId IN" (field contractId, operator IN, datatype STRING). The contract_br
+# depth builds the SAME conditions as the apiKey path and swaps only this input id and
+# the value it matches on.
+CONTRACT_INPUT_DETAIL_ID = 30
 STATIC_MARKUP_OUTPUT_DETAIL_ID = 4
 DYNAMIC_MARKUP_OUTPUT_DETAIL_ID = 8
 
@@ -85,16 +91,26 @@ class BusinessRulesClient:
         rule_id: int,
         parent_condition_id: int,
         output_detail_id: int,
-        api_key: str,
+        input_value: str,
         output_value: str,
+        input_detail_id: int = API_KEY_INPUT_DETAIL_ID,
+        description: str = "APIKey Included",
     ) -> dict[str, Any]:
+        """Create a markup-rule condition.
+
+        `input_value` is whatever the condition matches on — an apiKey by default, or a
+        contract id list when input_detail_id is CONTRACT_INPUT_DETAIL_ID. (It was named
+        api_key before this function served both.) Everything else about the body is
+        identical either way, which is the point: a contract-scoped scenario should
+        produce the same rule setup as the apiKey one, differing only in what it matches on.
+        """
         body = {
             "ruleId": rule_id,
-            "description": "APIKey Included",
+            "description": description,
             "parentRuleValueMappingId": parent_condition_id,
-            "inputDetailId": API_KEY_INPUT_DETAIL_ID,
+            "inputDetailId": input_detail_id,
             "outputDetailId": output_detail_id,
-            "inputValue": api_key,
+            "inputValue": input_value,
             "inputValueListId": None,
             "outputValue": output_value,
             "overwrite": True,
@@ -243,11 +259,264 @@ class CrawlaBusinessRulesProvisioner:
                 created.append(child_id)
         return {"rule_id": DYNAMIC_MARKUP_RULE_ID, "template_child_condition_ids": created}
 
+    async def provision_for_contracts(
+        self,
+        contracts: list[dict[str, Any]],
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Assign CONTRACTS (not an apiKey) to the markup rules — the contract_br depth.
+
+        Deliberately the SAME setup as provision(): the same two rules, the same parent
+        conditions, the same outputDetailIds and markup values, same overwrite and
+        executionOrder. The only difference is what the condition matches on —
+        inputDetailId CONTRACT_INPUT_DETAIL_ID (30, "contractId IN") with the contract id
+        list as inputValue, instead of 26 with the apiKey.
+
+        The conditions match on the contracts, but the rules still have to KNOW the
+        apiKey the search will run under, so when the caller named an existing one
+        (`api_key`) it is also assigned to both rules via the apiKey path's rule-CONFIG
+        call (POST /v1/apikeys/create-assign/rule/...). Without an existing apiKey there
+        is nothing to assign and that step is skipped, as before.
+
+        Only the rule-configs THIS scenario created are torn down (by their stored ids) —
+        an existing apiKey may carry other people's rule-configs, so cleanup never sweeps
+        it by name the way the `full` depth does with its own apiKey.
+
+        field-maps/br_contract_conditions.json remains an optional per-env OVERRIDE for
+        sites whose ids differ from the constants; with no entry, the mirrored path above
+        runs (no more NOT_CONFIGURED).
+
+        `contracts` is a list of {"instance_key", "uid", "id", "autoId"} for the
+        scenario's created contracts.
+        """
+        setup: dict[str, Any] = {
+            "enabled": True,
+            "status": "SUCCESS",
+            "mode": "contract",
+            "contracts": [c.get("uid") or c.get("id") for c in contracts],
+            # NOT "api_key": cleanup() falls back to setup["api_key"] and would then run
+            # the by-name rule-config sweep against an apiKey that isn't ours.
+            "assigned_api_key": api_key,
+            "rules": {},
+            "contract_condition_ids": [],
+            "errors": [],
+        }
+        config = _load_contract_conditions().get(self.client.settings.env) or {}
+        payloads = config.get("conditions") or []
+
+        value_field = config.get("contract_value_field") or "autoId"
+        # The real condition is "contractId IN <comma-separated list>", so by default
+        # every contract goes into ONE condition. per_contract is there for a
+        # single-value operator (EQUALS), which would need one condition each.
+        value_mode = config.get("value_mode") or "join"
+        separator = config.get("value_separator") or ","
+
+        values: list[str] = []
+        for contract in contracts:
+            value = contract.get(value_field)
+            if value in (None, ""):
+                setup["errors"].append({
+                    "step": "contract_conditions",
+                    "message": (
+                        f"contract {contract.get('instance_key')} has no '{value_field}' — "
+                        f"cannot build the BR condition inputValue"
+                    ),
+                })
+                continue
+            values.append(str(value))
+
+        if not values:
+            setup["status"] = "FAILED"
+            setup["warning"] = f"No contract '{value_field}' values available for the BR condition"
+            return setup
+
+        input_values = [separator.join(values)] if value_mode == "join" else values
+        setup["input_values"] = input_values
+        async with self.client:
+            # Same first step as the apiKey path: put the apiKey on both markup rules,
+            # so the contract conditions below evaluate under it.
+            if api_key:
+                setup["preexisting_rule_config_ids"] = await self._snapshot_rule_configs(api_key)
+                await self._run_step(
+                    setup, "assign_static", self._assign_rule, STATIC_MARKUP_RULE_ID, api_key
+                )
+                await self._run_step(
+                    setup, "assign_dynamic", self._assign_rule, DYNAMIC_MARKUP_RULE_ID, api_key
+                )
+            if payloads:
+                # Per-env override: raw bodies straight from the field-map.
+                for input_value in input_values:
+                    for payload in payloads:
+                        await self._create_condition_tree(setup, payload, input_value)
+            else:
+                # Default: mirror the apiKey path, swapping only the input.
+                for input_value in input_values:
+                    for rule_id, parent_id, output_detail_id, output_value in (
+                        (
+                            STATIC_MARKUP_RULE_ID,
+                            STATIC_MARKUP_PARENT_CONDITION_ID,
+                            STATIC_MARKUP_OUTPUT_DETAIL_ID,
+                            "10%",
+                        ),
+                        (
+                            DYNAMIC_MARKUP_RULE_ID,
+                            DYNAMIC_MARKUP_PARENT_CONDITION_ID,
+                            DYNAMIC_MARKUP_OUTPUT_DETAIL_ID,
+                            "15%-25%",
+                        ),
+                    ):
+                        await self._create_contract_condition(
+                            setup, rule_id, parent_id, output_detail_id, input_value, output_value
+                        )
+            await self._run_step(setup, "refresh", self.client.refresh)
+        if setup["errors"]:
+            setup["status"] = "FAILED"
+            setup["warning"] = "BR contract setup failed"
+        return setup
+
+    async def _create_contract_condition(
+        self,
+        setup: dict[str, Any],
+        rule_id: int,
+        parent_condition_id: int,
+        output_detail_id: int,
+        input_value: str,
+        output_value: str,
+    ) -> None:
+        """One markup condition keyed on contracts — same body as the apiKey path's."""
+        try:
+            response = await self.client.create_condition(
+                rule_id=rule_id,
+                parent_condition_id=parent_condition_id,
+                output_detail_id=output_detail_id,
+                input_value=input_value,
+                output_value=output_value,
+                input_detail_id=CONTRACT_INPUT_DETAIL_ID,
+                description="Contract Included",
+            )
+            condition_id = _extract_id(response)
+        except Exception as exc:  # noqa: BLE001 - BR setup is non-blocking by design
+            # An already-existing condition is reused, not fatal — and not ours to delete.
+            existing_id = _existing_condition_id(str(exc))
+            if existing_id is None:
+                logger.exception("BR contract condition failed rule=%s", rule_id)
+                setup["errors"].append({"step": f"condition_rule_{rule_id}", "message": str(exc)})
+                return
+            logger.info(
+                "BR contract condition already exists rule=%s id=%s — reusing it, not deleting on teardown",
+                rule_id, existing_id,
+            )
+            setup.setdefault("reused_condition_ids", []).append(existing_id)
+            return
+
+        if condition_id:
+            setup["contract_condition_ids"].append(condition_id)
+        setup["rules"].setdefault(str(rule_id), {}).update(
+            {"parent_condition_id": parent_condition_id, "condition_id": condition_id}
+        )
+
+    async def _create_condition_tree(
+        self,
+        setup: dict[str, Any],
+        payload: dict[str, Any],
+        input_value: str,
+        parent_condition_id: str | None = None,
+    ) -> None:
+        """Create one configured condition, then any children beneath it.
+
+        Rule 4 needs a chain: a root "marketPrice is NOT NULL" condition, then the
+        contractId-IN condition hanging off the id BR returns for it. Children are
+        created with parentRuleValueMappingId set to the LIVE parent id, never a value
+        stored in config — the same rule the per-template child conditions follow.
+
+        Ids are appended in creation order (parents before children); cleanup deletes
+        them in reverse, because BR refuses to delete a parent while a child points at it.
+        """
+        children = payload.get("children") or []
+        # A condition may opt out of inputValue injection: the marketPrice parent is an
+        # operator-only test ("NOT EQUAL TO" with no value == is-not-null), so injecting
+        # a contract list there would change what it matches.
+        body = {key: value for key, value in payload.items() if key != "children"}
+        if body.pop("inject_input_value", True):
+            body["inputValue"] = input_value
+        if parent_condition_id is not None:
+            # BR ids are numeric; send an int when it is one, but don't crash the whole
+            # step on an unexpected id format — pass it through and let BR judge.
+            raw_parent = str(parent_condition_id)
+            body["parentRuleValueMappingId"] = int(raw_parent) if raw_parent.isdigit() else raw_parent
+
+        created_by_us = True
+        try:
+            response = await self.client.create_condition_raw(body)
+            condition_id = _extract_id(response)
+        except Exception as exc:  # noqa: BLE001 - BR setup is non-blocking by design
+            # BR answers 400 AlreadyExistsException when the condition is already there,
+            # and helpfully names its id. Standing conditions (each rule's root) are the
+            # normal case for that, so reuse the id instead of failing the scenario —
+            # but do NOT record it for teardown: we did not create it, and deleting a
+            # rule's root condition would break the rule for everyone.
+            condition_id = _existing_condition_id(str(exc))
+            if condition_id is None:
+                logger.exception("BR contract condition failed rule=%s", body.get("ruleId"))
+                setup["errors"].append({"step": "contract_condition", "message": str(exc)})
+                return
+            created_by_us = False
+            logger.info(
+                "BR condition already exists rule=%s id=%s (%s) — reusing it, not deleting on teardown",
+                body.get("ruleId"), condition_id, body.get("description"),
+            )
+            setup.setdefault("reused_condition_ids", []).append(condition_id)
+
+        if condition_id and created_by_us:
+            setup["contract_condition_ids"].append(condition_id)
+        elif not condition_id and children:
+            setup["errors"].append({
+                "step": "contract_condition",
+                "message": (
+                    f"rule {body.get('ruleId')} parent condition returned no id — "
+                    "cannot attach its child conditions"
+                ),
+            })
+            return
+
+        for child in children:
+            await self._create_condition_tree(setup, child, input_value, condition_id)
+
     async def cleanup(self, setup: dict[str, Any] | None, api_key: str | None) -> dict[str, Any]:
         if not setup and not api_key:
             return {"enabled": False, "status": "SKIPPED", "errors": []}
         api_key = api_key or str((setup or {}).get("api_key") or "")
         result: dict[str, Any] = {"enabled": True, "status": "SUCCESS", "errors": []}
+
+        # contract_br scenarios have no apiKey rule-configs to unpick — just the
+        # contract conditions this scenario created.
+        # REVERSED: ids were appended parents-first, and BR refuses to delete a parent
+        # while a child still references it (same constraint the template child
+        # conditions hit). Reverse creation order is therefore children-first.
+        contract_condition_ids = list(reversed((setup or {}).get("contract_condition_ids") or []))
+        # The apiKey the contract path assigned to the markup rules. It is an EXISTING
+        # apiKey, so the rule-configs come off it on teardown even though the key itself
+        # survives — see _contract_rule_config_ids for which ones are ours to delete.
+        assigned_api_key = str((setup or {}).get("assigned_api_key") or "")
+        if contract_condition_ids or assigned_api_key:
+            async with self.client:
+                for condition_id in contract_condition_ids:
+                    await self._cleanup_step(
+                        result, "delete_contract_condition", self.client.delete_condition, str(condition_id)
+                    )
+                for rule_config_id in await self._contract_rule_config_ids(
+                    result, setup or {}, assigned_api_key
+                ):
+                    await self._cleanup_step(
+                        result, "delete_rule_config", self.client.delete_rule_config, rule_config_id
+                    )
+                await self._cleanup_step(result, "refresh", self.client.refresh)
+            if result["errors"]:
+                result["status"] = "FAILED"
+                result["warning"] = "BR contract cleanup failed"
+            if not api_key:
+                return result
+
         async with self.client:
             # Child conditions reference the parent via parentRuleValueMappingId — the
             # BR service won't let a parent be deleted while a child still points at
@@ -279,6 +548,65 @@ class CrawlaBusinessRulesProvisioner:
             result["warning"] = "BR cleanup failed"
         return result
 
+    async def _contract_rule_config_ids(
+        self,
+        result: dict[str, Any],
+        setup: dict[str, Any],
+        api_key: str,
+    ) -> list[str]:
+        """Which rule-configs to delete for a contract_br scenario that assigned an
+        existing apiKey to the markup rules.
+
+        Preferred source is the diff against the pre-assign snapshot: whatever the rule
+        holds for this apiKey NOW that it did not hold before we ran. That is what makes
+        the deletion safe on a shared apiKey — a rule-config someone else put there is in
+        the snapshot and therefore never touched.
+
+        The id captured from the create-assign response is only a fallback, for a rule
+        with no snapshot (a scenario created before snapshots existed, or a failed read)
+        or one whose diff came back empty. It is a fallback rather than the primary
+        because BR's create-assign response does not reliably carry the ruleConfig id —
+        relying on it is what left the assignment behind.
+        """
+        if not api_key:
+            return []
+        snapshot = setup.get("preexisting_rule_config_ids") or {}
+        ids: list[str] = []
+        for rule_id in (STATIC_MARKUP_RULE_ID, DYNAMIC_MARKUP_RULE_ID):
+            added: list[str] = []
+            if str(rule_id) in snapshot:
+                before = {str(config_id) for config_id in snapshot[str(rule_id)] or []}
+                try:
+                    current = await self._find_rule_config_ids(rule_id, api_key)
+                except Exception as exc:  # noqa: BLE001 - teardown continues best-effort
+                    logger.exception("Could not list rule configs rule=%s", rule_id)
+                    result["errors"].append({"step": "find_rule_config", "message": str(exc)})
+                    current = []
+                added = [config_id for config_id in current if config_id not in before]
+            if not added:
+                stored = _rule_data(setup, rule_id).get("rule_config_id")
+                added = [str(stored)] if stored else []
+            ids.extend(added)
+        return list(dict.fromkeys(ids))
+
+    async def _snapshot_rule_configs(self, api_key: str) -> dict[str, list[str]]:
+        """What the (existing, not ours) apiKey ALREADY has on the two markup rules.
+
+        Teardown deletes today's list minus this one, so a rule-config that was on the
+        apiKey before this scenario ran is left exactly as we found it. A rule whose
+        read fails is simply left out of the snapshot — cleanup then falls back to the
+        id stored at assign time rather than guessing.
+        """
+        snapshot: dict[str, list[str]] = {}
+        for rule_id in (STATIC_MARKUP_RULE_ID, DYNAMIC_MARKUP_RULE_ID):
+            try:
+                snapshot[str(rule_id)] = await self._find_rule_config_ids(rule_id, api_key)
+            except Exception:  # noqa: BLE001 - a failed snapshot must not fail provisioning
+                logger.exception(
+                    "Could not snapshot existing rule configs rule=%s apiKey=%s", rule_id, api_key
+                )
+        return snapshot
+
     async def _assign_rule(self, rule_id: int, api_key: str) -> dict[str, Any]:
         response = await self.client.add_and_assign_api_key(rule_id, api_key)
         rule_config_id = _extract_id(response)
@@ -299,7 +627,7 @@ class CrawlaBusinessRulesProvisioner:
             rule_id=rule_id,
             parent_condition_id=parent_condition_id,
             output_detail_id=output_detail_id,
-            api_key=api_key,
+            input_value=api_key,
             output_value=output_value,
         )
         return {
@@ -318,6 +646,10 @@ class CrawlaBusinessRulesProvisioner:
             configured_api_key = config.get("apiKey")
             if isinstance(configured_api_key, dict):
                 name = str(configured_api_key.get("name") or configured_api_key.get("apikey") or "")
+            elif isinstance(configured_api_key, str) and configured_api_key:
+                # BR has also answered with apiKey as a bare name; missing it here made
+                # the config invisible to cleanup, which then deleted nothing.
+                name = configured_api_key
             else:
                 name = str(config.get("apiKeyName") or config.get("apikey") or "")
             if name.lower() == api_key.lower():
@@ -355,6 +687,20 @@ def _load_template_child_conditions() -> dict[str, dict[str, list[dict[str, Any]
     return json.loads(BR_CHILD_CONDITIONS_PATH.read_text(encoding="utf-8"))
 
 
+def _load_contract_conditions() -> dict[str, dict[str, Any]]:
+    """{env: {"contract_value_field": ..., "conditions": [...]}} — read fresh each call
+    so filling in the real contract inputDetailId needs no restart."""
+    if not BR_CONTRACT_CONDITIONS_PATH.exists():
+        return {}
+    data = json.loads(BR_CONTRACT_CONDITIONS_PATH.read_text(encoding="utf-8"))
+    return {key: value for key, value in data.items() if isinstance(value, dict)}
+
+
+def has_contract_br_conditions(env: str) -> bool:
+    """Whether the contract_br depth can actually create BR conditions in this env."""
+    return bool((_load_contract_conditions().get(env) or {}).get("conditions"))
+
+
 def has_template_child_condition(template_id: str, env: str) -> bool:
     """Public helper for surfacing configured template ids to the UI (e.g. a badge
     on the template list), without exposing the raw condition payloads."""
@@ -366,6 +712,23 @@ def _json_or_empty(response: httpx.Response) -> dict[str, Any]:
         return {}
     data = response.json()
     return data if isinstance(data, dict) else {"data": data}
+
+
+_ALREADY_EXISTS_ID_RE = re.compile(r"already exists", re.IGNORECASE)
+_CONDITION_ID_RE = re.compile(r"with ID:\s*(\d+)", re.IGNORECASE)
+
+
+def _existing_condition_id(error_text: str) -> str | None:
+    """Pull the existing condition id out of BR's AlreadyExistsException message.
+
+    BR answers e.g. `Same Rule condition [with ID: 6, description: (marketPrice is NOT
+    NULL), parent ID: null, and rule ID: 4] already exists in db`. Returns None for any
+    other error, so genuine failures still surface.
+    """
+    if not _ALREADY_EXISTS_ID_RE.search(error_text):
+        return None
+    match = _CONDITION_ID_RE.search(error_text)
+    return match.group(1) if match else None
 
 
 def _extract_id(data: dict[str, Any]) -> str | None:
