@@ -54,6 +54,10 @@ _BACKOFFICE_IDS: dict[str, dict[str, tuple[str, int]]] = {
         "RHK": ("652cd63a90fb03102f226030", 100671),
         "CHC": ("69ef11d11a41325a74bab5da", 107017),
         "EXT": ("642c33cbff075a612ab6ad06", 100423),
+        # Third element pins the reference contract in git instead of relying on a
+        # gitignored HIL_REFERENCE_CONTRACT_ID — a missing .env entry is what makes a
+        # supplier's contract come out wrong on a fresh machine.
+        "HIL": ("636b7c17f7712464b606047d", 100061, "686f65375eaa00158118986f"),
     },
     "dev": {
         "HBS": ("60059008536a5c532c0936a2", 100006),
@@ -68,7 +72,14 @@ _FULL_BOOKING_FLOW = ["Search", "Packages", "PreBooking", "Booking", "GetOrder",
 
 
 def _reference_contract_id(code: str, env: str) -> str:
-    """The env's *_REFERENCE_CONTRACT_ID, read once at seed time."""
+    """The supplier's reference contract for this env.
+
+    Taken from _BACKOFFICE_IDS when it pins one, else the env's
+    *_REFERENCE_CONTRACT_ID, read once at seed time.
+    """
+    pinned = _BACKOFFICE_IDS.get(env, {}).get(code)
+    if pinned is not None and len(pinned) > 2 and pinned[2]:
+        return str(pinned[2])
     settings = get_settings(env)
     return getattr(settings, f"{code.lower()}_reference_contract_id", "") or ""
 
@@ -106,6 +117,20 @@ CHC_MOCK_PATH_SUFFIX: dict[str, str] = {
     "Booking": "api/go/bookingusb/v4/reservation/book",
     "GetOrder": "api/go/bookingusb/v4/reservation/detail",
     "CancelOrder": "api/go/bookingusb/v4/reservation/cancel",
+}
+
+
+# Hilton's Derby deployment answers on /bts/api/... where Choice's answers on
+# /api/go/... — same adapter, different hosts. Distinct suffixes per log type keep
+# availability and prebook apart (MockServer matches on path + method only).
+HIL_MOCK_PATH_SUFFIX: dict[str, str] = {
+    "Search": "bts/api/shopping/multihotels",
+    "Packages": "bts/api/availability",
+    "CancellationPolicy": "bts/api/cancellationpolicy",
+    "PreBooking": "bts/api/livecheck",
+    "Booking": "bts/api/reservation/book",
+    "GetOrder": "bts/api/reservation/detail",
+    "CancelOrder": "bts/api/reservation/cancel",
 }
 
 
@@ -324,6 +349,60 @@ SEED_SUPPLIERS: list[dict[str, Any]] = [
             "booking_id_format": "digits",
         },
     },
+    {
+        # Hilton, via the same hotels-derby-bts-adapter as Choice — plugins/hil.py is a
+        # DerbyBtsMockPlugin subclass, so the payload handling is shared and only the
+        # identity and endpoints differ. stg only: there is no HIL supplier in dev
+        # Backoffice, and the seeding loop skips an env with no ids for a code.
+        "code": "HIL",
+        "name": "Hilton",
+        "supplier_type": "net",
+        # Templates and the hotel are Saudi; the contract follows the reference (AED)
+        # unless a scenario overrides it.
+        "default_supplier_currency": "SAR",
+        "default_contract_currency": "USD",
+        "log_types": _FULL_BOOKING_FLOW,
+        "package_log_types": [
+            "Search",
+            "Packages",
+            "PreBooking",
+            "Booking",
+            "GetOrder",
+            "CancelOrder",
+        ],
+        "ui_color": "#5c6b6e",
+        "mock_config": {
+            "opt_source": "ingested",
+            "path_namespaced": True,
+            "mock_path_suffix": HIL_MOCK_PATH_SUFFIX,
+            "set_mock_server_url": True,
+            "dynamic_market_type": "DynamicMarkupTarget",
+        },
+        "mutation_config": {
+            "packages_path": "httpResponse.body.roomRates",
+            "check_in_keys": ["checkin"],
+            "check_out_keys": ["checkout"],
+            "price_keys": ["amountBeforeTax", "amountAfterTax"],
+            "board_key": "mealPlan",
+            "room_name_key": "roomId",
+            "package_id_key": "rateId",
+            "hotel_id_key": "hotelId",
+            "currency_key": "currency",
+            # Derby refundability is the cancelPolicy CODE, not a boolean field —
+            # DerbyBtsMockPlugin writes AD0_0 / AD100P_100P. Left empty on purpose so
+            # nothing stamps a bool over it.
+            "refundable_key": "",
+            # SupplierRoomBasis accepts more codes but collapses them onto these five.
+            "board_values": ["RO", "BB", "HB", "FB", "AI"],
+            "adapter_source_match": "derby-bts",
+            "booking_id_keys": ["distributorResId", "derbyResId", "supplierResId"],
+            "booking_id_fallback_paths": [
+                "httpResponse.body.reservationIds.distributorResId",
+                "httpResponse.body.reservationIds.derbyResId",
+            ],
+            "booking_id_format": "digits",
+        },
+    },
 ]
 
 
@@ -343,7 +422,13 @@ def seed_suppliers(store=None) -> int:
             code = spec["code"]
             if (code, env) in existing:
                 continue
-            supplier_id, auto_id = _BACKOFFICE_IDS[env][code]
+            ids = _BACKOFFICE_IDS.get(env, {}).get(code)
+            if ids is None:
+                # Not registered in this env's Backoffice (HIL is stg-only). Seeding a
+                # row with another env's supplier _id NPEs connectivity-core, so leave
+                # the supplier absent here rather than wrong.
+                continue
+            supplier_id, auto_id = ids[0], ids[1]
             resolved.suppliers.save(
                 SupplierRecord(
                     id=str(uuid.uuid4()),

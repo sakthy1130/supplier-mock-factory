@@ -92,7 +92,10 @@ def tst_templates():
 def test_seed_creates_built_in_suppliers_per_env(api_client):
     dev = {s["code"] for s in api_client.get("/api/suppliers", headers=DEV).json()}
     stg = {s["code"] for s in api_client.get("/api/suppliers", headers=STG).json()}
-    assert dev == stg == {"HBS", "EXP", "RHK", "CHC", "EXT"}
+    assert dev == {"HBS", "EXP", "RHK", "CHC", "EXT"}
+    # HIL is seeded for stg only — it has no supplier record in dev Backoffice, and
+    # borrowing stg's supplier _id there NPEs hotel-connectivity-core.
+    assert stg == {"HBS", "EXP", "RHK", "CHC", "EXT", "HIL"}
 
 
 def test_seed_keeps_dev_and_stg_backoffice_ids_separate(api_client):

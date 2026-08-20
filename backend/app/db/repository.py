@@ -109,15 +109,21 @@ class SupplierRepository:
         doc = self._collection.find_one({"code": code.upper(), "env": env})
         return SupplierRecord.from_doc(doc) if doc else None
 
+    # Insertion order, not alphabetical: callers treat the first entry as the primary
+    # supplier (teardown iterates it, the wizard ticks the first two), and seeding
+    # inserts in SEED_SUPPLIERS order. Sorting by code would silently reorder that.
+    _ORDER = [("created_at", ASCENDING), ("code", ASCENDING)]
+
     def list(self, env: Optional[str] = None) -> list[SupplierRecord]:
         query: dict = {}
         if env:
             query["env"] = env
-        cursor = self._collection.find(query).sort("code", ASCENDING)
+        cursor = self._collection.find(query).sort(self._ORDER)
         return [SupplierRecord.from_doc(doc) for doc in cursor]
 
     def codes(self, env: str) -> list[str]:
-        return [str(doc["code"]) for doc in self._collection.find({"env": env}, {"code": 1}).sort("code", ASCENDING)]
+        cursor = self._collection.find({"env": env}, {"code": 1, "created_at": 1}).sort(self._ORDER)
+        return [str(doc["code"]) for doc in cursor]
 
     def save(self, record: SupplierRecord) -> SupplierRecord:
         self._collection.replace_one({"_id": record.id}, record.to_doc(), upsert=True)

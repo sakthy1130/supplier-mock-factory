@@ -9,7 +9,9 @@ dependencies = [
     "pydantic>=2.10.0",
     "pydantic-settings>=2.6.0",
     "httpx>=0.28.0",
-    "sqlalchemy>=2.0.36",
+    # Persistence is MongoDB; sqlalchemy was dropped with the SQLite store but stayed
+    # declared here, so a fresh install got the ORM and not the driver the app imports.
+    "pymongo>=4.9.0",
     "python-dotenv>=1.0.1",
 ]
 

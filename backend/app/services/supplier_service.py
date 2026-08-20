@@ -162,15 +162,24 @@ def _config_from_seed(code: str, env: str) -> SupplierConfig | None:
     suppliers therefore behave identically with or without a database; only
     UI-added suppliers require the table.
     """
-    from app.config import get_settings
-    from app.db.seed_suppliers import _BACKOFFICE_IDS, SEED_SUPPLIERS
+    from app.db.seed_suppliers import (
+        _BACKOFFICE_IDS,
+        SEED_SUPPLIERS,
+        _reference_contract_id,
+    )
 
     spec = next((s for s in SEED_SUPPLIERS if s["code"] == code), None)
     if spec is None:
         return None
-    supplier_id, auto_id = _BACKOFFICE_IDS.get(env, _BACKOFFICE_IDS["stg"])[code]
-    settings = get_settings(env)
-    reference_contract_id = getattr(settings, f"{code.lower()}_reference_contract_id", "") or ""
+    # An unrecognised env name falls back to stg's ids, but a code the env has no
+    # Backoffice entry for is genuinely absent there (HIL is stg-only) — borrowing
+    # another env's supplier _id is what NPEs connectivity-core.
+    env_ids = _BACKOFFICE_IDS.get(env, _BACKOFFICE_IDS["stg"])
+    ids = env_ids.get(code)
+    if ids is None:
+        return None
+    supplier_id, auto_id = ids[0], ids[1]
+    reference_contract_id = _reference_contract_id(code, env)
     return SupplierConfig(
         id=f"seed-{code}-{env}",
         code=code,
