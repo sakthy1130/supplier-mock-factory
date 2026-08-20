@@ -37,7 +37,16 @@ def _derby_detail(supplier_id: str, room_id: str = "K1") -> dict:
                 "cancelPolicy": {
                     "code": "1D1N_1N",
                     "cancelPenalties": [
-                        {"noShow": False, "cancellable": True, "penaltyCharge": {"percent": 100}}
+                        {
+                            "noShow": False,
+                            "cancellable": True,
+                            "cancelDeadline": {
+                                "offsetTimeDropType": "BeforeArrival",
+                                "offsetTimeUnit": "D",
+                                "offsetTimeValue": 1,
+                            },
+                            "penaltyCharge": {"chargeBase": "NightBase", "nights": 1, "percent": 100},
+                        }
                     ],
                 },
             }
@@ -244,7 +253,26 @@ def _search_expectation() -> dict:
                                     "childCount": 0,
                                     "childAges": [],
                                 },
-                                "cancelPolicy": {"code": "1D1N_1N", "cancelPenalties": []},
+                                "cancelPolicy": {
+                                    "code": "5D1N_1N",
+                                    "cancelPenalties": [
+                                        {
+                                            "noShow": False,
+                                            "cancellable": True,
+                                            "cancelDeadline": {
+                                                "offsetTimeDropType": "BeforeArrival",
+                                                "offsetTimeUnit": "D",
+                                                "offsetTimeValue": 5,
+                                            },
+                                            # The real template stores this as a string.
+                                            "penaltyCharge": {
+                                                "chargeBase": "NightBase",
+                                                "nights": "1",
+                                                "percent": 100,
+                                            },
+                                        }
+                                    ],
+                                },
                             }
                         ],
                     }
@@ -261,7 +289,9 @@ def _mutate(expectation: dict, spec: PackageSpec, log_type: str) -> dict:
 
 
 def _spec(**kw) -> PackageSpec:
-    return PackageSpec(count=2, room_basis=["RO"], prices=[400.0], refundable=[True], **kw)
+    kw.setdefault("count", 2)
+    kw.setdefault("refundable", [True])
+    return PackageSpec(room_basis=["RO"], prices=[400.0], **kw)
 
 
 def test_search_rates_default_to_two_adults():
@@ -403,4 +433,31 @@ def test_an_unprefixed_id_is_left_alone(api_client):
             _derby_expectation(), _spec(), "RUHSK", "2026-09-01", "2026-09-03", "Packages"
         )
     assert result["httpResponse"]["body"]["hotelId"] == "RUHSK"
+
+
+def test_search_and_packages_describe_the_same_cancel_policy():
+    """The two templates come from different sessions and disagree on the deadline.
+
+    Nothing in the adapter compares the two — rate identity is rateId-roomId-
+    refundability — but a mock that advertises one policy in search and another in
+    availability is wrong on its own terms, and it is the kind of drift that gets
+    blamed for a silent zero-package result.
+    """
+    spec = _spec(count=2, refundable=[True, True])
+    search = HilMockPlugin().mutate_packages(
+        _search_expectation(), spec, "DXBAS", "2026-09-01", "2026-09-03", "Search"
+    )
+    packages = HilMockPlugin().mutate_packages(
+        _derby_expectation(), spec, "DXBAS", "2026-09-01", "2026-09-03", "Packages"
+    )
+
+    def policy(rate: dict) -> dict:
+        cp = rate["cancelPolicy"]
+        return {"code": cp["code"], "penalties": cp["cancelPenalties"]}
+
+    s_rate = search["httpResponse"]["body"]["availHotels"][0]["availRoomRates"][0]
+    p_rate = packages["httpResponse"]["body"]["roomRates"][0]
+    assert policy(s_rate) == policy(p_rate)
+    # nights is numeric on both sides — one template stored it as a string.
+    assert isinstance(p_rate["cancelPolicy"]["cancelPenalties"][0]["penaltyCharge"]["nights"], int)
 

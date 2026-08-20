@@ -265,12 +265,24 @@ def _apply_cancel_policy(rate: dict, is_refundable: bool, log_type: str) -> None
     for penalty in penalties:
         if not isinstance(penalty, dict) or penalty.get("noShow"):
             continue
-        if not isinstance(penalty.get("cancelDeadline"), dict):
-            penalty["cancelDeadline"] = deep_copy(_DEFAULT_CANCEL_DEADLINE)
+        # Overwrite the deadline rather than only filling a missing one. Search and
+        # Packages are ingested from different sessions, so the templates disagree (5
+        # days before arrival vs 1), and that drift shows up in a scenario where every
+        # other field matches. Nothing in the adapter compares the two deadlines — the
+        # rate identity key is rateId-roomId-refundability — but a mock that describes
+        # one policy in search and another in availability is wrong on its own terms.
+        penalty["cancelDeadline"] = deep_copy(_DEFAULT_CANCEL_DEADLINE)
         penalty["cancellable"] = True
         charge = penalty.get("penaltyCharge")
         if isinstance(charge, dict):
             charge["percent"] = 0 if is_refundable else 100
+            # One template carries nights as "1" and the other as 1; the field is
+            # numeric, so make both sides agree on the type too.
+            if "nights" in charge:
+                try:
+                    charge["nights"] = int(charge["nights"])
+                except (TypeError, ValueError):
+                    charge["nights"] = 1
         kept.append(penalty)
 
     if not kept:
