@@ -14,11 +14,11 @@ cp .env.stg.example .env.stg         # staging URLs/creds
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8001
 ```
 
-Health: http://localhost:8000/health  
-API docs: http://localhost:8000/docs
+Health: http://localhost:8001/health  
+API docs: http://localhost:8001/docs
 
 #### Environments (dev / stg)
 
@@ -50,12 +50,12 @@ docker compose up --build
 ```
 
 Open:
-- UI: http://localhost:5173
-- API health: http://localhost:8000/health
+- UI: http://localhost:5144
+- API health: http://localhost:8001/health
 
 The compose stack is tuned for local development:
 - Backend runs with reload enabled
-- Frontend runs Vite on `0.0.0.0:5173`
+- Frontend runs Vite on `0.0.0.0:5144`
 - Templates and field maps are mounted into the backend container
 
 ## Runbook

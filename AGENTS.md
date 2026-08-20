@@ -294,10 +294,10 @@ P1 ingest (`backend/app/ingest/expectation_builder.py`) builds templates from En
 
 ```bash
 # API
-cd backend && PYTHONPATH=. uvicorn app.main:app --reload --port 8000
+cd backend && PYTHONPATH=. uvicorn app.main:app --reload --port 8001
 
 # UI
-cd frontend && npm run dev   # :5173 → proxy :8000
+cd frontend && npm run dev   # :5144 → proxy :8001
 ```
 
 ---

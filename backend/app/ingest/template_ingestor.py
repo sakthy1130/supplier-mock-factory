@@ -28,7 +28,7 @@ from app.ingest.expectation_builder import (
 )
 from app.ingest.field_map_generator import FieldMapGenerator
 from app.integrations.logs_api import LogsApiClient
-from app.plugins import PLUGINS
+from app.plugins import resolve_plugin_or_none
 from app.plugins.base import SupplierMockPlugin
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,26 @@ class LogRowCandidate:
     canonical_type: str
     raw_log_type: str
     timestamp: str
+
+
+@dataclass
+class IngestResult:
+    """What one SID ingest produced — enough for the Suppliers screen to explain itself."""
+
+    supplier_code: str
+    sid: str
+    # Log types written to templates/{CODE}/{LogType}/v1.json.
+    written: list[str]
+    # Required log types the SID's logs had nothing usable for.
+    missing: list[str]
+    # Rows whose HTTP path couldn't be resolved; dumped to _diagnostics/.
+    unresolved: int
+    # log type -> the httpRequest.path the mock will match on.
+    paths: dict[str, str]
+    # How many field-map paths were inferred from the ingested templates.
+    field_map_paths: int
+    # Adapter log sources seen for this SID, whether or not they matched.
+    sources_seen: list[str]
 
 
 class TemplateIngestor:
@@ -62,15 +82,24 @@ class TemplateIngestor:
         counts: dict[str, int] = {}
         async with self.logs:
             for supplier_code, sid in sids.items():
-                plugin = PLUGINS.get(supplier_code)
-                if plugin is None:
-                    raise ValueError(f"Unknown supplier code: {supplier_code}")
-                list_json = await self.logs.list_logs(sid)
-                details = list_json.get("details") or []
-                counts[supplier_code] = await self._ingest_supplier(
-                    plugin, sid, details, fetch_detail=self.logs.get_log_detail
-                )
+                result = await self._ingest_one(supplier_code, sid)
+                counts[supplier_code] = len(result.written)
         return counts
+
+    async def ingest_sid(self, supplier_code: str, sid: str) -> IngestResult:
+        """Build one supplier's templates from a single SID's adapter logs."""
+        async with self.logs:
+            return await self._ingest_one(supplier_code, sid)
+
+    async def _ingest_one(self, supplier_code: str, sid: str) -> IngestResult:
+        plugin = resolve_plugin_or_none(supplier_code)
+        if plugin is None:
+            raise ValueError(f"Unknown supplier code: {supplier_code}")
+        list_json = await self.logs.list_logs(sid)
+        details = list_json.get("details") or []
+        return await self._ingest_supplier(
+            plugin, sid, details, fetch_detail=self.logs.get_log_detail
+        )
 
     async def ingest_from_list_json(
         self,
@@ -80,11 +109,12 @@ class TemplateIngestor:
         fetch_detail: Any,
     ) -> int:
         """Ingest from pre-loaded list payload — used by tests."""
-        plugin = PLUGINS.get(supplier_code)
+        plugin = resolve_plugin_or_none(supplier_code)
         if plugin is None:
             raise ValueError(f"Unknown supplier code: {supplier_code}")
         details = list_json.get("details") or []
-        return await self._ingest_supplier(plugin, sid, details, fetch_detail=fetch_detail)
+        result = await self._ingest_supplier(plugin, sid, details, fetch_detail=fetch_detail)
+        return len(result.written)
 
     def _collect_candidates(self, plugin: SupplierMockPlugin, details: list[dict]) -> dict[str, list[LogRowCandidate]]:
         buckets: dict[str, list[LogRowCandidate]] = {}
@@ -143,19 +173,76 @@ class TemplateIngestor:
             return max(outbound_rows, key=lambda c: c.timestamp)
         return None
 
+    async def _attribute_by_payload(
+        self,
+        plugin: SupplierMockPlugin,
+        buckets: dict[str, list[LogRowCandidate]],
+        detail_for: Any,
+    ) -> dict[str, list[LogRowCandidate]]:
+        """Drop source-matched rows whose payload belongs to a sibling on the same adapter.
+
+        CHC and HIL share ``hotels-derby-bts-adapter``, so ``matches_adapter_source``
+        cannot tell their rows apart and a single search SID contains both. Filtering here
+        rather than after ``_select_candidate`` means the selection rules (latest
+        CancelOrder, GetOrder response/outbound pairing) still choose from this supplier's
+        own rows instead of picking a sibling's row and losing the log type.
+        """
+        filtered: dict[str, list[LogRowCandidate]] = {}
+        for canonical_type, candidates in buckets.items():
+            kept: list[LogRowCandidate] = []
+            for candidate in candidates:
+                log_url = candidate.row.get("logUrl", "")
+                if not log_url:
+                    continue
+                try:
+                    full_log = await detail_for(log_url)
+                except Exception:  # noqa: BLE001 - one unreadable row must not fail the ingest
+                    logger.warning(
+                        "%s ingest could not read %s for attribution; skipping row",
+                        plugin.code,
+                        log_url,
+                    )
+                    continue
+                if plugin.claims_log_payload(full_log):
+                    kept.append(candidate)
+            dropped = len(candidates) - len(kept)
+            if dropped:
+                logger.info(
+                    "%s ingest dropped %d %s row(s) belonging to another supplier on the "
+                    "same adapter",
+                    plugin.code,
+                    dropped,
+                    canonical_type,
+                )
+            if kept:
+                filtered[canonical_type] = kept
+        return filtered
+
     async def _ingest_supplier(
         self,
         plugin: SupplierMockPlugin,
         sid: str,
         details: list[dict],
         fetch_detail: Any,
-    ) -> int:
+    ) -> IngestResult:
         if not details:
             raise ValueError(f"No log details for sid={sid} supplier={plugin.code}")
 
         buckets = self._collect_candidates(plugin, details)
         pending_by_type: dict[str, PendingExpectation] = {}
         diagnostics: list[dict] = []
+
+        # Details are fetched once per log url: shared-adapter attribution below reads the
+        # same payloads the expectations are then built from.
+        detail_cache: dict[str, dict] = {}
+
+        async def detail_for(log_url: str) -> dict:
+            if log_url not in detail_cache:
+                detail_cache[log_url] = await fetch_detail(log_url)
+            return detail_cache[log_url]
+
+        if plugin.disambiguate_by_payload:
+            buckets = await self._attribute_by_payload(plugin, buckets, detail_for)
 
         for canonical_type, candidates in buckets.items():
             selected = self._select_candidate(canonical_type, candidates)
@@ -164,7 +251,7 @@ class TemplateIngestor:
 
             row = selected.row
             log_url = row.get("logUrl", "")
-            full_log = await fetch_detail(log_url)
+            full_log = await detail_for(log_url)
 
             http = resolve_http_path_and_method(row, full_log)
             if not http.path:
@@ -219,12 +306,45 @@ class TemplateIngestor:
                 sorted(missing),
             )
 
-        field_map = self.field_map_generator.generate(plugin.code, templates)
+        # Generate the field map from the supplier's own configured key names, so a
+        # supplier added from the UI gets a real map instead of an empty one (the old
+        # SUPPLIER_MUTABLE_KEYS table only knew the five built-ins).
+        field_map = self.field_map_generator.generate(
+            plugin.code, templates, _mutation_config(plugin.code)
+        )
         self.field_maps_dir.mkdir(parents=True, exist_ok=True)
         field_map_path = self.field_maps_dir / f"{plugin.code}.json"
         field_map_path.write_text(json.dumps(field_map, indent=2), encoding="utf-8")
 
-        return len(templates)
+        return IngestResult(
+            supplier_code=plugin.code,
+            sid=sid,
+            written=sorted(templates.keys()),
+            missing=sorted(missing),
+            unresolved=len(diagnostics),
+            paths={
+                log_type: expectation.get("httpRequest", {}).get("path", "")
+                for log_type, expectation in templates.items()
+            },
+            field_map_paths=sum(len(v) for v in field_map.get("paths", {}).values()),
+            sources_seen=sorted(
+                {
+                    str(row.get("source", ""))
+                    for row in details
+                    if isinstance(row, dict) and row.get("source")
+                }
+            ),
+        )
+
+
+def _mutation_config(supplier_code: str):
+    """The supplier's configured key names, or None to fall back to SUPPLIER_MUTABLE_KEYS."""
+    from app.services.supplier_service import UnknownSupplierError, get_supplier_config
+
+    try:
+        return get_supplier_config(supplier_code).mutation_config
+    except UnknownSupplierError:
+        return None
 
 
 def _parse_timestamp(value: str) -> datetime:

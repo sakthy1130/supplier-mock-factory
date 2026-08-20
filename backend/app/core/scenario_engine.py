@@ -13,18 +13,24 @@ from app.core.linkage_validator import LinkageValidator
 from app.core.namespace import apply_namespace
 from app.ingest.expectation_builder import OPTIONAL_TEMPLATE_LOG_TYPES
 from app.models.scenario import ScenarioRequest
-from app.plugins import PLUGINS
+from app.plugins import resolve_plugin
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATES_DIR = REPO_ROOT / "templates"
 
-PACKAGE_MUTABLE_LOG_TYPES = {
-    "HBS": {"Search", "Packages"},
-    "EXP": {"Search", "Packages"},
-    "RHK": {"Search", "Packages"},
-    "CHC": {"Search", "Packages", "PreBooking", "GetOrder"},
-    "EXT": {"Search", "Packages"},
-}
+
+def _package_log_types(supplier_code: str) -> set[str]:
+    """Log types whose response body gets package mutation for this supplier.
+
+    Defaults to Packages only — a supplier that also serves rates on Search (or, for
+    CHC, on PreBooking/GetOrder) declares that on its config.
+    """
+    from app.services.supplier_service import UnknownSupplierError, get_supplier_config
+
+    try:
+        return set(get_supplier_config(supplier_code).package_log_types) or {"Packages"}
+    except UnknownSupplierError:
+        return {"Packages"}
 
 
 @dataclass
@@ -46,8 +52,8 @@ class ScenarioEngine:
     def build_expectations(self, request: ScenarioRequest) -> list[BuiltExpectation]:
         built: list[BuiltExpectation] = []
         for supplier_scenario in request.suppliers:
-            supplier_code = supplier_scenario.code.value
-            plugin = PLUGINS[supplier_code]
+            supplier_code = str(supplier_scenario.code)
+            plugin = resolve_plugin(supplier_code)
             templates = self._load_supplier_templates(supplier_code, plugin.log_types)
             mutated = self._mutate_supplier_templates(
                 plugin=plugin,
@@ -115,7 +121,7 @@ class ScenarioEngine:
         package_spec,
     ) -> dict[str, dict]:
         mutated: dict[str, dict] = {}
-        package_log_types = PACKAGE_MUTABLE_LOG_TYPES.get(plugin.code, {"Packages"})
+        package_log_types = _package_log_types(plugin.code)
 
         for log_type, template in templates.items():
             expectation = copy.deepcopy(template)

@@ -94,6 +94,48 @@ User-saved scenario templates for reuse.
 
 ---
 
+### **Table 3: `suppliers`**
+
+Supplier configuration — everything SMF needs to mock one supplier. Previously
+hardcoded across a Python enum, two registry dicts, five env vars and a dozen
+`if supplier_code == "XXX"` branches; now editable from the **Suppliers** screen,
+which is what makes adding a supplier a UI action rather than a code change.
+
+| Column | Type | Size | Purpose |
+|--------|------|------|---------|
+| `id` | VARCHAR | 36 | Primary key (UUID) |
+| `code` | VARCHAR | 8 | Supplier code (HBS, EXP, …) |
+| `env` | VARCHAR | 16 | `dev` or `stg` — unique with `code` |
+| `name` | VARCHAR | 64 | Display name |
+| `supplier_type` | VARCHAR | 8 | `net` or `gross` |
+| `supplier_id` | VARCHAR | 64 | Backoffice supplier Mongo `_id` |
+| `auto_id` | INTEGER | - | Backoffice numeric `autoId` |
+| `reference_contract_id` | VARCHAR | 64 | Contract cloned per scenario (empty = minimal body) |
+| `default_supplier_currency` | VARCHAR | 3 | Wizard default |
+| `default_contract_currency` | VARCHAR | 3 | Wizard default |
+| `log_types_json` | JSON | - | Log types this supplier serves |
+| `package_log_types_json` | JSON | - | Which of those get package mutation |
+| `ui_color` | VARCHAR | 16 | Tile/chip colour in the UI |
+| `mock_config_json` | JSON | - | Paths, contract `opt` fields and defaults |
+| `mutation_config_json` | JSON | - | Key names driving the generic mutator |
+| `field_map_json` | JSON | - | Booking-id extraction paths |
+| `created_at` / `updated_at` | DATETIME | - | Timestamps |
+
+**Rows are env-scoped on purpose.** Dev does not share staging's Backoffice supplier
+records — a dev contract referencing staging's supplier `_id` returns 500 from
+`GET /api/supplier/{id}` and NPEs `hotel-connectivity-core`.
+
+**Seeding:** `app/db/seed_suppliers.py` inserts the five built-in suppliers for both
+envs on first boot, from the constants that used to define them in code. It is
+idempotent per `(code, env)`, so edits made in the UI survive a restart. If the table
+is missing or empty, the built-ins are still resolved from those same definitions, so
+an un-migrated database degrades to today's behaviour instead of failing.
+
+**Typical Size:** 10 rows (5 suppliers × 2 envs) plus any added from the UI  
+**Growth:** Minimal
+
+---
+
 ## Data Flow
 
 ```
@@ -177,7 +219,13 @@ SQLALCHEMY_MAX_OVERFLOW=40
 
 - Manual schema updates (SQLAlchemy models)
 - No Alembic migrations yet
-- All tables created automatically on first run
+- New **tables** are created automatically on first run (`Base.metadata.create_all`)
+- New **columns on existing tables** are not — `create_all` skips a table that already
+  exists, so each added column needs an entry in the `migrations` list in
+  `app/db/database.py::_run_migrations`. Forgetting one is silent until a query hits
+  the missing column: `scenario_templates.function` shipped without an entry and every
+  `GET /api/scenario-templates` failed with `no such column` on any pre-existing
+  database.
 
 ### **For Production: Implement Alembic**
 

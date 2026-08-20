@@ -1,0 +1,12 @@
+{
+  "supplier": "HIL",
+  "log_types": [
+    "Booking",
+    "CancelOrder",
+    "GetOrder",
+    "Packages",
+    "PreBooking",
+    "Search"
+  ],
+  "paths": {}
+}

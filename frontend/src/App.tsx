@@ -11,6 +11,7 @@ import {
   refreshBookingIds,
   runScenario,
   teardownScenario,
+  type SupplierListItem,
 } from './api/client'
 import { ScenarioList } from './components/ScenarioList'
 import { ScenarioProgress } from './components/ScenarioProgress'
@@ -18,6 +19,7 @@ import { ScenarioResult } from './components/ScenarioResult'
 import { ScenarioWizard, type PackageRow, type ScenarioWizardTemplate } from './components/ScenarioWizard'
 import { useScenarioPoll } from './hooks/useScenarioPoll'
 import { CrawlaMocksWizard } from './components/CrawlaMocksWizard'
+import { SupplierRegistry } from './components/SupplierRegistry'
 import { CrawlaQueueRunner } from './components/CrawlaQueueRunner'
 import { TestRunDashboard, runSuites } from './components/TestRunDashboard'
 import { listTestRuns } from './api/testRun'
@@ -34,7 +36,7 @@ import type { CrawlaScenarioRequest, CrawlaScenarioRunResult } from './types/cra
 import type { ScenarioListItem, ScenarioRequest, ScenarioStatus, SupplierCode } from './types/scenario'
 import type { TestRunState } from './types/testRun'
 
-type Tab = 'home' | 'create' | 'browse' | 'crawla' | 'queue' | 'test-run' | 'templates'
+type Tab = 'home' | 'create' | 'browse' | 'crawla' | 'queue' | 'test-run' | 'templates' | 'suppliers'
 
 const NAV_ITEMS: { tab: Tab; icon: string; label: string }[] = [
   { tab: 'create', icon: '✦', label: 'Create Mock Scenario' },
@@ -43,6 +45,7 @@ const NAV_ITEMS: { tab: Tab; icon: string; label: string }[] = [
   { tab: 'queue', icon: '⏵', label: 'Queue Runner' },
   { tab: 'test-run', icon: '⬡', label: 'Test Runs' },
   { tab: 'templates', icon: '🛏', label: 'Template Bedding Mock' },
+  { tab: 'suppliers', icon: '⚑', label: 'Suppliers' },
 ]
 
 interface ImportSupplierBlock {
@@ -52,9 +55,8 @@ interface ImportSupplierBlock {
   json: string
 }
 
-function nextUnusedSupplier(used: SupplierCode[]): SupplierCode {
-  const all: SupplierCode[] = ['HBS', 'EXP', 'RHK', 'CHC', 'EXT']
-  return all.find((code) => !used.includes(code)) ?? 'HBS'
+function nextUnusedSupplier(used: SupplierCode[], available: SupplierCode[]): SupplierCode {
+  return available.find((code) => !used.includes(code)) ?? available[0] ?? ''
 }
 
 interface ScenarioTemplate {
@@ -75,7 +77,7 @@ function App() {
   const [importDescription, setImportDescription] = useState('')
   const [importHotelId, setImportHotelId] = useState('')
   const [importSuppliers, setImportSuppliers] = useState<ImportSupplierBlock[]>([
-    { supplier: 'HBS', supplier_currency: 'EUR', contract_currency: 'USD', json: '' },
+    { supplier: '', supplier_currency: 'EUR', contract_currency: 'USD', json: '' },
   ])
   const [importError, setImportError] = useState<string | null>(null)
   const [importBusy, setImportBusy] = useState(false)
@@ -84,7 +86,7 @@ function App() {
   const [healthDetails, setHealthDetails] = useState<{ status: string; message?: string; checks?: Record<string, { status: string; message: string }> } | null>(null)
   const [backendError, setBackendError] = useState<string | null>(null)
   const [supplierCount, setSupplierCount] = useState(0)
-  const [supplierCodes, setSupplierCodes] = useState<string[]>([])
+  const [supplierList, setSupplierList] = useState<SupplierListItem[]>([])
   const [scenarioCount, setScenarioCount] = useState(0)
   const [lastRun, setLastRun] = useState<TestRunState | null>(null)
 
@@ -127,19 +129,25 @@ function App() {
     }
   }, [])
 
+  const refreshSuppliers = useCallback(async () => {
+    const suppliers = await listSuppliers()
+    setSupplierCount(suppliers.length)
+    setSupplierList(suppliers)
+  }, [])
+
   useEffect(() => {
     Promise.all([getHealth(), listSuppliers()])
       .then(([h, suppliers]) => {
         setHealthDetails(h)
         setHealthOk(h.status === 'ok' || h.status === 'degraded')
         setSupplierCount(suppliers.length)
-        setSupplierCodes(suppliers.map((s) => s.code))
+        setSupplierList(suppliers)
         setBackendError(null)
       })
       .catch(() => {
         setHealthOk(false)
         setHealthDetails(null)
-        setBackendError('Cannot reach backend — run: python3 -m uvicorn app.main:app --reload --port 8000')
+        setBackendError('Cannot reach backend — run: python3 -m uvicorn app.main:app --reload --port 8001')
       })
     loadList()
   }, [loadList])
@@ -172,11 +180,11 @@ function App() {
       setHealthDetails(h)
       setHealthOk(h.status === 'ok' || h.status === 'degraded')
       setSupplierCount(suppliers.length)
-      setSupplierCodes(suppliers.map((s) => s.code))
+      setSupplierList(suppliers)
     } catch {
       setHealthOk(false)
       setHealthDetails(null)
-      setBackendError('Cannot reach backend — run: python3 -m uvicorn app.main:app --reload --port 8000')
+      setBackendError('Cannot reach backend — run: python3 -m uvicorn app.main:app --reload --port 8001')
     }
     await loadList()
   }
@@ -208,8 +216,12 @@ function App() {
     if (tab === 'templates') loadCustomTemplates()
   }, [tab, loadCustomTemplates])
 
+
   const addImportSupplierBlock = () => {
-    const nextSupplier = nextUnusedSupplier(importSuppliers.map((b) => b.supplier))
+    const nextSupplier = nextUnusedSupplier(
+      importSuppliers.map((b) => b.supplier),
+      supplierList.map((s) => s.code),
+    )
     setImportSuppliers((prev) => [...prev, { supplier: nextSupplier, supplier_currency: 'EUR', contract_currency: 'USD', json: '' }])
   }
 
@@ -225,7 +237,9 @@ function App() {
     setImportLabel('')
     setImportDescription('')
     setImportHotelId('')
-    setImportSuppliers([{ supplier: 'HBS', supplier_currency: 'EUR', contract_currency: 'USD', json: '' }])
+    setImportSuppliers([
+      { supplier: supplierList[0]?.code ?? '', supplier_currency: 'EUR', contract_currency: 'USD', json: '' },
+    ])
     setEditingTemplateId(null)
     setImportError(null)
     setShowImportForm(false)
@@ -236,13 +250,16 @@ function App() {
     setImportError(null)
     setImportBusy(true)
     try {
-      const codes = importSuppliers.map((b) => b.supplier)
+      const codes = importSuppliers.map((b) => b.supplier || supplierList[0]?.code || '')
+      if (codes.some((code) => !code)) {
+        throw new Error('Pick a supplier for every block')
+      }
       const duplicate = codes.find((code, i) => codes.indexOf(code) !== i)
       if (duplicate) {
         throw new Error(`${duplicate} is added more than once — each supplier can only appear once per template`)
       }
-      const suppliers = importSuppliers.map((block) => ({
-        supplier: block.supplier,
+      const suppliers = importSuppliers.map((block, index) => ({
+        supplier: codes[index],
         supplier_currency: block.supplier_currency.toUpperCase().slice(0, 3),
         contract_currency: block.contract_currency.toUpperCase().slice(0, 3),
         packages: parseTemplatePackagesJson(block.json),
@@ -298,7 +315,10 @@ function App() {
 
   const openCustomTemplate = (item: ApiScenarioTemplate) => {
     const packages: Partial<Record<SupplierCode, PackageRow[]>> = {}
-    const enabledSuppliers: Partial<Record<SupplierCode, boolean>> = { HBS: false, EXP: false, RHK: false, CHC: false, EXT: false }
+    // Start with every configured supplier off, then switch on the ones the template names.
+    const enabledSuppliers: Partial<Record<SupplierCode, boolean>> = Object.fromEntries(
+      supplierList.map((s) => [s.code, false]),
+    )
     const supplierCurrencies: Partial<Record<SupplierCode, string>> = {}
     const contractCurrencies: Partial<Record<SupplierCode, string>> = {}
     for (const entry of item.suppliers) {
@@ -605,7 +625,7 @@ function App() {
               <div className="mini-stat">
                 <div className="label">Suppliers</div>
                 <div className="value">{supplierCount}</div>
-                <div className="hint">{supplierCodes.join(' · ') || '—'}</div>
+                <div className="hint">{supplierList.map((s) => s.code).join(' · ') || '—'}</div>
               </div>
               <div className="mini-stat">
                 <div className="label">Scenarios</div>
@@ -715,6 +735,7 @@ function App() {
                   onSubmit={handleCreate}
                   busy={creating}
                   initialTemplate={activeTemplate?.template}
+                  availableSuppliers={supplierList}
                 />
 
                 {activeScenarioId && bundle && (
@@ -932,16 +953,16 @@ function App() {
                           <label>
                             Supplier
                             <select
-                              value={block.supplier}
+                              value={block.supplier || supplierList[0]?.code || ''}
                               onChange={(e) =>
                                 updateImportSupplierBlock(index, { supplier: e.target.value as SupplierCode })
                               }
                             >
-                              <option value="HBS">HBS</option>
-                              <option value="EXP">EXP</option>
-                              <option value="RHK">RHK</option>
-                              <option value="CHC">CHC</option>
-                              <option value="EXT">EXT</option>
+                              {supplierList.map((supplier) => (
+                                <option key={supplier.code} value={supplier.code}>
+                                  {supplier.code}
+                                </option>
+                              ))}
                             </select>
                           </label>
                         </div>
@@ -1068,6 +1089,18 @@ function App() {
               )}
             </section>
           </>
+        )}
+
+        {tab === 'suppliers' && (
+          <SupplierRegistry
+            // Remount on an env switch: supplier config is per env, so the open
+            // editor and its draft don't carry over.
+            key={env}
+            env={env}
+            onSuppliersChanged={() => {
+              void refreshSuppliers()
+            }}
+          />
         )}
 
         {tab === 'browse' && (

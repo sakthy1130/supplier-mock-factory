@@ -1,4 +1,6 @@
-export type SupplierCode = 'HBS' | 'EXP' | 'RHK' | 'CHC' | 'EXT'
+/** A supplier code. Open by design — suppliers are configured on the Suppliers
+ *  screen, so the UI can never know the full set at build time. */
+export type SupplierCode = string
 
 export type ScenarioStatus =
   | 'PENDING'
@@ -17,18 +19,18 @@ export interface PackageSpec {
   supplier_currency: string
   prices: number[]
   refundable: boolean[]
+  /**
+   * Occupancy the mocked rates advertise. Derby BTS (CHC, HIL) drops every rate whose
+   * occupancy differs from the searched one — silently, with zero results. Omit to take
+   * the backend default of 2 adults, which is what the default search uses.
+   */
+  adults?: number
+  child_ages?: number[]
+  room_count?: number
 }
 
 export const DEFAULT_ROOM_NAME = '1 Double Bed, Nonsmoking'
 export const DEFAULT_ROOM_BASIS = 'RO'
-
-export const DEFAULT_SUPPLIER_CURRENCIES: Record<SupplierCode, string> = {
-  HBS: 'EUR',
-  EXP: 'USD',
-  RHK: 'USD',
-  CHC: 'SAR',
-  EXT: 'EUR',
-}
 
 export interface SupplierScenario {
   code: SupplierCode

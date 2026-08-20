@@ -103,7 +103,7 @@ def create_pending(db: Session, request: ScenarioRequest, env: str | None = None
             detail=f"Scenario namespace already exists: {request.namespace}",
         )
 
-    suppliers = [s.code.value for s in request.suppliers]
+    suppliers = [str(s.code) for s in request.suppliers]
     record = ScenarioRecord(
         id=str(uuid.uuid4()),
         namespace=request.namespace,

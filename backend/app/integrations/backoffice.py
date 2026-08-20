@@ -84,7 +84,13 @@ class BackofficeClient:
             headers=await self.auth_headers(),
         )
         if response.status_code != 200:
-            raise BackofficeError(f"Get contract failed status={response.status_code}")
+            # Carry the id and the body: Backoffice explains itself there (a non-ObjectId
+            # id answers with "hexString has 24 characters"), and dropping it left the
+            # caller with a bare 500 and nothing to act on.
+            raise BackofficeError(
+                f"Get contract failed status={response.status_code} "
+                f"contract_id={contract_id!r} body={response.text}"
+            )
         return response.json()
 
     async def create_contract(self, body: dict[str, Any]) -> str:

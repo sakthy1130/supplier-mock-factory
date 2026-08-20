@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+if TYPE_CHECKING:
+    from app.models.supplier import MutationConfig
+
+# Seeded into each supplier's mutation_config on first boot (see db/seed_suppliers.py)
+# and read from there at runtime. Kept here as the seed source, and as the fallback for
+# ingest runs that predate the suppliers table.
 SUPPLIER_MUTABLE_KEYS: dict[str, dict[str, list[str]]] = {
     "HBS": {
         "check_in": ["checkIn"],
@@ -46,9 +52,39 @@ SUPPLIER_MUTABLE_KEYS: dict[str, dict[str, list[str]]] = {
 }
 
 
+def _keys_from_mutation_config(config: "MutationConfig") -> dict[str, list[str]]:
+    """Map a supplier's mutation config onto the field-map's key categories."""
+    single = {
+        "hotel_id": config.hotel_id_key,
+        "package_id": config.package_id_key,
+        "board": config.board_key,
+        "room_name": config.room_name_key,
+        "currency": config.currency_key,
+    }
+    categories: dict[str, list[str]] = {
+        "check_in": list(config.check_in_keys),
+        "check_out": list(config.check_out_keys),
+        "price": list(config.price_keys),
+        "booking_id": list(config.booking_id_keys),
+    }
+    for category, key in single.items():
+        if key:
+            categories[category] = [key]
+    return {category: keys for category, keys in categories.items() if keys}
+
+
 class FieldMapGenerator:
-    def generate(self, supplier_code: str, templates: dict[str, dict]) -> dict:
-        key_config = SUPPLIER_MUTABLE_KEYS.get(supplier_code, {})
+    def generate(
+        self,
+        supplier_code: str,
+        templates: dict[str, dict],
+        mutation_config: "MutationConfig | None" = None,
+    ) -> dict:
+        key_config = (
+            _keys_from_mutation_config(mutation_config)
+            if mutation_config is not None
+            else SUPPLIER_MUTABLE_KEYS.get(supplier_code, {})
+        )
         paths: dict[str, list[str]] = {}
 
         for category, key_names in key_config.items():

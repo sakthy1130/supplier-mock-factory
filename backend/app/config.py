@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     api_key_template_uid: str = ""
 
     database_url: str = "sqlite:///./smf.db"
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5144"
     log_level: str = "INFO"
 
     env: str = ""  # populated by get_settings so callers can read settings.env

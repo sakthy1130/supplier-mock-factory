@@ -1,0 +1,44 @@
+{
+  "httpRequest": {
+    "path": "/bts/api/reservation/cancel",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "Date": [
+        "Tue, 12 Aug 2025 12:01:27 GMT"
+      ],
+      "Content-Type": [
+        "application/json;charset=UTF-8"
+      ],
+      "Transfer-Encoding": [
+        "chunked"
+      ],
+      "Connection": [
+        "keep-alive"
+      ],
+      "X-Frame-Options": [
+        "SAMEORIGIN"
+      ],
+      "Server": [
+        "DGateway/2.0"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "header": {
+        "supplierId": "HILTON",
+        "distributorId": "ALTAYYAR",
+        "version": "v1.2",
+        "token": "0a493bf0-7c71-433c-bb54-dd35f06ebbc5"
+      },
+      "reservationIds": {
+        "distributorResId": "BtmrbPTvqbVqiYJ-0-EJZnTK",
+        "derbyResId": "GP8121201118341E7O4V7",
+        "supplierResId": "3309725003"
+      },
+      "cancellationId": "1754501953"
+    }
+  },
+  "priority": 1000
+}

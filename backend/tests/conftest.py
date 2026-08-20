@@ -23,10 +23,16 @@ def mock_hotel_mapping(monkeypatch):
 
 @pytest.fixture
 def api_client(tmp_path, monkeypatch):
+    from app.services.supplier_service import invalidate_cache
+
     db_path = tmp_path / "smf-test.db"
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
     clear_settings_cache()
     reset_engine()
+    # Supplier configs are cached per (code, env) and outlive the engine, so a config read
+    # against an earlier test's database — or a miss recorded before seeding — would be
+    # served to this one. Drop it at both ends so each test sees only its own DB.
+    invalidate_cache()
     init_db()
 
     from fastapi.testclient import TestClient
@@ -38,3 +44,4 @@ def api_client(tmp_path, monkeypatch):
 
     reset_engine()
     clear_settings_cache()
+    invalidate_cache()

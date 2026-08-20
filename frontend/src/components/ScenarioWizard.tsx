@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { resolveHotelMapping } from '../api/hotels'
 import type { ScenarioRequest, SupplierCode } from '../types/scenario'
-import { DEFAULT_ROOM_BASIS, DEFAULT_ROOM_NAME, DEFAULT_SUPPLIER_CURRENCIES } from '../types/scenario'
+import { DEFAULT_ROOM_BASIS, DEFAULT_ROOM_NAME } from '../types/scenario'
+import type { SupplierListItem } from '../api/client'
 
 function defaultNamespace() {
   const d = new Date()
@@ -59,21 +60,8 @@ function parseRows(supplierLabel: string, rows: PackageRow[]): ParsedRows {
   return { room_basis, room_names, prices, refundable }
 }
 
-const SUPPLIER_CODES: SupplierCode[] = ['HBS', 'EXP', 'RHK', 'CHC', 'EXT']
-
-const SUPPLIER_META: {
-  code: SupplierCode
-  className: string
-  label: string
-  description: string
-  currencyPlaceholder: string
-}[] = [
-  { code: 'HBS', className: 'hbs', label: 'HBS', description: 'Hotelbeds · net supplier', currencyPlaceholder: 'EUR' },
-  { code: 'EXP', className: 'exp', label: 'EXP', description: 'Expedia · override URLs', currencyPlaceholder: 'USD' },
-  { code: 'RHK', className: 'rhk', label: 'RHK', description: 'RateHawk · WorldOTA B2B', currencyPlaceholder: 'USD' },
-  { code: 'CHC', className: 'chc', label: 'CHC', description: 'Choice · net supplier', currencyPlaceholder: 'SAR' },
-  { code: 'EXT', className: 'ext', label: 'EXT', description: 'Extranet · net supplier', currencyPlaceholder: 'EUR' },
-]
+/** How many suppliers start ticked when the wizard opens with no template. */
+const DEFAULT_ENABLED_COUNT = 2
 
 export interface ScenarioWizardTemplate {
   atgHotelId?: string
@@ -87,9 +75,15 @@ interface Props {
   onSubmit: (request: ScenarioRequest) => Promise<void>
   busy: boolean
   initialTemplate?: ScenarioWizardTemplate
+  /** Configured suppliers for the active env — from GET /api/suppliers. */
+  availableSuppliers: SupplierListItem[]
 }
 
-export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
+export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppliers }: Props) {
+  const supplierCodes = useMemo(
+    () => availableSuppliers.map((s) => s.code),
+    [availableSuppliers],
+  )
   const [namespace, setNamespace] = useState(defaultNamespace)
   const [checkIn, setCheckIn] = useState('2026-09-01')
   const [checkOut, setCheckOut] = useState('2026-09-03')
@@ -97,37 +91,46 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
   const [supplierHotelIds, setSupplierHotelIds] = useState<Record<string, string>>({})
   const [mappingHint, setMappingHint] = useState<string | null>(null)
   const [mappingLoading, setMappingLoading] = useState(false)
-  const [supplierCurrencies, setSupplierCurrencies] = useState<Record<SupplierCode, string>>(() => ({
-    ...DEFAULT_SUPPLIER_CURRENCIES,
-    ...(initialTemplate?.supplierCurrencies ?? {}),
-  }))
-  const [contractCurrencies, setContractCurrencies] = useState<Record<SupplierCode, string>>(() => ({
-    HBS: initialTemplate?.contractCurrencies?.HBS ?? 'USD',
-    EXP: initialTemplate?.contractCurrencies?.EXP ?? 'USD',
-    RHK: initialTemplate?.contractCurrencies?.RHK ?? 'USD',
-    CHC: initialTemplate?.contractCurrencies?.CHC ?? 'USD',
-    EXT: initialTemplate?.contractCurrencies?.EXT ?? 'USD',
-  }))
-  const [supplierPackages, setSupplierPackages] = useState<Record<SupplierCode, PackageRow[]>>(() => ({
-    HBS: initialTemplate?.packages?.HBS ?? defaultPackageRows(3),
-    EXP: initialTemplate?.packages?.EXP ?? defaultPackageRows(3),
-    RHK: initialTemplate?.packages?.RHK ?? defaultPackageRows(3),
-    CHC: initialTemplate?.packages?.CHC ?? defaultPackageRows(3),
-    EXT: initialTemplate?.packages?.EXT ?? defaultPackageRows(3),
-  }))
-  const [enabledSuppliers, setEnabledSuppliers] = useState<Record<SupplierCode, boolean>>(() => ({
-    HBS: initialTemplate?.enabledSuppliers?.HBS ?? true,
-    EXP: initialTemplate?.enabledSuppliers?.EXP ?? true,
-    RHK: initialTemplate?.enabledSuppliers?.RHK ?? false,
-    CHC: initialTemplate?.enabledSuppliers?.CHC ?? false,
-    EXT: initialTemplate?.enabledSuppliers?.EXT ?? false,
-  }))
+  // One entry per configured supplier, seeded from the API's defaults and then
+  // overlaid with whatever the template (if any) specified.
+  const [supplierCurrencies, setSupplierCurrencies] = useState<Record<SupplierCode, string>>(() =>
+    Object.fromEntries(
+      availableSuppliers.map((s) => [
+        s.code,
+        initialTemplate?.supplierCurrencies?.[s.code] ?? s.default_supplier_currency,
+      ]),
+    ),
+  )
+  const [contractCurrencies, setContractCurrencies] = useState<Record<SupplierCode, string>>(() =>
+    Object.fromEntries(
+      availableSuppliers.map((s) => [
+        s.code,
+        initialTemplate?.contractCurrencies?.[s.code] ?? s.default_contract_currency,
+      ]),
+    ),
+  )
+  const [supplierPackages, setSupplierPackages] = useState<Record<SupplierCode, PackageRow[]>>(() =>
+    Object.fromEntries(
+      availableSuppliers.map((s) => [
+        s.code,
+        initialTemplate?.packages?.[s.code] ?? defaultPackageRows(3),
+      ]),
+    ),
+  )
+  const [enabledSuppliers, setEnabledSuppliers] = useState<Record<SupplierCode, boolean>>(() =>
+    Object.fromEntries(
+      availableSuppliers.map((s, index) => [
+        s.code,
+        initialTemplate?.enabledSuppliers?.[s.code] ?? index < DEFAULT_ENABLED_COUNT,
+      ]),
+    ),
+  )
   const [assignToBr, setAssignToBr] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
 
   const suppliers = useMemo(
-    () => SUPPLIER_CODES.filter((code) => enabledSuppliers[code]),
-    [enabledSuppliers],
+    () => supplierCodes.filter((code) => enabledSuppliers[code]),
+    [enabledSuppliers, supplierCodes],
   )
 
   useEffect(() => {
@@ -180,14 +183,14 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
 
   const updateRow = (code: SupplierCode, index: number, patch: Partial<PackageRow>) => {
     setSupplierPackages((prev) => {
-      const rows = prev[code].map((row, i) => (i === index ? { ...row, ...patch } : row))
+      const rows = (prev[code] ?? []).map((row, i) => (i === index ? { ...row, ...patch } : row))
       return { ...prev, [code]: rows }
     })
   }
 
   const addRow = (code: SupplierCode) => {
     setSupplierPackages((prev) => {
-      const rows = prev[code]
+      const rows = prev[code] ?? []
       const last = rows[rows.length - 1] ?? defaultPackageRow(rows.length)
       return { ...prev, [code]: [...rows, { ...last }] }
     })
@@ -195,7 +198,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
 
   const removeRow = (code: SupplierCode, index: number) => {
     setSupplierPackages((prev) => {
-      const rows = prev[code]
+      const rows = prev[code] ?? []
       if (rows.length <= 1) return prev
       return { ...prev, [code]: rows.filter((_, i) => i !== index) }
     })
@@ -216,7 +219,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
         atg_hotel_id: atgHotelId.trim(),
         supplier_hotel_ids: supplierHotelIds,
         suppliers: suppliers.map((code) => {
-          const rows = supplierPackages[code]
+          const rows = supplierPackages[code] ?? []
           const parsed = parseRows(code, rows)
           return {
             code,
@@ -225,7 +228,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
               count: rows.length,
               room_basis: parsed.room_basis,
               room_names: parsed.room_names,
-              supplier_currency: supplierCurrencies[code] || DEFAULT_SUPPLIER_CURRENCIES[code],
+              supplier_currency: supplierCurrencies[code] || 'USD',
               prices: parsed.prices,
               refundable: parsed.refundable,
             },
@@ -308,11 +311,15 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
           Each supplier has its own package rows — add/remove a row per package instead of editing separated text.
         </p>
         <div className="supplier-tiles supplier-tiles-wide">
-          {SUPPLIER_META.map((meta) => {
-            const enabled = enabledSuppliers[meta.code]
-            const rows = supplierPackages[meta.code]
+          {availableSuppliers.map((meta) => {
+            const enabled = enabledSuppliers[meta.code] ?? false
+            const rows = supplierPackages[meta.code] ?? []
             return (
-              <div key={meta.code} className={`supplier-tile ${meta.className}`}>
+              <div
+                key={meta.code}
+                className="supplier-tile"
+                style={{ ['--tile-color' as string]: meta.ui_color || 'var(--accent)' }}
+              >
                 <label className="supplier-tile-header">
                   <input
                     type="checkbox"
@@ -320,8 +327,11 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
                     onChange={(e) => toggleSupplier(meta.code, e.target.checked)}
                   />
                   <div className="supplier-tile-body">
-                    <strong>{meta.label}</strong>
-                    <span>{meta.description}</span>
+                    <strong>{meta.code}</strong>
+                    <span>
+                      {meta.name} · {meta.supplier_type} supplier
+                      {!meta.ready && ` · ${meta.missing_count} thing(s) missing`}
+                    </span>
                   </div>
                 </label>
                 {enabled && (
@@ -329,17 +339,17 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate }: Props) {
                     <label className="supplier-tile-field" style={{ maxWidth: '140px' }}>
                       Supplier Currency
                       <input
-                        value={supplierCurrencies[meta.code]}
+                        value={supplierCurrencies[meta.code] ?? ''}
                         onChange={(e) => updateSupplierCurrency(meta.code, e.target.value)}
                         maxLength={3}
-                        placeholder={meta.currencyPlaceholder}
+                        placeholder={meta.default_supplier_currency}
                       />
                     </label>
 
                     <label className="supplier-tile-field" style={{ maxWidth: '140px' }}>
                       Contract Currency
                       <select
-                        value={contractCurrencies[meta.code]}
+                        value={contractCurrencies[meta.code] ?? ''}
                         onChange={(e) => updateContractCurrency(meta.code, e.target.value)}
                       >
                         <option value="SAR">SAR</option>

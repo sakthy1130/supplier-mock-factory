@@ -6,23 +6,19 @@ import secrets
 import string
 
 from app.core.path_utils import get_by_path, replace_string_values, set_by_path
+from app.models.supplier import MutationConfig
 
 BOOKING_FLOW_LOG_TYPES = frozenset({"Booking", "GetOrder", "CancelOrder"})
 
-# RHK templates differ per log type (Booking body.data is null).
-RHK_BOOKING_ID_PATHS: dict[str, list[str]] = {
-    "Booking": [
-        "httpResponse.body.debug.request.partner.partner_order_id",
-    ],
-    "GetOrder": [
-        "httpResponse.body.data.orders[0].order_id",
-        "httpResponse.body.data.orders[0].supplier_data.order_id",
-        "httpResponse.body.data.orders[0].partner_data.order_id",
-    ],
-    "CancelOrder": [
-        "httpResponse.body.debug.request.partner_order_id",
-    ],
-}
+
+def _mutation_config(supplier_code: str) -> MutationConfig:
+    """The supplier's booking-id rules; empty config for an unconfigured code."""
+    from app.services.supplier_service import UnknownSupplierError, get_supplier_config
+
+    try:
+        return get_supplier_config(supplier_code).mutation_config
+    except UnknownSupplierError:
+        return MutationConfig()
 
 
 class BookingIdInjector:
@@ -67,57 +63,29 @@ class BookingIdInjector:
             if value is not None and str(value).strip():
                 return str(value).strip()
 
-        if supplier_code == "HBS":
-            reference = (
-                booking_expectation.get("httpResponse", {})
-                .get("body", {})
-                .get("booking", {})
-                .get("reference")
-            )
-            if reference:
-                return str(reference)
-        if supplier_code == "EXP":
-            itinerary_id = (
-                booking_expectation.get("httpResponse", {}).get("body", {}).get("itinerary_id")
-            )
-            if itinerary_id:
-                return str(itinerary_id)
-        if supplier_code == "RHK":
-            partner_order_id = (
-                booking_expectation.get("httpResponse", {})
-                .get("body", {})
-                .get("debug", {})
-                .get("request", {})
-                .get("partner", {})
-                .get("partner_order_id")
-            )
-            if partner_order_id:
-                return str(partner_order_id)
-
-        if supplier_code == "EXT":
-            # Try bookingId first, then fall back to reservationId
-            booking_id = booking_expectation.get("httpResponse", {}).get("body", {}).get("bookingId")
-            if booking_id:
-                return str(booking_id)
-            reservation_id = (
-                booking_expectation.get("httpResponse", {})
-                .get("body", {})
-                .get("reservations", [{}])[0]
-                .get("bookingId")
-            )
-            if reservation_id:
-                return str(reservation_id)
+        # Configured fallbacks, for templates whose field map missed the id
+        # (e.g. a nested reservations[0].bookingId that no key search reached).
+        for path in _mutation_config(supplier_code).booking_id_fallback_paths:
+            try:
+                value = get_by_path(booking_expectation, path)
+            except (KeyError, TypeError, IndexError):
+                continue
+            if value is not None and str(value).strip():
+                return str(value).strip()
 
         raise ValueError(f"Could not extract booking id for supplier {supplier_code}")
 
     def generate_booking_id(self, supplier_code: str, sample_id: str) -> str:
-        if supplier_code == "HBS" and "-" in sample_id:
+        """A fresh id in the same shape as the template's, per the supplier's format."""
+        booking_id_format = _mutation_config(supplier_code).booking_id_format
+
+        if booking_id_format == "prefix_digits" and "-" in sample_id:
             prefix, suffix = sample_id.split("-", 1)
             width = max(len(suffix), 7)
             generated_suffix = "".join(secrets.choice(string.digits) for _ in range(width))
             return f"{prefix}-{generated_suffix}"
 
-        if supplier_code == "RHK" and sample_id:
+        if booking_id_format == "prefix_hex" and sample_id:
             prefix = sample_id.split("-", 1)[0] if "-" in sample_id else "smf"
             suffix = secrets.token_hex(16)
             return f"{prefix}-{suffix}"
@@ -126,8 +94,12 @@ class BookingIdInjector:
         return "".join(secrets.choice(string.digits) for _ in range(width))
 
     def _booking_id_paths(self, supplier_code: str, log_type: str, field_map: dict) -> list[str]:
-        if supplier_code == "RHK":
-            return RHK_BOOKING_ID_PATHS.get(log_type, [])
+        # Some suppliers carry the id somewhere different in each log type (RHK's
+        # Booking response has a null body.data), so a per-log-type override wins
+        # over the field map's flat list of paths.
+        per_log_type = _mutation_config(supplier_code).booking_id_paths_by_log_type
+        if per_log_type:
+            return per_log_type.get(log_type, [])
         return field_map.get("paths", {}).get("booking_id", [])
 
     def _apply_booking_id(
@@ -145,23 +117,32 @@ class BookingIdInjector:
             except (KeyError, TypeError, IndexError):
                 continue
         replace_string_values(expectation, old_id, new_id)
-        if supplier_code == "HBS" and log_type == "GetOrder":
-            self._apply_hbs_get_order_path(expectation, new_id)
+        if log_type == "GetOrder":
+            self._apply_get_order_path(expectation, supplier_code, new_id)
 
     @staticmethod
-    def _apply_hbs_get_order_path(expectation: dict, booking_id: str) -> None:
+    def _apply_get_order_path(expectation: dict, supplier_code: str, booking_id: str) -> None:
+        """Retarget a GetOrder mock whose path carries the booking id (<base>/<id>)."""
+        from app.services.supplier_service import UnknownSupplierError, get_supplier_config
+
+        try:
+            mock_config = get_supplier_config(supplier_code).mock_config
+        except UnknownSupplierError:
+            return
+        if not mock_config.booking_id_in_get_order_path:
+            return
+
+        base = mock_config.mock_path("GetOrder")
+        if not base:
+            return
+
         http_request = expectation.get("httpRequest")
         if not isinstance(http_request, dict):
             return
-
         path = http_request.get("path")
         if not isinstance(path, str) or not path:
             return
 
-        base = "/hotel-api/1.2/bookings/GetOrderBooking"
-        if path == base or path.endswith("/GetOrderBooking"):
-            http_request["path"] = f"{base}/{booking_id}"
-            return
-
-        if path.startswith(base + "/"):
+        suffix = mock_config.mock_path_suffix.get("GetOrder", "")
+        if path == base or (suffix and path.endswith(f"/{suffix}")) or path.startswith(f"{base}/"):
             http_request["path"] = f"{base}/{booking_id}"

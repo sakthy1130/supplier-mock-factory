@@ -5,14 +5,45 @@ from enum import Enum
 from typing import Any, Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic_core import core_schema
 
 
-class SupplierCode(str, Enum):
+class SupplierCode(str):
+    """A supplier code.
+
+    Was a closed Enum; supplier codes now live in the ``suppliers`` table so QA can
+    add one from the Suppliers screen without a code change. This stays a real type
+    (rather than a bare ``str``) so the built-in codes keep working as attributes —
+    ``SupplierCode.HBS``, ``SupplierCode("HBS")`` and ``.value`` all behave as before.
+    Whether a code is *configured* is checked where the config is actually needed
+    (see app/services/supplier_service.py), not by this type.
+    """
+
     HBS = "HBS"
     EXP = "EXP"
     RHK = "RHK"
     CHC = "CHC"
     EXT = "EXT"
+
+    @property
+    def value(self) -> str:
+        return str(self)
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, _source: Any, _handler: Any) -> core_schema.CoreSchema:
+        """Validate as a non-blank upper-case string, then wrap in SupplierCode."""
+        return core_schema.no_info_after_validator_function(
+            cls._validate,
+            core_schema.str_schema(min_length=1, max_length=8, strip_whitespace=True),
+            serialization=core_schema.plain_serializer_function_ser_schema(str),
+        )
+
+    @classmethod
+    def _validate(cls, value: str) -> "SupplierCode":
+        code = value.strip().upper()
+        if not code:
+            raise ValueError("supplier code must not be blank")
+        return cls(code)
 
 
 class SBGroupConfiguration(BaseModel):
@@ -86,6 +117,26 @@ class PackageSpec(BaseModel):
         default_factory=list,
         description="Refundable flag per package; defaults to false if shorter than count",
     )
+    # Occupancy the mocked rates advertise. Derby BTS drops every rate whose occupancy
+    # does not match the search request (adultCount + childCount + childAges), returning
+    # zero results and no error, so this has to line up with how the search is run.
+    # Defaults to 2 adults because that is the default search.
+    adults: int = Field(default=2, ge=1, le=10, description="Adults per room the rates are for")
+    child_ages: list[int] = Field(
+        default_factory=list,
+        description="Age per child; length is the child count. Empty means adults only.",
+    )
+    room_count: int = Field(default=1, ge=1, le=8, description="Rooms the rates are for")
+
+    @property
+    def room_criteria(self) -> dict[str, Any]:
+        """Derby BTS ``roomCriteria`` for this spec's occupancy."""
+        return {
+            "roomCount": self.room_count,
+            "adultCount": self.adults,
+            "childCount": len(self.child_ages),
+            "childAges": list(self.child_ages),
+        }
 
     @model_validator(mode="before")
     @classmethod
@@ -111,7 +162,7 @@ class PackageSpec(BaseModel):
 
 
 class SupplierScenario(BaseModel):
-    code: SupplierCode
+    code: SupplierCode = Field(description="Supplier code as configured in the suppliers table")
     packages: PackageSpec
     contract_currency: str = Field(
         default="USD",
@@ -124,6 +175,7 @@ class SupplierScenario(BaseModel):
     @classmethod
     def _upper_contract_currency(cls, value: str) -> str:
         return value.strip().upper()
+
 
 
 class SupplierMutation(BaseModel):

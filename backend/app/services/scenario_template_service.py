@@ -48,11 +48,11 @@ def _apply_payload(record: ScenarioTemplateRecord, payload: ScenarioTemplateCrea
     record.description = payload.description.strip()
     record.function = payload.function
     record.atg_hotel_id = payload.atg_hotel_id.strip()
-    record.supplier = first.supplier.value
+    record.supplier = str(first.supplier)
     record.packages_json = [row.model_dump() for row in first.packages]
     record.suppliers_json = [
         {
-            "supplier": entry.supplier.value,
+            "supplier": str(entry.supplier),
             "supplier_currency": entry.supplier_currency,
             "contract_currency": entry.contract_currency,
             "packages": [row.model_dump() for row in entry.packages],

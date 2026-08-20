@@ -1903,3 +1903,347 @@ pre.raw-response {
     min-width: 80px;
   }
 }
+
+/* ── Suppliers screen (Option B: tile grid + inline editor) ──────────────────
+   Reuses .supplier-tile from the wizard so a supplier reads the same everywhere;
+   the editor expands below the grid at full main-panel width, which is what the
+   mutation-config JSON and the log-type table need. */
+.supplier-registry-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.registry-tile {
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+/* The wizard's tiles highlight via :has(input:checked); these are plain buttons. */
+.registry-tile.on {
+  border-color: var(--tile-color, var(--accent));
+  background: color-mix(in srgb, var(--tile-color, var(--accent)) 8%, var(--bg-elevated));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tile-color, var(--accent)) 25%, transparent);
+}
+
+.registry-tile .supplier-tile-header {
+  cursor: pointer;
+}
+
+.registry-tile-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 1rem 0.9rem;
+}
+
+.tile-add {
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  gap: 0.3rem;
+  padding: 1.25rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.tile-add:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.code-chip {
+  display: inline-grid;
+  place-items: center;
+  min-width: 46px;
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--sc, var(--text-muted));
+  border: 1px solid color-mix(in srgb, var(--sc, var(--border-strong)) 45%, transparent);
+  background: color-mix(in srgb, var(--sc, var(--border)) 10%, transparent);
+}
+
+.ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.ready.ok { color: var(--success); }
+.ready.warn { color: var(--warning); }
+.ready.bad { color: var(--danger); }
+
+.ready .bulb {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.inline-editor {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  animation: slideDown 0.2s ease;
+}
+
+.inline-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.inline-editor-head h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.inline-editor-head .btn {
+  margin-left: auto;
+}
+
+.inline-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+/* Per-log-type template rows: serve toggle, mutate toggle, state, upload. */
+.tpl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tpl-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) auto minmax(90px, auto) auto;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.82rem;
+}
+
+.tpl-row.missing {
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  background: var(--danger-dim);
+}
+
+.tpl-row.optional {
+  opacity: 0.65;
+}
+
+.tpl-row .lt {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.tpl-row .sz {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.tpl-serve,
+.tpl-mutate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.tpl-mutate {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.tpl-upload {
+  cursor: pointer;
+}
+
+.ready-slot {
+  justify-self: start;
+}
+
+.checkbox-field {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem !important;
+  cursor: pointer;
+  padding-top: 1.1rem;
+}
+
+/* Readiness checklist */
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.check {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.1rem;
+}
+
+.check + .check {
+  border-top: 1px dashed var(--border);
+}
+
+.check .mk {
+  font-weight: 700;
+  text-align: center;
+}
+
+.check.ok .mk { color: var(--success); }
+.check.bad .mk { color: var(--danger); }
+.check.info .mk { color: var(--text-muted); }
+
+.check .lbl {
+  color: var(--text-strong);
+}
+
+.check .lbl small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+/* The editor's section titles carry a trailing hint or an action button, so they
+   need the two-part layout the wizard's plain titles don't. */
+.inline-editor .wizard-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* The title itself is uppercase; a hint or path inside it should not be. */
+.inline-editor .wizard-section-title .hint {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+
+/* Sticky so Save / Test / Delete stay reachable through a six-section form. */
+.detail-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0.85rem 0.25rem;
+  margin: 0 -0.25rem;
+  border-top: 1px solid var(--border);
+  /* Opaque, not a fade — the form scrolls underneath it. */
+  background: var(--surface);
+  box-shadow: 0 -6px 16px -12px rgba(23, 38, 43, 0.5);
+}
+
+.detail-footer .spacer {
+  margin-right: auto;
+}
+
+/* SID ingest — the primary way templates get built. */
+.sid-ingest {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding: 0.9rem;
+  margin-bottom: 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: var(--accent-dim);
+}
+
+.sid-ingest .field {
+  /* SID and source share the row, and drop to their own lines when it gets tight. */
+  flex: 1 1 15rem;
+  min-width: 0;
+}
+
+.sid-ingest .btn {
+  white-space: nowrap;
+}
+
+.ingest-result {
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+  background: var(--success-dim);
+  font-size: 0.85rem;
+}
+
+.ingest-result strong {
+  color: var(--text-strong);
+}
+
+.ingest-result.empty {
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+
+.ingest-result .hint {
+  margin-top: 0.3rem;
+}
+
+.ingest-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+
+.ingest-sources code {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  /* Each chip fills in the source match, so it has to read as clickable. */
+  cursor: pointer;
+}
+
+.ingest-sources code:hover,
+.ingest-sources code:focus-visible {
+  border-color: var(--accent);
+  color: var(--text-strong);
+}

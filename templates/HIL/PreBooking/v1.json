@@ -1,0 +1,123 @@
+{
+  "httpRequest": {
+    "path": "/bts/api/livecheck",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "Date": [
+        "Tue, 12 Aug 2025 12:01:07 GMT"
+      ],
+      "Content-Type": [
+        "application/json;charset=UTF-8"
+      ],
+      "Transfer-Encoding": [
+        "chunked"
+      ],
+      "Connection": [
+        "keep-alive"
+      ],
+      "vary": [
+        "accept-encoding"
+      ],
+      "Server": [
+        "DGateway/2.0"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "header": {
+        "supplierId": "HILTON",
+        "distributorId": "ALTAYYAR",
+        "version": "v1.2",
+        "token": "0a493bf0-7c71-433c-bb54-dd35f06ebbc5"
+      },
+      "hotelId": "RUHSK",
+      "stayRange": {
+        "checkin": "2025-11-01",
+        "checkout": "2025-11-02"
+      },
+      "roomCriteria": {
+        "roomCount": 1,
+        "adultCount": 1,
+        "childCount": 0,
+        "childAges": []
+      },
+      "productCandidate": {
+        "roomId": "K1",
+        "rateId": "ODCC30"
+      },
+      "iata": "71200614",
+      "roomRates": [
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "ODCC30",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            564.2
+          ],
+          "amountAfterTax": [
+            681.27
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "priority": 1000
+}

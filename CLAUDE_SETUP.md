@@ -136,7 +136,7 @@ cp .env.example .env
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-PYTHONPATH=. python3 -m uvicorn app.main:app --reload --port 8000
+PYTHONPATH=. python3 -m uvicorn app.main:app --reload --port 8001
 ```
 
 ### Frontend
@@ -146,7 +146,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173
+Open http://localhost:5144
 
 ---
 

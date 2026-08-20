@@ -33,10 +33,12 @@ def get_session_factory():
 
 def init_db() -> None:
     from app.db.models import Base
+    from app.db.seed_suppliers import seed_suppliers
 
     engine = get_engine()
     Base.metadata.create_all(bind=engine)
     _run_migrations(engine)
+    seed_suppliers(get_session_factory())
 
 
 def _run_migrations(engine) -> None:
@@ -55,6 +57,10 @@ def _run_migrations(engine) -> None:
         # supplier/packages_json columns — service layer falls back to those
         # when suppliers_json is NULL.
         ("scenario_templates", "suppliers_json", "JSON"),
+        # Which screen a template came from (templateBeddingMock, importTemplate,
+        # crawlaScenario). Added to the model without a migration entry, so any
+        # smf.db created before it raised "no such column" on every template read.
+        ("scenario_templates", "function", "VARCHAR(64)"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in migrations:

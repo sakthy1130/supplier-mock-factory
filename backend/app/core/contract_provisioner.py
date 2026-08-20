@@ -6,14 +6,12 @@ import copy
 from typing import Any
 
 from app.config import get_settings
-from app.core.chc_paths import apply_chc_contract_opt_defaults
-from app.core.exp_paths import apply_exp_contract_opt_defaults
-from app.core.ext_paths import apply_ext_contract_opt_defaults
-from app.core.hbs_paths import apply_hbs_contract_opt_defaults
+from app.core.contract_opt import apply_contract_opt_defaults
 from app.core.mock_urls import build_mock_opt_urls
-from app.core.supplier_registry import get_supplier_registry
 from app.integrations.backoffice import BackofficeClient
 from app.models.scenario import ScenarioRequest
+from app.models.supplier import SupplierConfig
+from app.services.supplier_service import get_supplier_config
 
 
 class ContractProvisioner:
@@ -30,49 +28,48 @@ class ContractProvisioner:
         contract_ids: dict[str, str] = {}
         async with self.backoffice:
             for supplier in request.suppliers:
-                supplier_code = supplier.code.value
+                supplier_code = str(supplier.code)
+                config = get_supplier_config(supplier_code)
                 contract_currency = supplier.contract_currency
                 paths = mock_paths.get(supplier_code, {})
                 opt_urls = build_mock_opt_urls(mock_base_url, paths, supplier_code=supplier_code)
                 body = await self._build_contract_body(
-                    supplier_code, request.namespace, opt_urls, contract_currency
+                    config, request.namespace, opt_urls, contract_currency
                 )
                 contract_id = await self.backoffice.create_contract(body)
                 contract_ids[supplier_code] = contract_id
         return contract_ids
 
+    def _reference_contract_id(self, config: SupplierConfig) -> str:
+        """The supplier's reference contract, config first then the env file.
+
+        The Suppliers screen owns this value now, but ``<CODE>_REFERENCE_CONTRACT_ID``
+        stays a fallback so an existing .env keeps working for a supplier whose row has
+        never been given one.
+        """
+        if config.reference_contract_id:
+            return config.reference_contract_id
+        return getattr(self.settings, f"{config.code.lower()}_reference_contract_id", "") or ""
+
     async def _build_contract_body(
         self,
-        supplier_code: str,
+        config: SupplierConfig,
         namespace: str,
         opt_urls: dict[str, str],
         contract_currency: str,
     ) -> dict[str, Any]:
-        reference_id = self._reference_contract_id(supplier_code)
+        reference_id = self._reference_contract_id(config)
         if reference_id:
             reference = await self.backoffice.get_contract(reference_id)
-            return _clone_contract(reference, supplier_code, namespace, opt_urls, contract_currency)
+            return _clone_contract(reference, config, namespace, opt_urls, contract_currency)
         return _minimal_contract_body(
-            supplier_code, namespace, opt_urls, self.settings.mock_server_url, contract_currency
+            config, namespace, opt_urls, self.settings.mock_server_url, contract_currency
         )
-
-    def _reference_contract_id(self, supplier_code: str) -> str:
-        if supplier_code == "HBS":
-            return self.settings.hbs_reference_contract_id
-        if supplier_code == "EXP":
-            return self.settings.exp_reference_contract_id
-        if supplier_code == "RHK":
-            return self.settings.rhk_reference_contract_id
-        if supplier_code == "CHC":
-            return self.settings.chc_reference_contract_id
-        if supplier_code == "EXT":
-            return self.settings.ext_reference_contract_id
-        return ""
 
 
 def _clone_contract(
     reference: dict[str, Any],
-    supplier_code: str,
+    config: SupplierConfig,
     namespace: str,
     opt_urls: dict[str, str],
     contract_currency: str,
@@ -80,21 +77,14 @@ def _clone_contract(
     body = copy.deepcopy(reference)
     for key in ("_id", "id", "autoId", "createdAt", "updatedAt", "__v"):
         body.pop(key, None)
-    uid = _contract_uid(namespace, supplier_code)
+    uid = _contract_uid(namespace, config.code)
     body["uid"] = uid
-    body["label"] = f"SMF {namespace} {supplier_code}"
-    _apply_hbs_contract_defaults(body, supplier_code)
+    body["label"] = f"SMF {namespace} {config.code}"
+    _apply_dynamic_market_type(body, config)
     opt = body.setdefault("opt", {})
     if isinstance(opt, dict):
         opt.update(opt_urls)
-        if supplier_code == "HBS":
-            apply_hbs_contract_opt_defaults(opt, get_settings().mock_server_url)
-        elif supplier_code == "EXP":
-            apply_exp_contract_opt_defaults(opt, get_settings().mock_server_url)
-        elif supplier_code == "CHC":
-            apply_chc_contract_opt_defaults(opt, get_settings().mock_server_url)
-        elif supplier_code == "EXT":
-            apply_ext_contract_opt_defaults(opt, get_settings().mock_server_url)
+        apply_contract_opt_defaults(opt, config.mock_config, get_settings().mock_server_url)
     # Apply contract currency to all suppliers (not just CHC)
     body["currency"] = contract_currency
     supported = body.get("supportedCurrencies", [])
@@ -107,42 +97,31 @@ def _clone_contract(
 
 
 def _minimal_contract_body(
-    supplier_code: str,
+    config: SupplierConfig,
     namespace: str,
     opt_urls: dict[str, str],
     mock_base_url: str,
     contract_currency: str,
 ) -> dict[str, Any]:
-    meta = get_supplier_registry()[supplier_code]
-    uid = _contract_uid(namespace, supplier_code)
+    uid = _contract_uid(namespace, config.code)
     enabled_currencies = [contract_currency, *(c for c in ("SAR", "AED", "USD", "EUR") if c != contract_currency)]
     body = {
-        "code": meta["code"],
+        "code": config.code,
         "uid": uid,
-        "label": f"SMF {namespace} {supplier_code}",
+        "label": f"SMF {namespace} {config.code}",
         "userName": uid,
         "password": "smf-password",
         "priority": "1",
-        "supplierId": meta["supplier_id"],
-        "supplierDetail": meta["supplier_detail"],
-        "supplierType": meta["supplier_type"],
+        "supplierId": config.supplier_id,
+        "supplierDetail": config.supplier_detail,
+        "supplierType": config.supplier_type,
         "timeoutSeconds": "60",
         "baseApiUrl": mock_base_url.rstrip("/"),
         "currency": contract_currency,
-        "supplierAutoId": str(meta["auto_id"]),
+        "supplierAutoId": str(config.auto_id),
         "enabledCurrencyArr": enabled_currencies,
         "supplierSupportedCurrencies": enabled_currencies,
-        "opt": (
-            apply_hbs_contract_opt_defaults(dict(opt_urls), mock_base_url)
-            if supplier_code == "HBS"
-            else apply_exp_contract_opt_defaults(dict(opt_urls), mock_base_url)
-            if supplier_code == "EXP"
-            else apply_chc_contract_opt_defaults(dict(opt_urls), mock_base_url)
-            if supplier_code == "CHC"
-            else apply_ext_contract_opt_defaults(dict(opt_urls), mock_base_url)
-            if supplier_code == "EXT"
-            else dict(opt_urls)
-        ),
+        "opt": apply_contract_opt_defaults(dict(opt_urls), config.mock_config, mock_base_url),
         "permission": {
             "isEnable": True,
             "canSearch": True,
@@ -153,7 +132,7 @@ def _minimal_contract_body(
             "canOrder": True,
         },
     }
-    _apply_hbs_contract_defaults(body, supplier_code)
+    _apply_dynamic_market_type(body, config)
     return body
 
 
@@ -161,11 +140,10 @@ def _contract_uid(namespace: str, supplier_code: str) -> str:
     return f"smf-{namespace}-{supplier_code}".lower().replace(" ", "-")
 
 
-def _apply_hbs_contract_defaults(body: dict[str, Any], supplier_code: str) -> None:
-    # Net suppliers receive the borrowed market price (DynamicMarkupTarget); gross
-    # suppliers provide it (MarketPriceSource). CHC and EXT are net like HBS — without this it
-    # inherits the reference contract's "NotParticipating" and is left out of merge.
-    if supplier_code in ("HBS", "CHC", "EXT"):
-        body["dynamicMarketType"] = "DynamicMarkupTarget"
-    elif supplier_code == "EXP":
-        body["dynamicMarketType"] = "MarketPriceSource"
+def _apply_dynamic_market_type(body: dict[str, Any], config: SupplierConfig) -> None:
+    """Net suppliers receive the borrowed market price (DynamicMarkupTarget); gross
+    suppliers provide it (MarketPriceSource). Without this a net supplier inherits the
+    reference contract's "NotParticipating" and is left out of merge. Suppliers with
+    no configured value (RHK) keep whatever the reference contract carried."""
+    if config.mock_config.dynamic_market_type:
+        body["dynamicMarketType"] = config.mock_config.dynamic_market_type

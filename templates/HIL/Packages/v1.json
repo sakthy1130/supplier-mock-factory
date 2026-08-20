@@ -1,0 +1,3816 @@
+{
+  "httpRequest": {
+    "path": "/bts/api/availability",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "Date": [
+        "Tue, 12 Aug 2025 12:00:36 GMT"
+      ],
+      "Content-Type": [
+        "application/json;charset=UTF-8"
+      ],
+      "Transfer-Encoding": [
+        "chunked"
+      ],
+      "Connection": [
+        "keep-alive"
+      ],
+      "vary": [
+        "accept-encoding"
+      ],
+      "Server": [
+        "DGateway/2.0"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "header": {
+        "supplierId": "HILTON",
+        "distributorId": "ALTAYYAR",
+        "version": "v1.2",
+        "token": "0a493bf0-7c71-433c-bb54-dd35f06ebbc5"
+      },
+      "hotelId": "RUHSK",
+      "stayRange": {
+        "checkin": "2025-11-01",
+        "checkout": "2025-11-02"
+      },
+      "roomCriteria": {
+        "roomCount": 1,
+        "adultCount": 1,
+        "childCount": 0,
+        "childAges": []
+      },
+      "iata": "71200614",
+      "roomRates": [
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "OD30DV",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            686.7
+          ],
+          "amountAfterTax": [
+            829.19
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "OD30DV",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            686.7
+          ],
+          "amountAfterTax": [
+            829.19
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "OD30DV",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            791.7
+          ],
+          "amountAfterTax": [
+            955.98
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "OD30DV",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            756.7
+          ],
+          "amountAfterTax": [
+            913.72
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "ODBB15",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            748.85
+          ],
+          "amountAfterTax": [
+            904.24
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "ODBB15",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            748.85
+          ],
+          "amountAfterTax": [
+            904.24
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "ODBB15",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            876.35
+          ],
+          "amountAfterTax": [
+            1058.19
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "ODBB15",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            833.85
+          ],
+          "amountAfterTax": [
+            1006.87
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "ODBB30",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            616.7
+          ],
+          "amountAfterTax": [
+            744.67
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "ODBB30",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            616.7
+          ],
+          "amountAfterTax": [
+            744.67
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "ODBB30",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            721.7
+          ],
+          "amountAfterTax": [
+            871.45
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "ODBB30",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            686.7
+          ],
+          "amountAfterTax": [
+            829.19
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "ODCC15",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            685.1
+          ],
+          "amountAfterTax": [
+            827.26
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "ODCC15",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            685.1
+          ],
+          "amountAfterTax": [
+            827.26
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "ODCC15",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            812.6
+          ],
+          "amountAfterTax": [
+            981.21
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "ODCC15",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            770.1
+          ],
+          "amountAfterTax": [
+            929.9
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "ODCC30",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            564.2
+          ],
+          "amountAfterTax": [
+            681.27
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "ODCC30",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            564.2
+          ],
+          "amountAfterTax": [
+            681.27
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "ODCC30",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            669.2
+          ],
+          "amountAfterTax": [
+            808.06
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "ODCC30",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            634.2
+          ],
+          "amountAfterTax": [
+            765.8
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "ODF5HB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            833.85
+          ],
+          "amountAfterTax": [
+            1006.87
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "ODF5HB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            833.85
+          ],
+          "amountAfterTax": [
+            1006.87
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "ODF5HB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            961.35
+          ],
+          "amountAfterTax": [
+            1160.83
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "ODF5HB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            918.85
+          ],
+          "amountAfterTax": [
+            1109.51
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "OG15TB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            742.05
+          ],
+          "amountAfterTax": [
+            896.03
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "5D1N_1N",
+            "description": "CXL 5 DAYS PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 5
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "OG15TB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            742.05
+          ],
+          "amountAfterTax": [
+            896.03
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "5D1N_1N",
+            "description": "CXL 5 DAYS PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 5
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "OG15TB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            867.85
+          ],
+          "amountAfterTax": [
+            1047.93
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "5D1N_1N",
+            "description": "CXL 5 DAYS PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 5
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "OG15TB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            826.2
+          ],
+          "amountAfterTax": [
+            997.64
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "5D1N_1N",
+            "description": "CXL 5 DAYS PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 5
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "OG15TF",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            678.25
+          ],
+          "amountAfterTax": [
+            818.99
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "5D1N_1N",
+            "description": "CXL 5 DAYS PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 5
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "OG15TF",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            678.25
+          ],
+          "amountAfterTax": [
+            818.99
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "5D1N_1N",
+            "description": "CXL 5 DAYS PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 5
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "OG15TF",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            804.47
+          ],
+          "amountAfterTax": [
+            971.4
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "5D1N_1N",
+            "description": "CXL 5 DAYS PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 5
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "OG15TF",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            762.4
+          ],
+          "amountAfterTax": [
+            920.6
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "5D1N_1N",
+            "description": "CXL 5 DAYS PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 5
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "OGAPF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            582.34
+          ],
+          "amountAfterTax": [
+            703.18
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "OGAPF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            582.34
+          ],
+          "amountAfterTax": [
+            703.18
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "OGAPF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            690.71
+          ],
+          "amountAfterTax": [
+            834.03
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "OGAPF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            654.59
+          ],
+          "amountAfterTax": [
+            790.42
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "OGPBF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            636.52
+          ],
+          "amountAfterTax": [
+            768.6
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "OGPBF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            636.52
+          ],
+          "amountAfterTax": [
+            768.6
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "OGPBF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            744.9
+          ],
+          "amountAfterTax": [
+            899.47
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "OGPBF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            708.77
+          ],
+          "amountAfterTax": [
+            855.84
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "OGPDF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            667.08
+          ],
+          "amountAfterTax": [
+            805.5
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "OGPDF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            667.08
+          ],
+          "amountAfterTax": [
+            805.5
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "OGPDF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            769.08
+          ],
+          "amountAfterTax": [
+            928.66
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "OGPDF5",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            735.08
+          ],
+          "amountAfterTax": [
+            887.61
+          ],
+          "mealPlan": "HB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "AD100P_100P",
+            "description": "NONREFUNDABLE",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 999,
+                  "deadline": "any date time"
+                },
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "FullStay",
+                  "percent": 100
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "OD10BB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            792.9
+          ],
+          "amountAfterTax": [
+            957.43
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "OD10BB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            792.9
+          ],
+          "amountAfterTax": [
+            957.43
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "OD10BB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            927.9
+          ],
+          "amountAfterTax": [
+            1120.44
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "OD10BB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            882.9
+          ],
+          "amountAfterTax": [
+            1066.1
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "OD10FF",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            725.4
+          ],
+          "amountAfterTax": [
+            875.92
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "OD10FF",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            725.4
+          ],
+          "amountAfterTax": [
+            875.92
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "OD10FF",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            860.4
+          ],
+          "amountAfterTax": [
+            1038.93
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "OD10FF",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            815.4
+          ],
+          "amountAfterTax": [
+            984.6
+          ],
+          "mealPlan": "RO",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1",
+          "rateId": "OD15BB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            748.85
+          ],
+          "amountAfterTax": [
+            904.24
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "T2",
+          "rateId": "OD15BB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            748.85
+          ],
+          "amountAfterTax": [
+            904.24
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "Q1RRQ",
+          "rateId": "OD15BB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            876.35
+          ],
+          "amountAfterTax": [
+            1058.19
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "inventory": 9,
+          "roomId": "K1RC",
+          "rateId": "OD15BB",
+          "currency": "SAR",
+          "amountBeforeTax": [
+            833.85
+          ],
+          "amountAfterTax": [
+            1006.87
+          ],
+          "mealPlan": "BB",
+          "fees": [
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax1",
+                "type": "Exclusive",
+                "amount": 15.75,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            },
+            {
+              "dateRange": {
+                "startDate": "2025-11-01",
+                "endDate": "2025-11-01"
+              },
+              "fee": {
+                "name": "Tax2",
+                "type": "Exclusive",
+                "amount": 5,
+                "amountType": "Percent",
+                "chargeType": "PerRoomPerNight"
+              }
+            }
+          ],
+          "cancelPolicy": {
+            "code": "1D1N_1N",
+            "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+            "cancelPenalties": [
+              {
+                "noShow": false,
+                "cancellable": true,
+                "cancelDeadline": {
+                  "offsetTimeDropType": "BeforeArrival",
+                  "offsetTimeUnit": "D",
+                  "offsetTimeValue": 1
+                },
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              },
+              {
+                "noShow": true,
+                "penaltyCharge": {
+                  "chargeBase": "NightBase",
+                  "nights": 1
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "priority": 1000
+}

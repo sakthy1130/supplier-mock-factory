@@ -200,6 +200,56 @@ def extract_request_payload_for_mock(log_detail: dict) -> Any | None:
     return None
 
 
+def _supplier_id_from_body(body: dict) -> str | None:
+    """``supplierId`` wherever this payload keeps it.
+
+    Derby BTS puts it in ``header`` on every call except the multi-hotel Search, whose
+    header carries only distributor/version/token and whose ``supplierId`` sits on each
+    ``availHotels`` entry instead. Both locations are checked, or Search rows would look
+    unattributable and get dropped.
+    """
+    header = body.get("header")
+    if isinstance(header, dict):
+        value = header.get("supplierId")
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    hotels = body.get("availHotels")
+    if isinstance(hotels, list):
+        for hotel in hotels:
+            if isinstance(hotel, dict):
+                value = hotel.get("supplierId")
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+    return None
+
+
+def payload_supplier_id(full_log: dict) -> str | None:
+    """The supplier id a fetched log detail belongs to, response first then request.
+
+    Suppliers sharing one adapter (CHC and HIL on Derby BTS) log an identical ``source``,
+    so this is the only thing in the payload that says which of them a row belongs to.
+    Returns None when the log carries none — the caller decides what that means.
+    """
+    if not isinstance(full_log, dict):
+        return None
+    for section in ("response", "request"):
+        node = full_log.get(section)
+        if not isinstance(node, dict):
+            continue
+        for candidate in (node.get("body"), node):
+            try:
+                body = parse_log_json_body(candidate)
+            except (ValueError, TypeError):
+                continue
+            if not isinstance(body, dict):
+                continue
+            found = _supplier_id_from_body(body)
+            if found:
+                return found
+    return None
+
+
 def strip_request_body_header(payload: Any) -> Any:
     if not isinstance(payload, dict):
         return payload
