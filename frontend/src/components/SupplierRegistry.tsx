@@ -428,6 +428,18 @@ export function SupplierRegistry({ env, onSuppliersChanged }: Props) {
                       hotel id prefix stripped
                     </span>
                   )}
+                  {Object.keys(config.mock_config.forced_permission ?? {}).length > 0 && (
+                    <span
+                      className="tile-note"
+                      title={`Contract permissions forced on: ${Object.entries(
+                        config.mock_config.forced_permission,
+                      )
+                        .map(([k, v]) => `${k}=${String(v)}`)
+                        .join(', ')} — overriding what the reference contract carried.`}
+                    >
+                      contract permissions forced
+                    </span>
+                  )}
                   <span className="registry-tile-foot">
                     <span className={`ready ${label.cls}`}>
                       <span className="bulb" />
@@ -594,6 +606,29 @@ export function SupplierRegistry({ env, onSuppliersChanged }: Props) {
                         value={draft.reference_contract_id}
                         onChange={(e) => patch({ reference_contract_id: e.target.value })}
                         placeholder="leave empty to build a minimal contract instead"
+                      />
+                    </label>
+                  </div>
+                  <div className="field field-wide">
+                    <label>
+                      Forced contract permissions <span className="hint">JSON</span>
+                      <span className="hint">
+                        Applied on top of whatever the reference contract carried. A safe
+                        reference (Hilton's is named “…-dont-book-…”) has canBook false, and
+                        a clone inherits it — so booking is refused before the mock is ever
+                        reached.
+                      </span>
+                      <textarea
+                        rows={3}
+                        value={JSON.stringify(draft.mock_config.forced_permission, null, 2)}
+                        onChange={(e) => {
+                          try {
+                            patchMock({ forced_permission: JSON.parse(e.target.value) })
+                          } catch {
+                            /* keep typing — validated on save */
+                          }
+                        }}
+                        placeholder={'{\n  "canBook": true\n}'}
                       />
                     </label>
                   </div>

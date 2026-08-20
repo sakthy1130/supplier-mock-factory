@@ -17,6 +17,8 @@ export interface ApiMockConfig {
   booking_id_in_get_order_path: boolean
   /** Mapping returns "GI-RUHSK"; the adapter calls the supplier with "RUHSK". */
   strip_hotel_id_prefix: boolean
+  /** Contract permission flags forced on regardless of what the reference carried. */
+  forced_permission: Record<string, unknown>
 }
 
 export interface ApiMutationConfig {
@@ -260,6 +262,7 @@ export function emptySupplierConfig(): SupplierConfigPayload {
       dynamic_market_type: 'DynamicMarkupTarget',
       booking_id_in_get_order_path: false,
       strip_hotel_id_prefix: false,
+      forced_permission: {},
     },
     mutation_config: {
       packages_path: '',

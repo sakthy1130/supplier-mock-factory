@@ -530,3 +530,56 @@ def test_ingest_keeps_search_on_the_packages_hotel():
         assert hotel["hotelId"] == "DXBAS", "Search must follow the Packages hotel"
         assert hotel["availRoomRates"][0]["roomId"] == "K3RRF2"
 
+
+# ── contract permissions ────────────────────────────────────────────────────────
+
+
+def _config_with(forced: dict):
+    from app.models.supplier import MockConfig, MutationConfig, SupplierConfig
+
+    return SupplierConfig(
+        id="x", code="HIL", env="stg", name="Hilton",
+        mock_config=MockConfig(forced_permission=forced),
+        mutation_config=MutationConfig(),
+        log_types=["Search"],
+    )
+
+
+def test_forced_permission_flips_can_book_keeping_the_contract_s_own_shape():
+    """Hilton's reference is the safe "dont-book" contract, so a clone inherits
+    canBook false and the booking flow is refused before the mock is consulted.
+
+    Backoffice returns these flags as the strings "true"/"false" on a real contract, so
+    the override has to write a string back — a raw bool risks the block being misread.
+    """
+    from app.core.contract_provisioner import _apply_forced_permission
+
+    body = {
+        "permission": {
+            "isEnable": "true", "canSearch": "true", "canBook": "false",
+            "canCancel": "true", "canPackages": "true", "canOrder": "true",
+        }
+    }
+    _apply_forced_permission(body, _config_with({"canBook": True}))
+    assert body["permission"]["canBook"] == "true"
+    # Nothing else is touched.
+    assert body["permission"]["canSearch"] == "true"
+    assert body["permission"]["canPackages"] == "true"
+    assert body["permission"]["canOrder"] == "true"
+
+
+def test_forced_permission_writes_a_bool_when_the_body_uses_bools():
+    from app.core.contract_provisioner import _apply_forced_permission
+
+    body = {"permission": {"canBook": False, "canSearch": True}}
+    _apply_forced_permission(body, _config_with({"canBook": True}))
+    assert body["permission"]["canBook"] is True
+
+
+def test_a_supplier_with_no_forced_permission_is_left_alone():
+    from app.core.contract_provisioner import _apply_forced_permission
+
+    body = {"permission": {"canBook": "false"}}
+    _apply_forced_permission(body, _config_with({}))
+    assert body["permission"]["canBook"] == "false"
+

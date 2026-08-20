@@ -380,6 +380,9 @@ SEED_SUPPLIERS: list[dict[str, Any]] = [
             # Hilton ids come back prefixed from mapping ("GI-RUHSK", "HL-DXBJB") and
             # the adapter calls Derby with the part after the dash.
             "strip_hotel_id_prefix": True,
+            # The reference contract is the safe "dont-book" one; a clone inherits
+            # canBook false and the booking flow is refused before the mock is reached.
+            "forced_permission": {"canBook": True},
         },
         "mutation_config": {
             "packages_path": "httpResponse.body.roomRates",

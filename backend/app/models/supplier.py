@@ -69,6 +69,11 @@ class MockConfig(BaseModel):
     # supplier whose ids are prefixed so the mock replies with what the supplier
     # actually sees.
     strip_hotel_id_prefix: bool = False
+    # Permission keys forced onto the contract whatever the reference carried. A
+    # reference contract is often a deliberately safe one — Hilton's is literally
+    # "hil-contract-dont-book-bts-v4" with canBook false — and a clone inherits that,
+    # so the booking flow is refused before the mock is ever consulted.
+    forced_permission: dict[str, Any] = Field(default_factory=dict)
 
     def mock_path(self, log_type: str) -> str | None:
         base = self.canonical_base.get(log_type)

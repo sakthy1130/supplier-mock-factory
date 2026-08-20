@@ -152,6 +152,7 @@ def _clone_contract(
         # chain: which keys to fill, force, and whether to stamp mockServerUrl are
         # MockConfig fields on the supplier row.
         apply_contract_opt_defaults(opt, config.mock_config, get_settings().mock_server_url)
+    _apply_forced_permission(body, config)
     # Apply contract currency to all suppliers (not just CHC)
     body["currency"] = contract_currency
     supported = body.get("supportedCurrencies", [])
@@ -202,6 +203,7 @@ def _minimal_contract_body(
         },
     }
     _apply_dynamic_market_type(body, config)
+    _apply_forced_permission(body, config)
     return body
 
 
@@ -215,6 +217,31 @@ def _contract_uid(namespace: str, instance_key: str) -> str:
     """`instance_key` is the supplier code for a single entry, or "EXP-2" for a
     repeated one — the uid must differ or backoffice rejects the second contract."""
     return f"smf-{namespace}-{instance_key}".lower().replace(" ", "-")
+
+
+def _apply_forced_permission(body: dict[str, Any], config: SupplierConfig) -> None:
+    """Override contract permission flags the supplier's config pins.
+
+    A cloned reference contract brings its own permissions, and a safe reference
+    (Hilton's is named "…-dont-book-…") carries canBook false — which refuses the
+    booking flow upstream of the mock. Values keep the shape the contract already uses:
+    these flags come back from Backoffice as the strings "true"/"false" on a clone but
+    as real booleans on a minimal body, and writing the wrong one risks the whole
+    permission block being misread.
+    """
+    forced = config.mock_config.forced_permission
+    if not forced:
+        return
+    permission = body.get("permission")
+    if not isinstance(permission, dict):
+        permission = {}
+        body["permission"] = permission
+    for key, value in forced.items():
+        current = permission.get(key)
+        if isinstance(current, str) and isinstance(value, bool):
+            permission[key] = "true" if value else "false"
+        else:
+            permission[key] = value
 
 
 def _apply_dynamic_market_type(body: dict[str, Any], config: SupplierConfig) -> None:
