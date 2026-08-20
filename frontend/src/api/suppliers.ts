@@ -15,6 +15,8 @@ export interface ApiMockConfig {
   set_mock_server_url: boolean
   dynamic_market_type: string | null
   booking_id_in_get_order_path: boolean
+  /** Mapping returns "GI-RUHSK"; the adapter calls the supplier with "RUHSK". */
+  strip_hotel_id_prefix: boolean
 }
 
 export interface ApiMutationConfig {
@@ -257,6 +259,7 @@ export function emptySupplierConfig(): SupplierConfigPayload {
       set_mock_server_url: true,
       dynamic_market_type: 'DynamicMarkupTarget',
       booking_id_in_get_order_path: false,
+      strip_hotel_id_prefix: false,
     },
     mutation_config: {
       packages_path: '',

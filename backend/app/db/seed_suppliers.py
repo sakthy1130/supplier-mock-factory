@@ -377,6 +377,9 @@ SEED_SUPPLIERS: list[dict[str, Any]] = [
             "mock_path_suffix": HIL_MOCK_PATH_SUFFIX,
             "set_mock_server_url": True,
             "dynamic_market_type": "DynamicMarkupTarget",
+            # Hilton ids come back prefixed from mapping ("GI-RUHSK", "HL-DXBJB") and
+            # the adapter calls Derby with the part after the dash.
+            "strip_hotel_id_prefix": True,
         },
         "mutation_config": {
             "packages_path": "httpResponse.body.roomRates",

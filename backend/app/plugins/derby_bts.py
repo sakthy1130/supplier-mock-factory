@@ -88,6 +88,25 @@ class DerbyBtsMockPlugin(SupplierMockPlugin):
         )
         return result
 
+    def supplier_hotel_id(self, hotel_id: str) -> str:
+        """The hotel id the supplier itself sees.
+
+        The mapping service returns it prefixed ("HL-DXBJB", "GI-RUHSK") while the
+        adapter calls Derby with only the part after the dash. Echoing the prefixed id
+        back describes a hotel the supplier was never asked about, and the adapter's
+        per-hotel lookups miss — which surfaces as zero packages and no error. Opt in
+        per supplier via mock_config.strip_hotel_id_prefix.
+        """
+        if not hotel_id or "-" not in hotel_id:
+            return hotel_id
+        from app.services.supplier_service import UnknownSupplierError, get_supplier_config
+
+        try:
+            strip = get_supplier_config(self.code).mock_config.strip_hotel_id_prefix
+        except UnknownSupplierError:
+            return hotel_id
+        return hotel_id.split("-", 1)[1] if strip else hotel_id
+
     def mutate_packages(
         self,
         expectation: dict,
@@ -97,6 +116,7 @@ class DerbyBtsMockPlugin(SupplierMockPlugin):
         check_out: str,
         log_type: str,
     ) -> dict:
+        hotel_id = self.supplier_hotel_id(hotel_id)
         result = self.mutate_dates(expectation, check_in, check_out)
         prices = _normalized_prices(spec)
         refundable = _normalized_refundable(spec)

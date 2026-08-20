@@ -7,12 +7,14 @@ single search SID contains rows from both, so ingest has to separate them by
 
 import pytest
 
+from app.env_context import use_env
 from app.ingest.expectation_builder import payload_supplier_id
 from app.ingest.template_ingestor import TemplateIngestor
 from app.models.scenario import PackageSpec
 from app.plugins import PLUGINS, DerbyBtsMockPlugin
 from app.plugins.chc import ChcMockPlugin
 from app.plugins.hil import HilMockPlugin
+from app.services import supplier_service
 
 DERBY_SOURCE = "hotels-derby-bts-adapter"
 
@@ -363,4 +365,42 @@ def test_derby_mock_paths_are_namespaced_and_never_collide(api_client):
     assert opt["availabilityUrl"] == f"http://mock{paths['Packages']}"
     assert opt["prebookingUrl"] == f"http://mock{paths['PreBooking']}"
     assert opt["searchUrl"] == f"http://mock{paths['Search']}"
+
+
+# ── hotel id prefix ─────────────────────────────────────────────────────────────
+
+
+def test_hilton_replies_with_the_stripped_hotel_id(api_client):
+    """Mapping hands out GI-RUHSK; the adapter calls Derby with RUHSK.
+
+    Echoing the prefixed id back describes a hotel the supplier was never asked about,
+    and the adapter's per-hotel lookups (room names among them) miss — zero packages,
+    no error. Takes api_client because the flag lives on the seeded supplier row.
+    """
+    # HIL is seeded for stg only, and the flag is read from its row — in dev there is
+    # no HIL config and nothing is stripped.
+    with use_env("stg"):
+        supplier_service.invalidate_cache()
+        result = HilMockPlugin().mutate_packages(
+            _derby_expectation(), _spec(), "GI-RUHSK", "2026-09-01", "2026-09-03", "Packages"
+        )
+    assert result["httpResponse"]["body"]["hotelId"] == "RUHSK"
+
+
+def test_choice_keeps_its_hotel_id_untouched(api_client):
+    """The flag is per supplier: Choice's ids are not prefixed, so nothing is stripped."""
+    result = ChcMockPlugin().mutate_packages(
+        _derby_expectation("CHOICE"), _spec(), "GB-113", "2026-09-01", "2026-09-03", "Packages"
+    )
+    assert result["httpResponse"]["body"]["hotelId"] == "GB-113"
+
+
+def test_an_unprefixed_id_is_left_alone(api_client):
+    """Nothing to strip — a bare code must survive verbatim, not lose its first char."""
+    with use_env("stg"):
+        supplier_service.invalidate_cache()
+        result = HilMockPlugin().mutate_packages(
+            _derby_expectation(), _spec(), "RUHSK", "2026-09-01", "2026-09-03", "Packages"
+        )
+    assert result["httpResponse"]["body"]["hotelId"] == "RUHSK"
 

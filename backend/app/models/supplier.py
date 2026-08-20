@@ -61,6 +61,14 @@ class MockConfig(BaseModel):
     # The GetOrder mock is addressed as <GetOrder path>/<bookingId> (HBS), so the path
     # has to be rewritten whenever a fresh booking id is injected.
     booking_id_in_get_order_path: bool = False
+    # The mapping service hands out a prefixed supplier hotel id ("HL-DXBJB",
+    # "GI-RUHSK") but the adapter calls the supplier with only the part after the
+    # dash ("DXBJB", "RUHSK"). A mock that echoes the prefixed id answers with a
+    # hotel the supplier never asked about, and the adapter's per-hotel lookups
+    # (room names among them) miss — zero packages, no error. Set this for a
+    # supplier whose ids are prefixed so the mock replies with what the supplier
+    # actually sees.
+    strip_hotel_id_prefix: bool = False
 
     def mock_path(self, log_type: str) -> str | None:
         base = self.canonical_base.get(log_type)

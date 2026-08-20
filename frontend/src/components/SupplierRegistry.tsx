@@ -21,6 +21,14 @@ import {
 
 const NEW_CODE = '__new__'
 
+/** Shown wherever strip_hotel_id_prefix is on — the reason is not guessable from the flag. */
+const HOTEL_ID_PREFIX_NOTE =
+  'Mapping returns this supplier\'s hotel ids with a prefix (GI-RUHSK, HL-DXBJB) but the ' +
+  'adapter calls the supplier with only the part after the dash (RUHSK, DXBJB). The mock ' +
+  'replies with the stripped id, so it describes the hotel the supplier was actually asked ' +
+  'about — otherwise the adapter finds no room names for it and returns zero packages ' +
+  'without an error.'
+
 /** Comma-separated text <-> string[] for the key-list fields. */
 function splitKeys(value: string): string[] {
   return value
@@ -415,6 +423,11 @@ export function SupplierRegistry({ env, onSuppliersChanged }: Props) {
                       </span>
                     </span>
                   </span>
+                  {config.mock_config.strip_hotel_id_prefix && (
+                    <span className="tile-note" title={HOTEL_ID_PREFIX_NOTE}>
+                      hotel id prefix stripped
+                    </span>
+                  )}
                   <span className="registry-tile-foot">
                     <span className={`ready ${label.cls}`}>
                       <span className="bulb" />
@@ -808,6 +821,17 @@ export function SupplierRegistry({ env, onSuppliersChanged }: Props) {
                       />
                       Isolate paths per scenario
                     </label>
+                  </div>
+                  <div className="field field-wide">
+                    <label className="checkbox-field">
+                      <input
+                        type="checkbox"
+                        checked={draft.mock_config.strip_hotel_id_prefix}
+                        onChange={(e) => patchMock({ strip_hotel_id_prefix: e.target.checked })}
+                      />
+                      Strip the hotel id prefix (GI-RUHSK → RUHSK)
+                    </label>
+                    <span className="hint">{HOTEL_ID_PREFIX_NOTE}</span>
                   </div>
                   <div className="field field-wide">
                     <label>
