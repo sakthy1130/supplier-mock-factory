@@ -57,11 +57,13 @@ function MarkupFields({
   dynamicMarkup,
   onStatic,
   onDynamic,
+  showDynamic = true,
 }: {
   staticMarkup: string
   dynamicMarkup: string
   onStatic: (value: string) => void
   onDynamic: (value: string) => void
+  showDynamic?: boolean
 }) {
   return (
     <div className="depth-field" style={{ marginTop: '0.75rem' }}>
@@ -74,22 +76,37 @@ function MarkupFields({
         spellCheck={false}
         autoComplete="off"
       />
-      <label htmlFor="dynamic-markup" style={{ marginTop: '0.5rem' }}>
-        Dynamic markup (optional)
-      </label>
-      <input
-        id="dynamic-markup"
-        value={dynamicMarkup}
-        onChange={(e) => onDynamic(e.target.value)}
-        placeholder="10%-15%"
-        spellCheck={false}
-        autoComplete="off"
-      />
+      {showDynamic && (
+        <>
+          <label htmlFor="dynamic-markup" style={{ marginTop: '0.5rem' }}>
+            Dynamic markup (optional)
+          </label>
+          <input
+            id="dynamic-markup"
+            value={dynamicMarkup}
+            onChange={(e) => onDynamic(e.target.value)}
+            placeholder="10%-15%"
+            spellCheck={false}
+            autoComplete="off"
+          />
+        </>
+      )}
       <p className="hint">
-        Output values for Room Static Markup In Percentage (3) and Room Dynamic Markup In
-        Percentage (4). Leave blank for the defaults, 10% and 15%-25%. A plain number is read as
-        a percentage, so <code>10</code> and <code>10%</code> both work, as do <code>10-15</code>{' '}
-        and <code>10%-15%</code>.
+        {showDynamic ? (
+          <>
+            Output values for Room Static Markup In Percentage (3) and Room Dynamic Markup In
+            Percentage (4). Leave blank for the defaults, 10% and 15%-25%. A plain number is read
+            as a percentage, so <code>10</code> and <code>10%</code> both work, as do{' '}
+            <code>10-15</code> and <code>10%-15%</code>.
+          </>
+        ) : (
+          <>
+            Output value for Room Static Markup In Percentage (3). This environment has no
+            DynamicMarkup rule, so static is all there is. Leave blank for the default, 10%. A
+            plain number is read as a percentage, so <code>10</code> and <code>10%</code> both
+            work.
+          </>
+        )}
       </p>
     </div>
   )
@@ -104,6 +121,21 @@ const EXPLICIT_PRICING_SUPPLIERS: SupplierCode[] = ['EXP']
  *  sits inside totals.inclusive; a net contract has no such node, so the fields are
  *  hidden here and the backend rejects them (see scenario_engine). */
 const NET_EXP_ENVS: SmfEnv[] = ['odis']
+
+/** Envs with no DynamicMarkup rule — Static Markup (rule 3) is all there is.
+ *  Mirrors STATIC_ONLY_ENVS in backend/app/integrations/business_rules.py. */
+const STATIC_ONLY_ENVS: SmfEnv[] = ['odis']
+
+/** Envs with no SmartBooking. Mirrors SB_UNSUPPORTED_ENVS in the backend. */
+const NO_SMART_BOOKING_ENVS: SmfEnv[] = ['odis']
+
+function hasDynamicMarkup(env: SmfEnv): boolean {
+  return !STATIC_ONLY_ENVS.includes(env)
+}
+
+function hasSmartBooking(env: SmfEnv): boolean {
+  return !NO_SMART_BOOKING_ENVS.includes(env)
+}
 
 function showExplicitPricing(code: SupplierCode, env: SmfEnv): boolean {
   if (code === 'EXP' && NET_EXP_ENVS.includes(env)) return false
@@ -312,6 +344,10 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
   // SmartBooking: create the apiKey with SB enabled, and per-supplier route each
   // contract to the apiKey, the SB group, or both (default apikey).
   const [sbEnabled, setSbEnabled] = useState(() => initialTemplate?.sbEnabled ?? false)
+  // A template saved on stg can carry sbEnabled=true into an env with no SmartBooking,
+  // where the checkbox is hidden. Everything behavioural reads this, not the raw state,
+  // so such a template runs with SB off instead of asking for a group that cannot exist.
+  const sbActive = sbEnabled && hasSmartBooking(activeEnv)
   const [assignmentTargets, setAssignmentTargets] = useState<Record<SupplierCode, AssignmentTarget>>(() =>
     Object.fromEntries(
       availableSuppliers.map((s) => [s.code, initialTemplate?.assignmentTargets?.[s.code] ?? 'apikey']),
@@ -473,7 +509,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
   // Whether this scenario will provision BR at all — 'full' does it for the checkbox or
   // for SmartBooking, 'contract_br' always does, 'contract_only' never. Drives both the
   // markup inputs' visibility and whether their values are sent.
-  const brWillProvision = depth === 'full' ? assignToBr || sbEnabled : depth === 'contract_br'
+  const brWillProvision = depth === 'full' ? assignToBr || sbActive : depth === 'contract_br'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -484,7 +520,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
     }
     // SmartBooking needs at least one supplier feeding the SB group, else the
     // group would be created empty (mirrors the backend guard).
-    if (depth === 'full' && sbEnabled && !suppliers.some((code) => assignmentTargets[code] !== 'apikey')) {
+    if (depth === 'full' && sbActive && !suppliers.some((code) => assignmentTargets[code] !== 'apikey')) {
       setFormError('SmartBooking is on — set at least one supplier to SbGroup or Both')
       return
     }
@@ -531,7 +567,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
         // The backend rejects these outside 'full' rather than ignoring them, so don't
         // send stale values from a depth the user switched away from.
         assign_to_br: depth === 'full' ? assignToBr : false,
-        sb_enabled: depth === 'full' ? sbEnabled : false,
+        sb_enabled: depth === 'full' ? sbActive : false,
         existing_api_key: depth === 'full' ? null : existingApiKey.trim() || null,
         // Same rule for the markup: only the depths that actually provision BR accept
         // them, and contract_only rejects them outright.
@@ -661,7 +697,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                       </select>
                     </label>
 
-                    {sbEnabled && (
+                    {sbActive && (
                       <label className="supplier-tile-field" style={{ maxWidth: '160px' }}>
                         Contract goes to
                         <select
@@ -864,6 +900,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                 dynamicMarkup={dynamicMarkup}
                 onStatic={setStaticMarkup}
                 onDynamic={setDynamicMarkup}
+                showDynamic={hasDynamicMarkup(activeEnv)}
               />
             )}
           </div>
@@ -876,7 +913,9 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}
             >
               <input type="checkbox" checked={assignToBr} onChange={(e) => setAssignToBr(e.target.checked)} />
-              Assign apiKey to BR (Static + Dynamic Markup rules)
+              {`Assign apiKey to BR (${
+                hasDynamicMarkup(activeEnv) ? 'Static + Dynamic Markup rules' : 'Static Markup rule'
+              })`}
             </label>
             <p className="hint" style={{ marginTop: '0.35rem' }}>
               On by default. Cleaned up automatically on teardown. Uncheck to skip BR assignment for
@@ -890,20 +929,25 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                 dynamicMarkup={dynamicMarkup}
                 onStatic={setStaticMarkup}
                 onDynamic={setDynamicMarkup}
+                showDynamic={hasDynamicMarkup(activeEnv)}
               />
             )}
 
-            <label
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}
-            >
-              <input type="checkbox" checked={sbEnabled} onChange={(e) => setSbEnabled(e.target.checked)} />
-              Create apiKey with SmartBooking (creates an SB group)
-            </label>
-            <p className="hint" style={{ marginTop: '0.35rem' }}>
-              {sbEnabled
-                ? 'An SB group is created first, then attached to the apiKey. Choose per supplier (above) whether its contract goes to the ApiKey, the SB Group, or Both — at least one must be SB Group or Both.'
-                : 'Off by default. When on, each supplier can route its contract to the apiKey, the SB group, or both.'}
-            </p>
+            {hasSmartBooking(activeEnv) && (
+              <>
+                <label
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}
+                >
+                  <input type="checkbox" checked={sbEnabled} onChange={(e) => setSbEnabled(e.target.checked)} />
+                  Create apiKey with SmartBooking (creates an SB group)
+                </label>
+                <p className="hint" style={{ marginTop: '0.35rem' }}>
+                  {sbEnabled
+                    ? 'An SB group is created first, then attached to the apiKey. Choose per supplier (above) whether its contract goes to the ApiKey, the SB Group, or Both — at least one must be SB Group or Both.'
+                    : 'Off by default. When on, each supplier can route its contract to the apiKey, the SB group, or both.'}
+                </p>
+              </>
+            )}
           </>
         )}
       </div>

@@ -10,7 +10,7 @@ from app.core.apikey_provisioner import ApiKeyProvisioner
 from app.core.contract_provisioner import ContractProvisioner
 from app.core.mock_registration import refresh_booking_flow_expectations, register_built_expectations
 from app.core.mock_urls import extract_paths_from_built
-from app.core.sb_group_provisioner import SBGroupProvisioner
+from app.core.sb_group_provisioner import SBGroupProvisioner, smart_booking_supported
 from app.core.scenario_engine import ScenarioEngine
 from app.integrations.business_rules import CrawlaBusinessRulesProvisioner
 from app.integrations.backoffice import BackofficeClient, BackofficeError
@@ -120,6 +120,15 @@ class SupplierMockScenarioOrchestrator:
         # Step 3a: Create SB group BEFORE SB configuration and apiKey
         sb_config_data: dict | None = None
         sb_group_data: dict | None = None
+        if request.sb_config is not None and not smart_booking_supported(self.settings.env):
+            # Refuse rather than provision half a scenario: the group would be created
+            # against a tenant with no SmartBooking, and the per-supplier sbgroup routing
+            # would silently send those contracts nowhere.
+            raise ValueError(
+                f"SmartBooking is not available on '{self.settings.env}' — no SB group can "
+                "be created there. Run with sb_enabled false, and route every supplier's "
+                "contract to the apiKey."
+            )
         if request.sb_config is not None:
             node_id = self.settings.tenant_id
             logger.info("Creating SB group for namespace=%s", request.namespace)
