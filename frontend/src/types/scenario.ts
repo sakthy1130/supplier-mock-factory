@@ -128,6 +128,13 @@ export interface ScenarioRequest {
 }
 
 export interface ScenarioBundle {
+  /**
+   * The create request this scenario was provisioned from, as the backend stored it
+   * (namespace, dates, hotel, per-supplier package specs). Surfaced in the detail
+   * panel so a scenario can be replayed or turned into a template without
+   * reconstructing the payload by hand.
+   */
+  request?: Record<string, unknown> | null
   id?: string
   namespace: string
   env: string
