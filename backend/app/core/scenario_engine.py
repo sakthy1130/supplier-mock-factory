@@ -20,6 +20,28 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATES_DIR = REPO_ROOT / "templates"
 
 
+def _reject_explicit_pricing_for_net_supplier(supplier_code: str) -> None:
+    """Raise if this env prices `supplier_code` net — the gross split cannot apply.
+
+    An unknown supplier is left alone: resolve_plugin/_package_log_types already report
+    that far more usefully than a pricing complaint would.
+    """
+    from app.env_context import get_current_env
+    from app.services.supplier_service import UnknownSupplierError, get_supplier_config
+
+    try:
+        config = get_supplier_config(supplier_code)
+    except UnknownSupplierError:
+        return
+    if config.supplier_type == "net":
+        env = get_current_env()
+        raise ValueError(
+            f"{supplier_code} is a net supplier on '{env}', so originalPriceWithVAT and "
+            "markup do not apply — that split only exists for a gross supplier, where "
+            "the markup sits inside the total. Send the package price alone."
+        )
+
+
 def _package_log_types(supplier_code: str) -> set[str]:
     """Log types whose response body gets package mutation for this supplier.
 
@@ -97,6 +119,14 @@ class ScenarioEngine:
             # From the suppliers table, not a hardcoded registry: a supplier added from
             # the Suppliers screen gets the generic mutator built from its own config.
             plugin = resolve_plugin(supplier_code)
+            # The originalPriceWithVAT/markup split only means something for a GROSS
+            # supplier: the markup sits inside totals.inclusive and these fields say how
+            # to divide it. A net supplier carries no such markup node, so accepting the
+            # values would write a split the contract cannot express. supplier_type is
+            # per-env (EXP is gross on dev/stg, net on ODIS), so this is resolved from
+            # the suppliers table rather than the code.
+            if supplier_scenario.packages.has_explicit_pricing:
+                _reject_explicit_pricing_for_net_supplier(supplier_code)
             # When no package is selected for the booking flow, only build
             # search/package (+ prebooking/cancellation-policy) mocks — skip
             # Booking/GetOrder/CancelOrder entirely for this supplier.

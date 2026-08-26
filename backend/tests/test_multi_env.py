@@ -275,3 +275,45 @@ def test_odis_runs_exp_as_net_not_gross():
     for spec in SEED_SUPPLIERS:
         if spec["code"] != "EXP":
             assert _spec_for_env(spec, "odis") is spec
+
+
+def test_explicit_pricing_is_rejected_where_exp_is_net():
+    """originalPriceWithVAT/markup only mean something for a GROSS supplier.
+
+    EXP is gross on stg and net on ODIS, so the very same scenario must build on stg
+    and be refused on ODIS — the split has no home in a net contract.
+    """
+    import pytest as _pytest
+    from app.core.scenario_engine import ScenarioEngine, TEMPLATES_DIR
+    from app.env_context import use_env
+    from app.models.scenario import PackageSpec, ScenarioRequest, SupplierCode, SupplierScenario
+
+    if not (TEMPLATES_DIR / "EXP" / "Search" / "v1.json").exists():
+        _pytest.skip("EXP templates not available")
+
+    def request_with_split():
+        return ScenarioRequest(
+            namespace="qa-net-split",
+            check_in="2026-09-01",
+            check_out="2026-09-03",
+            atg_hotel_id="1010102",
+            supplier_hotel_ids={"EXP": "1010102"},
+            suppliers=[
+                SupplierScenario(
+                    code=SupplierCode("EXP"),
+                    packages=PackageSpec(
+                        count=1, room_basis="RO", room_names=["A"], prices=[120.0],
+                        original_price_with_vat=[100.0], markup=[20.0],
+                    ),
+                )
+            ],
+        )
+
+    engine = ScenarioEngine()
+    with use_env("odis"):
+        with _pytest.raises(ValueError, match="net supplier"):
+            engine.build_expectations(request_with_split())
+
+    # stg prices EXP gross, so the identical request is still accepted there.
+    with use_env("stg"):
+        assert engine.build_expectations(request_with_split())

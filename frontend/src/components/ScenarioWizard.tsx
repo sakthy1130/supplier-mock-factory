@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { resolveHotelMapping } from '../api/hotels'
+import { getActiveEnv, type SmfEnv } from '../api/base'
 import { PROVISIONING_DEPTHS } from '../types/scenario'
 import type {
   AssignmentTarget,
@@ -99,7 +100,13 @@ function MarkupFields({
  *  only supplier where setting these means anything. */
 const EXPLICIT_PRICING_SUPPLIERS: SupplierCode[] = ['EXP']
 
-function showExplicitPricing(code: SupplierCode): boolean {
+/** Envs that price EXP NET. The split only exists for a GROSS supplier, where the markup
+ *  sits inside totals.inclusive; a net contract has no such node, so the fields are
+ *  hidden here and the backend rejects them (see scenario_engine). */
+const NET_EXP_ENVS: SmfEnv[] = ['odis']
+
+function showExplicitPricing(code: SupplierCode, env: SmfEnv): boolean {
+  if (code === 'EXP' && NET_EXP_ENVS.includes(env)) return false
   return EXPLICIT_PRICING_SUPPLIERS.includes(code)
 }
 
@@ -231,6 +238,9 @@ interface Props {
 }
 
 export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppliers }: Props) {
+  // App remounts the wizard on env change (it unmounts whenever tab !== 'create'), so
+  // reading this once per render is enough — no subscription needed.
+  const activeEnv = getActiveEnv()
   const supplierCodes = useMemo(
     () => availableSuppliers.map((s) => s.code),
     [availableSuppliers],
@@ -685,14 +695,14 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                         <div className="package-rows">
                           <div
                             className={`package-row package-row-head${
-                              showExplicitPricing(meta.code) ? ' package-row-explicit' : ''
+                              showExplicitPricing(meta.code, activeEnv) ? ' package-row-explicit' : ''
                             }`}
                           >
                             <span title="Build the Booking/GetOrder flow for this package">Book</span>
                             <span>Room basis</span>
                             <span>Room name</span>
                             <span>Price</span>
-                            {showExplicitPricing(meta.code) && (
+                            {showExplicitPricing(meta.code, activeEnv) && (
                               <>
                                 <span title="Price minus markup — the pre-markup price">
                                   Orig. price (VAT)
@@ -709,7 +719,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                             <div
                               key={index}
                               className={`package-row${
-                                showExplicitPricing(meta.code) ? ' package-row-explicit' : ''
+                                showExplicitPricing(meta.code, activeEnv) ? ' package-row-explicit' : ''
                               }`}
                             >
                               <input
@@ -740,7 +750,7 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                                 onChange={(e) => updateRow(meta.code, instance, index, { price: e.target.value })}
                                 placeholder="100"
                               />
-                              {showExplicitPricing(meta.code) && (
+                              {showExplicitPricing(meta.code, activeEnv) && (
                                 <>
                                   <input
                                     type="number"
