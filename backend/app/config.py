@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     core_app_url: str = ""
     business_rules_url: str = ""
     backoffice_url: str = ""
+    # Read NOWHERE. ConfigManagerClient clears the apiKey cache against backoffice_url,
+    # not this host ("Java ClearApiKeyCacheActivator uses backoffice base URL"), so no env
+    # needs to set it. Kept only so an existing .env carrying it does not fail to parse —
+    # if the cache clear ever moves to the real config-manager host, this becomes required
+    # and every env file needs a value.
     config_manager_url: str = ""
 
     backoffice_token: str = ""

@@ -13,12 +13,10 @@ from datetime import date, datetime
 _ENV_INDEX_PREFIX: dict[str, str] = {
     "dev": "dev",
     "stg": "staging",
-    # UNVERIFIED. ODIS logs live on enigma-logs-sandbox.discoversaudi.sa; its index
-    # naming has not been read off the real Quickwit yet. This mirrors the env code,
-    # which is what the fallback below would produce anyway — stated explicitly so the
-    # guess is visible. Confirm against the live index list before relying on ODIS log
-    # queries; stg is the precedent for code and prefix differing.
-    "odis": "odis",
+    # No "odis" entry on purpose: ODIS has no Quickwit at all (QUICKWIT_LOGS_API_URL is
+    # empty for that env — enigma-logs-sandbox is its log surface instead). A prefix here
+    # would imply an index that does not exist; the .get(env, env) fallback below still
+    # covers the code path if anything ever calls it for odis.
 }
 
 
