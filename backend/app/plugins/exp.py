@@ -183,11 +183,18 @@ class ExpMockPlugin(SupplierMockPlugin):
         if not packages or not prebook:
             return
 
-        property_id, room_id, rate_id = _extract_exp_package_ids(packages)
+        # Bind to the package that actually gets booked, not always the first, so the
+        # price-check the core follows is the one for the selected rate — matching HBS
+        # (hbs.py "Link PreBooking to the SELECTED package"). Falls back to the first
+        # package when no booking package was chosen.
+        selected = None
+        if spec.booking_package_index is not None:
+            selected = _exp_selected_package(packages, spec.booking_package_index)
+        property_id, room_id, rate_id = selected or _extract_exp_package_ids(packages)
         if not all((property_id, room_id, rate_id)):
             return
 
-        self._apply_prebooking_changed_price(prebook, spec)
+        self._apply_prebooking_price(prebook, spec)
 
         token = _extract_primary_price_check_token(packages)
         prebook_path = build_exp_price_check_href(property_id, room_id, rate_id, token)
@@ -201,14 +208,14 @@ class ExpMockPlugin(SupplierMockPlugin):
                 if log_type == "Search":
                     _align_search_room_rate_ids(expectation, room_id, rate_id)
 
-    def _apply_prebooking_changed_price(self, prebook: dict, spec: PackageSpec) -> None:
-        """Write the re-quoted price into the PreBooking body for price_changed.
+    def _apply_prebooking_price(self, prebook: dict, spec: PackageSpec) -> None:
+        """Price the PreBooking body from the booked package, or the re-quote.
 
-        Without this the mock replays whatever total the capture happened to carry, so
-        the "changed" price is an arbitrary number unrelated to the scenario. Search and
-        Packages keep the package price — the whole point is that the two disagree.
-
-        No-ops for every other status, so `available` stays byte-identical to before.
+        Without this the mock replays whatever total the capture happened to carry —
+        526.75 — so a price check never agreed with the package being booked.
+        For price_changed the re-quote is deliberately DIFFERENT from the package
+        price: Search and Packages keep the package price, and the disagreement is
+        the thing under test.
         """
         changed = _prebooking_effective_price(spec)
         if changed is None:
@@ -275,10 +282,21 @@ class ExpMockPlugin(SupplierMockPlugin):
 
 
 def _prebooking_effective_price(spec: PackageSpec) -> float | None:
-    """The price the price-check re-quotes at, or None when it did not re-quote."""
-    if spec.prebooking_status is not PreBookingStatus.price_changed:
+    """What the price check comes back at.
+
+    The re-quoted price when the scenario asked for one, otherwise the BOOKED
+    package's price. Previously PreBooking was not priced at all: its body is a bare
+    rate, so `_exp_property_entries` walks nothing and the mock replayed the template's
+    captured total (526.75) whatever the scenario asked for. Returns None only when
+    there is no package to price from.
+    """
+    if spec.prebooking_status is PreBookingStatus.price_changed:
+        return spec.prebooking_changed_price
+    prices = _normalized_prices(spec)
+    if not prices:
         return None
-    return spec.prebooking_changed_price
+    idx = spec.booking_package_index if spec.booking_package_index is not None else 0
+    return prices[idx] if idx < len(prices) else prices[0]
 
 
 def _exp_selected_package(packages: dict, idx: int) -> tuple[str | None, str | None, str | None] | None:

@@ -443,14 +443,13 @@ def test_explicit_pricing_agrees_across_search_and_packages():
 
 
 @needs_exp_templates
-def test_prebooking_pricing_is_untouched_by_the_scenario():
-    """Documents a PRE-EXISTING gap, not a decision of the explicit-pricing work.
+def test_prebooking_is_priced_from_the_booked_package():
+    """PreBooking now agrees with the package being booked.
 
-    EXP PreBooking's body is a bare rate, so `_exp_property_entries` finds nothing to walk
-    and no price is applied — the mock replays the template's captured price whatever the
-    scenario asked for. True with and without explicit pricing. Left as-is here because
-    fixing it changes what every existing EXP scenario returns from price-check; if that is
-    ever wired up, this test is the reminder to price it from the same numbers.
+    It used to replay the template's captured total (526.75) whatever the scenario
+    asked for — its body is a bare rate, so `_exp_property_entries` walked nothing.
+    That gap was pinned here deliberately; it is now wired up, so this test asserts
+    the fixed behaviour instead: the price check quotes the booked package's price.
     """
     built = ScenarioEngine().build_expectations(_explicit_request())
     prebooking = next(
@@ -460,7 +459,37 @@ def test_prebooking_pricing_is_untouched_by_the_scenario():
     template = json.loads(
         (TEMPLATES_DIR / "EXP" / "PreBooking" / "v1.json").read_text(encoding="utf-8")
     )
-    assert _totals(prebooking)["inclusive"] == _totals(template)["inclusive"]
+    # 1120.0 is the scenario's gross package price (1000 net + 120 markup).
+    assert float(_totals(prebooking)["inclusive"]) == pytest.approx(1120.0, abs=0.01)
+    # ...and it is no longer whatever the capture happened to carry.
+    assert float(_totals(prebooking)["inclusive"]) != float(_totals(template)["inclusive"])
+
+
+@needs_exp_templates
+def test_prebooking_follows_the_selected_package_not_always_the_first():
+    """Booking package 2 must price-check package 2, matching HBS's behaviour."""
+    request = ScenarioRequest(
+        namespace="exp-prebooking-selected",
+        check_in="2026-09-01",
+        check_out="2026-09-03",
+        atg_hotel_id="1043546",
+        supplier_hotel_ids={"EXP": "2001358"},
+        suppliers=[
+            SupplierScenario(
+                code=SupplierCode.EXP,
+                packages=PackageSpec(
+                    count=3, room_basis="RO", prices=[100.0, 200.0, 300.0],
+                    booking_package_index=2,
+                ),
+            )
+        ],
+    )
+    built = ScenarioEngine().build_expectations(request)
+    prebooking = next(
+        item.expectation for item in built
+        if item.supplier_code == "EXP" and item.log_type == "PreBooking"
+    )
+    assert float(_totals(prebooking)["inclusive"]) == pytest.approx(300.0, abs=0.01)
 
 
 @needs_exp_templates
