@@ -1,4 +1,4 @@
-import { API_BASE } from './base'
+import { API_BASE, formatApiError } from './base'
 
 export interface ApiTemplatePackageRow {
   room_name: string
@@ -44,15 +44,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   const response = await fetch(`${API_BASE}${path}`, { ...init, headers })
   if (!response.ok) {
-    const body = await response.text()
-    let detail = body
-    try {
-      const json = JSON.parse(body) as { detail?: string }
-      detail = json.detail ?? body
-    } catch {
-      /* use raw body */
-    }
-    throw new Error(detail || `HTTP ${response.status}`)
+    throw new Error(formatApiError(await response.text(), response.status))
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>

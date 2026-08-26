@@ -718,12 +718,19 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                         PreBooking
                         <select
                           value={prebookingStatus[meta.code] ?? 'available'}
-                          onChange={(e) =>
-                            setPrebookingStatus((prev) => ({
-                              ...prev,
-                              [meta.code]: e.target.value as PreBookingStatus,
-                            }))
-                          }
+                          onChange={(e) => {
+                            const next = e.target.value as PreBookingStatus
+                            setPrebookingStatus((prev) => ({ ...prev, [meta.code]: next }))
+                            // sold_out builds no Booking/GetOrder mocks, so a Book
+                            // selection would be rejected by the backend. Clear it here
+                            // rather than let the request 422.
+                            if (next === 'sold_out') {
+                              setBookingRow((prev) => ({
+                                ...prev,
+                                [meta.code]: (prev[meta.code] ?? []).map(() => null),
+                              }))
+                            }
+                          }}
                         >
                           {PREBOOKING_STATUSES.map((s) => (
                             <option key={s.value} value={s.value}>
@@ -817,11 +824,17 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                                 type="radio"
                                 name={`booking-${meta.code}-${instance}`}
                                 checked={bookingRow[meta.code][instance] === index}
+                                disabled={prebookingStatus[meta.code] === 'sold_out'}
                                 // Toggle on click (clears when the selected row is re-clicked);
                                 // onChange is a no-op required for a controlled radio.
                                 onChange={() => {}}
                                 onClick={() => toggleBookingRow(meta.code, instance, index)}
-                                title="Select this package for the Booking/GetOrder flow (click again to clear)"
+                                title={
+                                  prebookingStatus[meta.code] === 'sold_out'
+                                    ? 'A sold-out price check stops the scenario before booking, ' +
+                                      'so there is no package to book.'
+                                    : 'Select this package for the Booking/GetOrder flow (click again to clear)'
+                                }
                               />
                               <input
                                 value={row.roomBasis}
