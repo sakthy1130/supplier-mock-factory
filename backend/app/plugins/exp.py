@@ -11,7 +11,7 @@ from app.core.cancel_policy import (
     free_cancel_deadline,
 )
 from app.core.exp_paths import build_exp_price_check_href, extract_price_check_token
-from app.models.scenario import PackageSpec
+from app.models.scenario import PackageSpec, PreBookingStatus
 from app.plugins.base import SupplierMockPlugin
 from app.plugins.room_names import (
     apply_exp_board_basis_to_rate,
@@ -187,6 +187,8 @@ class ExpMockPlugin(SupplierMockPlugin):
         if not all((property_id, room_id, rate_id)):
             return
 
+        self._apply_prebooking_changed_price(prebook, spec)
+
         token = _extract_primary_price_check_token(packages)
         prebook_path = build_exp_price_check_href(property_id, room_id, rate_id, token)
         prebook.setdefault("httpRequest", {})["path"] = prebook_path.split("?", 1)[0]
@@ -198,6 +200,25 @@ class ExpMockPlugin(SupplierMockPlugin):
                 _set_price_check_hrefs(expectation, price_check_href)
                 if log_type == "Search":
                     _align_search_room_rate_ids(expectation, room_id, rate_id)
+
+    def _apply_prebooking_changed_price(self, prebook: dict, spec: PackageSpec) -> None:
+        """Write the re-quoted price into the PreBooking body for price_changed.
+
+        Without this the mock replays whatever total the capture happened to carry, so
+        the "changed" price is an arbitrary number unrelated to the scenario. Search and
+        Packages keep the package price — the whole point is that the two disagree.
+
+        No-ops for every other status, so `available` stays byte-identical to before.
+        """
+        changed = _prebooking_effective_price(spec)
+        if changed is None:
+            return
+        body = prebook.get("httpResponse", {}).get("body")
+        if not isinstance(body, dict):
+            return
+        occupancy_pricing = body.get("occupancy_pricing")
+        if isinstance(occupancy_pricing, dict):
+            _apply_exp_occupancy_pricing(occupancy_pricing, changed)
 
     def _link_booking_flow(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
         """Sync the selected package's property/room/rate ids and total price into
@@ -237,14 +258,27 @@ class ExpMockPlugin(SupplierMockPlugin):
         refundable = _normalized_refundable(spec)
         if idx < len(refundable):
             rate["refundable"] = refundable[idx]
-        # The package price is the gross total, so a retrieved order matches what was booked.
+        # The package price is the gross total, so a retrieved order matches what was
+        # booked — unless the price check re-quoted, in which case the booking went
+        # through at the CHANGED price and GetOrder has to agree with that, not with the
+        # package the search advertised.
         prices = _normalized_prices(spec)
-        if idx < len(prices):
-            _scale_exp_get_order_pricing(rate.get("pricing"), prices[idx])
+        booked_total = _prebooking_effective_price(spec)
+        if booked_total is None and idx < len(prices):
+            booked_total = prices[idx]
+        if booked_total is not None:
+            _scale_exp_get_order_pricing(rate.get("pricing"), booked_total)
 
     @property
     def log_types(self) -> list[str]:
         return LOG_TYPES
+
+
+def _prebooking_effective_price(spec: PackageSpec) -> float | None:
+    """The price the price-check re-quotes at, or None when it did not re-quote."""
+    if spec.prebooking_status is not PreBookingStatus.price_changed:
+        return None
+    return spec.prebooking_changed_price
 
 
 def _exp_selected_package(packages: dict, idx: int) -> tuple[str | None, str | None, str | None] | None:

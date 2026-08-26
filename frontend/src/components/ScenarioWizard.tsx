@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { resolveHotelMapping } from '../api/hotels'
 import { getActiveEnv, type SmfEnv } from '../api/base'
-import { PROVISIONING_DEPTHS } from '../types/scenario'
+import { PROVISIONING_DEPTHS, PREBOOKING_STATUSES } from '../types/scenario'
 import type {
   AssignmentTarget,
   ProvisioningDepth,
+  PreBookingStatus,
   ScenarioRequest,
   SupplierCode,
 } from '../types/scenario'
@@ -343,6 +344,10 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
   const [existingApiKey, setExistingApiKey] = useState('')
   // SmartBooking: create the apiKey with SB enabled, and per-supplier route each
   // contract to the apiKey, the SB group, or both (default apikey).
+  // Per supplier, like assignmentTargets: one supplier can be sold out while another
+  // stays available, which is how a multi-supplier partial case is composed today.
+  const [prebookingStatus, setPrebookingStatus] = useState<Record<string, PreBookingStatus>>({})
+  const [prebookingChangedPrice, setPrebookingChangedPrice] = useState<Record<string, string>>({})
   const [sbEnabled, setSbEnabled] = useState(() => initialTemplate?.sbEnabled ?? false)
   // A template saved on stg can carry sbEnabled=true into an env with no SmartBooking,
   // where the checkbox is hidden. Everything behavioural reads this, not the raw state,
@@ -551,6 +556,15 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                 prices: parsed.prices,
                 refundable: parsed.refundable,
                 booking_package_index: bookingRow[code]?.[instance] ?? null,
+                // Omitted when 'available' so the payload is unchanged for every
+                // scenario that does not ask for a status.
+                ...(prebookingStatus[code] && prebookingStatus[code] !== 'available'
+                  ? { prebooking_status: prebookingStatus[code] }
+                  : {}),
+                ...(prebookingStatus[code] === 'price_changed' &&
+                prebookingChangedPrice[code]?.trim()
+                  ? { prebooking_changed_price: Number(prebookingChangedPrice[code]) }
+                  : {}),
                 // Omitted entirely when unused, so the request body stays exactly what it
                 // was for every scenario that does not price explicitly.
                 ...(parsed.markup
@@ -696,6 +710,47 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                         <option value="EUR">EUR</option>
                       </select>
                     </label>
+
+                    {/* Only for suppliers that actually have a PreBooking step — EXT
+                        books straight off the distribution and has none. */}
+                    {meta.log_types?.includes('PreBooking') && (
+                      <label className="supplier-tile-field" style={{ maxWidth: '200px' }}>
+                        PreBooking
+                        <select
+                          value={prebookingStatus[meta.code] ?? 'available'}
+                          onChange={(e) =>
+                            setPrebookingStatus((prev) => ({
+                              ...prev,
+                              [meta.code]: e.target.value as PreBookingStatus,
+                            }))
+                          }
+                        >
+                          {PREBOOKING_STATUSES.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+
+                    {prebookingStatus[meta.code] === 'price_changed' && (
+                      <label className="supplier-tile-field" style={{ maxWidth: '160px' }}>
+                        Changed price
+                        <input
+                          value={prebookingChangedPrice[meta.code] ?? ''}
+                          onChange={(e) =>
+                            setPrebookingChangedPrice((prev) => ({
+                              ...prev,
+                              [meta.code]: e.target.value,
+                            }))
+                          }
+                          placeholder="140"
+                          spellCheck={false}
+                          autoComplete="off"
+                        />
+                      </label>
+                    )}
 
                     {sbActive && (
                       <label className="supplier-tile-field" style={{ maxWidth: '160px' }}>

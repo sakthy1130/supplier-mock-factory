@@ -1,0 +1,72 @@
+{
+  "httpRequest": {
+    "path": "/v3/properties/1723385/rooms/201836237/rates/209336313",
+    "method": "GET"
+  },
+  "httpResponse": {
+    "headers": {
+      "cache-control": [
+        "no-cache, no-store, max-age=0, must-revalidate"
+      ],
+      "connection": [
+        "keep-alive"
+      ],
+      "content-encoding": [
+        "gzip"
+      ],
+      "content-length": [
+        "1331"
+      ],
+      "content-type": [
+        "application/json"
+      ],
+      "date": [
+        "Fri, 05 Jun 2026 18:28:57 GMT"
+      ],
+      "expires": [
+        "0"
+      ],
+      "pragma": [
+        "no-cache"
+      ],
+      "referrer-policy": [
+        "no-referrer"
+      ],
+      "region": [
+        "us-west-2"
+      ],
+      "strict-transport-security": [
+        "max-age=31536000 ; includeSubDomains"
+      ],
+      "transaction-id": [
+        "e9e9a1ad-902a-45f2-8166-4b1acfc2f761"
+      ],
+      "vary": [
+        "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Accept-Encoding"
+      ],
+      "x-akamai-reference-id": [
+        "0.8562645f.1780684137.19804766"
+      ],
+      "x-content-type-options": [
+        "nosniff"
+      ],
+      "x-frame-options": [
+        "DENY"
+      ],
+      "x-xss-protection": [
+        "0"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "status": "sold_out",
+      "links": {
+        "additional_rates": {
+          "method": "GET",
+          "href": "/v3/properties/16166/availability?token=Ql1WAERHXV1QOxULUAsJBg1cBVBSC09bVlEBFAEMVwtLU1RRDBQCUQZRAF0GVgFXAVATCQFHAAlQVxZrXQBpQFFVWEFSDnVtZydwLHUSEl9MVGpBTRQAD00XUVJcTA9XXgVabFUTXBRLURZHW1tRFEkHWwZICghDVhtQWkEVWgtXCxZfUVtUEVZfA19RDx1makdLUBZdPlcRQQhdWlsAQFpGQToVUA5YEFZyC1FeVlcTFkINF0QBBgxGAxVYUR5JQV4BUklVUV0CXx9WVRZcXQQARFZQVFAIXVoNVgIGUx5VWh9WUkNAEwxfEVBZOlIMXFEFQkdSRhdaA0c6FkUJXgwIUWsKVghVB14HXwIfCFAMUwRKWENETVIUBhYQRV0KUxwKNmd2FghAE1FKUAxQRAheXWgHClddW2M1eBdUBEZdAUxdDARvUwtRC1ZRDQlVRFAOBAZYXUZMWQsIUFIdUQAcUFseWQ4DWV1HH2sHU0UHBgkXSF9AFxUPBgoCU1ICFktYCkZFXV1QOxEDQF4NNXkmfiN3fD14MjJ4en0SEV0AVBRBXFcDPEcLTBZXAw5EWBVcAElFEQhSXE9XWgNVWRJVQkBCXF1QRT1HAEdHCFlWblxRCVYACwldVg5XFQBbCQAbBwEFBU5ZUgVQGQlWVQhWUwcFVVpVV0VAV1gDQDtaXlFdXlBfWUBdBBFdFVUVSgRKQgtXD2cIUVwGUgVQV1QFAkgDDQRXGFVTAwweDAMHARxbAw5WV1ICBlVXAlUfQVYWUjtGVVkPa1pcQQhBBAsFUhNLUF8GR2tVCkRdF1wLD1cKEVhYDhddD25EBFIIWVNdQlBWWgZGB0EAAmgSUQgBCQZTAANOB14cVAFtVwZEAiAIXRIFeQcBS1VQAABQAlMBVG4UVgtZFV1LCUNQXxRfR0UdOlBXAlNbanAfJlxTB1NHFw4NA1sEVw8AUwdUUg=="
+        }
+      }
+    }
+  },
+  "priority": 1000
+}

@@ -46,6 +46,13 @@ def build_scenario_request_from_template(
     sb_enabled = (
         request_data.sb_enabled if request_data.sb_enabled is not None else template.sb_enabled
     )
+    # Omitted rather than passed as None so PackageSpec's own defaults apply and an
+    # unset request still builds a byte-identical scenario.
+    prebooking_kwargs: dict[str, object] = {}
+    if request_data.prebooking_status:
+        prebooking_kwargs["prebooking_status"] = request_data.prebooking_status
+    if request_data.prebooking_changed_price is not None:
+        prebooking_kwargs["prebooking_changed_price"] = request_data.prebooking_changed_price
 
     suppliers: list[SupplierScenario] = []
     for supplier_entry in template.suppliers:
@@ -75,6 +82,7 @@ def build_scenario_request_from_template(
             refundable=[pkg.refundable for pkg in packages_data],
             supplier_currency=supplier_entry.supplier_currency,
             booking_package_index=supplier_book_idx,
+            **prebooking_kwargs,
             **explicit_pricing,
         )
         suppliers.append(

@@ -12,6 +12,15 @@ export type ScenarioStatus =
   | 'FAILED'
   | 'TORN_DOWN'
 
+export type PreBookingStatus = 'available' | 'price_changed' | 'sold_out'
+
+/** Expedia's own wire values, so the field and the mock body say the same thing. */
+export const PREBOOKING_STATUSES: { value: PreBookingStatus; label: string }[] = [
+  { value: 'available', label: 'Available (default)' },
+  { value: 'price_changed', label: 'Price changed' },
+  { value: 'sold_out', label: 'Sold out (stops before booking)' },
+]
+
 export interface PackageSpec {
   count: number
   room_basis: string[]
@@ -22,6 +31,14 @@ export interface PackageSpec {
   // 0-based index of the package the Booking/GetOrder flow is built for.
   // null/undefined means no booking flow (only search + package mocks).
   booking_package_index?: number | null
+  /**
+   * Which price-check response this supplier's PreBooking mock returns. Omit for
+   * 'available' (today's behaviour). 'sold_out' also skips Booking/GetOrder/CancelOrder
+   * — that body carries no book link, so the chain genuinely stops at PreBooking.
+   */
+  prebooking_status?: PreBookingStatus
+  /** Only with 'price_changed': the re-quoted price, in supplier currency. */
+  prebooking_changed_price?: number | null
   /**
    * EXP explicit pricing, per package, both or neither: the split of `prices` into
    * pre-markup + markup, in supplier currency, where price = original_price_with_vat +

@@ -84,6 +84,26 @@ class RunTemplateRequest(BaseModel):
             "detaches the contracts."
         ),
     )
+    prebooking_status: Optional[str] = Field(
+        default=None,
+        description=(
+            "Which PreBooking (price-check) response the supplier mocks return: "
+            "'available' (default), 'price_changed' or 'sold_out'. 'sold_out' also "
+            "skips the Booking/GetOrder/CancelOrder mocks, so do not combine it with "
+            "booking_package_index."
+        ),
+        examples=["sold_out", "price_changed"],
+    )
+    prebooking_changed_price: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Required with prebooking_status='price_changed': the price the check "
+            "re-quotes at, in supplier currency. Search/Packages keep the package "
+            "price; PreBooking, Booking and GetOrder use this."
+        ),
+        examples=[140.0],
+    )
     static_markup: Optional[str] = Field(
         default=None,
         description=(

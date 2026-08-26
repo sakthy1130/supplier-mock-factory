@@ -1,0 +1,236 @@
+{
+  "httpRequest": {
+    "path": "/v3/properties/1723385/rooms/201836237/rates/209336313",
+    "method": "GET"
+  },
+  "httpResponse": {
+    "headers": {
+      "cache-control": [
+        "no-cache, no-store, max-age=0, must-revalidate"
+      ],
+      "connection": [
+        "keep-alive"
+      ],
+      "content-encoding": [
+        "gzip"
+      ],
+      "content-length": [
+        "1331"
+      ],
+      "content-type": [
+        "application/json"
+      ],
+      "date": [
+        "Fri, 05 Jun 2026 18:28:57 GMT"
+      ],
+      "expires": [
+        "0"
+      ],
+      "pragma": [
+        "no-cache"
+      ],
+      "referrer-policy": [
+        "no-referrer"
+      ],
+      "region": [
+        "us-west-2"
+      ],
+      "strict-transport-security": [
+        "max-age=31536000 ; includeSubDomains"
+      ],
+      "transaction-id": [
+        "e9e9a1ad-902a-45f2-8166-4b1acfc2f761"
+      ],
+      "vary": [
+        "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Accept-Encoding"
+      ],
+      "x-akamai-reference-id": [
+        "0.8562645f.1780684137.19804766"
+      ],
+      "x-content-type-options": [
+        "nosniff"
+      ],
+      "x-frame-options": [
+        "DENY"
+      ],
+      "x-xss-protection": [
+        "0"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "status": "price_changed",
+      "occupancy_pricing": {
+        "1": {
+          "nightly": [
+            [
+              {
+                "type": "base_rate",
+                "value": "1320.29",
+                "currency": "AED"
+              },
+              {
+                "type": "tax_and_service_fee",
+                "value": "150.03",
+                "currency": "AED"
+              }
+            ],
+            [
+              {
+                "type": "base_rate",
+                "value": "1320.29",
+                "currency": "AED"
+              },
+              {
+                "type": "tax_and_service_fee",
+                "value": "150.03",
+                "currency": "AED"
+              }
+            ],
+            [
+              {
+                "type": "base_rate",
+                "value": "1320.29",
+                "currency": "AED"
+              },
+              {
+                "type": "tax_and_service_fee",
+                "value": "150.03",
+                "currency": "AED"
+              }
+            ],
+            [
+              {
+                "type": "base_rate",
+                "value": "1320.29",
+                "currency": "AED"
+              },
+              {
+                "type": "tax_and_service_fee",
+                "value": "150.03",
+                "currency": "AED"
+              }
+            ],
+            [
+              {
+                "type": "base_rate",
+                "value": "1320.29",
+                "currency": "AED"
+              },
+              {
+                "type": "tax_and_service_fee",
+                "value": "150.03",
+                "currency": "AED"
+              }
+            ],
+            [
+              {
+                "type": "base_rate",
+                "value": "1320.29",
+                "currency": "AED"
+              },
+              {
+                "type": "tax_and_service_fee",
+                "value": "150.03",
+                "currency": "AED"
+              }
+            ]
+          ],
+          "totals": {
+            "exclusive": {
+              "billable_currency": {
+                "value": "7921.74",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "7921.74",
+                "currency": "AED"
+              }
+            },
+            "gross_profit": {
+              "billable_currency": {
+                "value": "1289.35",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "1289.35",
+                "currency": "AED"
+              }
+            },
+            "inclusive": {
+              "billable_currency": {
+                "value": "8821.92",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "8821.92",
+                "currency": "AED"
+              }
+            },
+            "property_inclusive": {
+              "billable_currency": {
+                "value": "2056.93",
+                "currency": "EUR"
+              },
+              "request_currency": {
+                "value": "8821.92",
+                "currency": "AED"
+              }
+            },
+            "marketing_fee": {
+              "billable_currency": {
+                "value": "885.01",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "885.01",
+                "currency": "AED"
+              }
+            },
+            "strikethrough": {
+              "billable_currency": {
+                "value": "9967.68",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "9967.68",
+                "currency": "AED"
+              }
+            },
+            "inclusive_strikethrough": {
+              "billable_currency": {
+                "value": "11092.92",
+                "currency": "AED"
+              },
+              "request_currency": {
+                "value": "11092.92",
+                "currency": "AED"
+              }
+            },
+            "property_inclusive_strikethrough": {
+              "billable_currency": {
+                "value": "2586.44",
+                "currency": "EUR"
+              },
+              "request_currency": {
+                "value": "11092.92",
+                "currency": "AED"
+              }
+            }
+          }
+        }
+      },
+      "links": {
+        "additional_rates": {
+          "method": "GET",
+          "href": "/v3/properties/26678216/availability?token=Ql1WAERHXV1QOxULUAsBXA4GUQEFDU8NUAQPFAFQB1pLU1cADBQCVANVWwUMVVZSDAATCQFHAAlQVxZrXQBpQFFVWEFSDnVtZydwLHUSEl9MVGpBTRQAD1gCVVhBZxJXXwgQXFQCRhNZWgcYCQkUBEEFWRBCXlYLDkVfV1oBRgVeUw1WXhhmNxFKBxZRPl9DTQhWX19VBFUDUBMURwkWQFZQDxcHRQtQGBFDD1dWGVEJVVIJRFMDE1hQX1UXVltcUFwLWVkECQpXGQkKGVYDH0lCDVJKUF48V1tUAQ8SFVIXFlwBFzpAEwxeCl1ROlgHBQEIUQ8HB0VZA1gHA0VbTBcRURIAR0cRUghSHwl4IHFHWxRKDERSUVRGDAwMaFsLVAAKImZ3Fg9UE1NcQAxdVz5SW1YKC1ZUWwZAWllcBl9ZEUwJUFMCBk4AXBUFUxIED1YICBFKbVBZEFxfDRZJXB5FEgtcBVZVBwQVFVwLQkELDwE6QQMSC1g2I3R8IyV3FkpVA1NHRlpZAz4RW0NCBl1YRwNAUAYUFhRQWlAZAFADUg0VVkwXF1sJXBZrFVZFSgxaCjtcB1xXD1cGUAcPVBkHDlYPHgQED1AZBFEDUhsMBQ1XV1VTBAhcUwcTSwdUVRdpUF8AXQ1dWFkAU11cFWYSWgpdEUoAQBBaWVo5WgAEVANQCVBWXAQVV1VSVB0HXQUOHAMMBwBMUFkGUFVSUAAAAVBUExBVQQRuFlhSWm0CX0QMFgtQVgESEQRdUEBmVlkUXhZZV1UEWk0OXAlBXFVvElRbWlIEURJXAVxRF1IRB1Y7EQxdBF4KUwMCSAFbFQYOMAcFEVB1VQdAVXZVCktQDQ1UBwdTAVVrQFJQCUEEQ1xdHUdTXF5TOgANW1QBUxERAFtHXhZHGGdaWwFWDSB0FXQMAFBTFUMLBAcOUAcGVQ8A"
+        },
+        "book": {
+          "method": "POST",
+          "href": "/v3/itineraries?token=QldfCGlcUA4FVVVXBQYCUghDRwdWXBBLDwheZkFdBwVXCFBQUVpRVxlQDwYCSwdSXQcYBlUGWkxXDlUFUAcOAVFSAlYQXlVHVApVC0BrDlBnQ1BWWxYBD3w9YHNxcSceQBZfUFI-UAtZWgMEUAVGE0wDExdQQ1w6WgcOBAFWAl0KBAULFkZaEFJnEhtEBA1SXgRXRT1MDlcNEw5RVxMTU1tWS1hXEw9VRwpUEl1dU20HVVRfWg5XTQEFRAlQW1RMUlAHCgFYFG0yEkpcQRRWXARCA0VRVR4TRl1TAR9XDVYGCRQWBBFVPhdBE1QJNmUidnB5NnMVWgZAOUcEElIVBQMFWEcGFFACRw9VWwQfBl0EUgpRCwoECAUESFNbGghSFhVWEUBcVRBqEUpWUgxfVT5YVwpRVQYAUgVAVFRUB1FEWUxGFwYWUxZCF11aAk1YI3YiRw9GQFpLAFBbFg1fD2dSDQZdBSI0chJBA1IRXFUDAwoADAQHDxYDRFpWEAlXRFFeAmlWXFJZCgQOCQYWBlAAVglfTBYEVFYLDxgEWhVXA0BRUF07ClBZClMHUgMQTRVcAFkAUFEBHxFcXRZGW1pRaENXR1gIZyN3LnVzJBBaXVpWXzsIV1QHVURqVwhUSTtSVlYNQF5eVQgSUR5TDFYTWxEMDwFXAk0KBBIUVgJcREJaXlJsF1hNFAFRXEJSSQhdHBJKCFsEGAJaUQUIFFZAQREJWAdGahJUFUdaW1w-WVVfBABXUVNVWwMcBApcChpWBlwEFFkEAwoeAFINW1oBVAMJCFBSEkdVF0FdCl06C1ZZB1ZTWAZdWwIZVAYFDRkMAFMEGQIAAA1IAw9SXFZVVgFWAQBRERZDCURcF0EYbghcWAUADgAKV1JUEV8BXgBFAkBXVD1BCFVcCVcDAlccAw9JVwVsVgBDCnAKVxEFJQsGTFcJCVQFVQkNVG5DEVIKBBZsV11ODUtXDAlVD0wMCg1MXQ85R1VQDVUDVxcBDhMLRRAfPAYJBlIKIycUUl1UOlJQR1BFDREWXVleWApAB1JhTAdcCEMLCXdRB0tAUwNXaloLDVINXhFGB0dfVgsIQVF3RlZzHFAGRh9GVxEEBRYFchUHBTNBAFFaI1NcFAcHEVYmFwtXQ19PXUMKAkEFchJTATJNUQEPEQoARAslEFcDRkwEXRdaQk1DAVYcBXEBFQJ3QQJ8QBFBEUBfUARLbgtcXApVEyJaUQUIQUBYD1ZVB1EBAlYEXgc="
+        }
+      }
+    }
+  },
+  "priority": 1000
+}

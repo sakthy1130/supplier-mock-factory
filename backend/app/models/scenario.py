@@ -66,6 +66,24 @@ class ProvisioningDepth(str, Enum):
     full = "full"                    # mocks + contract + a NEW apiKey (+ apiKey -> BR)
 
 
+class PreBookingStatus(str, Enum):
+    """Which PreBooking (price-check) response the supplier mock returns.
+
+    The values are Expedia's own wire strings, so the scenario field and the mock body
+    say the same thing and there is no translation layer. Each maps to a template file
+    beside the supplier's PreBooking template — ``available`` is the historical
+    ``v1.json``, so an unset scenario builds byte-identical mocks to before.
+
+    ``partial_sold_out`` is deliberately absent: on EXP that is a different API
+    (``POST /v3/properties/{id}/rooms``, per-room status) which the core only calls for
+    a 2+ room search, and SMF has no multi-room concept yet.
+    """
+
+    available = "available"
+    price_changed = "price_changed"
+    sold_out = "sold_out"
+
+
 class SBGroupConfiguration(BaseModel):
     """Controls which attributes SB enforces when matching packages. These drive
     the TOP-LEVEL config fields the SB engine reads; defaults mirror the known-
@@ -151,6 +169,24 @@ class PackageSpec(BaseModel):
             "Search/Packages (and PreBooking/CancellationPolicy where present)."
         ),
     )
+    prebooking_status: PreBookingStatus = Field(
+        default=PreBookingStatus.available,
+        description=(
+            "Which price-check response this supplier's PreBooking mock returns. "
+            "'available' (default) is today's behaviour. 'sold_out' also skips the "
+            "Booking/GetOrder/CancelOrder mocks — the supplier body carries no book "
+            "link, so the chain genuinely stops there."
+        ),
+    )
+    prebooking_changed_price: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Only with prebooking_status='price_changed': the price the price-check "
+            "comes back with, in supplier currency. Search/Packages keep the package "
+            "price; PreBooking, Booking and GetOrder use this one."
+        ),
+    )
     # EXP explicit pricing. `prices` IS the gross total (totals.inclusive) — there is no
     # separate total field, because two inputs for one number only invited disagreement.
     # What `prices` alone cannot express is the split: EXP runs with no business rules, so
@@ -215,6 +251,34 @@ class PackageSpec(BaseModel):
             raise ValueError(
                 f"booking_package_index {self.booking_package_index} out of range "
                 f"for {self.count} package(s)"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_prebooking_status(self) -> "PackageSpec":
+        """The changed price and the status travel together, and sold_out cannot book.
+
+        Each of these is rejected rather than quietly ignored: a QA who typed a changed
+        price and saw it do nothing would have no way to tell it was dropped.
+        """
+        is_price_changed = self.prebooking_status is PreBookingStatus.price_changed
+        if is_price_changed and self.prebooking_changed_price is None:
+            raise ValueError(
+                "prebooking_status='price_changed' needs prebooking_changed_price — "
+                "the price the check comes back with, in supplier currency"
+            )
+        if not is_price_changed and self.prebooking_changed_price is not None:
+            raise ValueError(
+                f"prebooking_changed_price only applies to prebooking_status="
+                f"'price_changed', not '{self.prebooking_status.value}'"
+            )
+        if (
+            self.prebooking_status is PreBookingStatus.sold_out
+            and self.booking_package_index is not None
+        ):
+            raise ValueError(
+                "prebooking_status='sold_out' stops the scenario at PreBooking, so no "
+                "Booking/GetOrder mocks are built — drop booking_package_index"
             )
         return self
 

@@ -13,11 +13,22 @@ from app.core.crawla_mutations import apply_supplier_mutation
 from app.core.linkage_validator import LinkageValidator
 from app.core.namespace import apply_namespace
 from app.ingest.expectation_builder import OPTIONAL_TEMPLATE_LOG_TYPES
-from app.models.scenario import ScenarioRequest
+from app.models.scenario import PreBookingStatus, ScenarioRequest
 from app.plugins import resolve_plugin
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATES_DIR = REPO_ROOT / "templates"
+
+
+def _template_filename(log_type: str, prebooking_status: PreBookingStatus) -> str:
+    """The template file for this log type — a status variant only for PreBooking.
+
+    `available` maps to the historical v1.json, so every existing scenario keeps
+    loading exactly the file it always did.
+    """
+    if log_type == "PreBooking" and prebooking_status is not PreBookingStatus.available:
+        return f"{prebooking_status.value}.json"
+    return "v1.json"
 
 
 def _reject_explicit_pricing_for_net_supplier(supplier_code: str) -> None:
@@ -131,9 +142,16 @@ class ScenarioEngine:
             # search/package (+ prebooking/cancellation-policy) mocks — skip
             # Booking/GetOrder/CancelOrder entirely for this supplier.
             log_types = plugin.log_types
-            if supplier_scenario.packages.booking_package_index is None:
+            spec = supplier_scenario.packages
+            # sold_out stops the chain at PreBooking: that body carries no links.book,
+            # so the core cannot proceed to booking even if the mocks existed. Same set
+            # already dropped when no package is selected for booking.
+            sold_out = spec.prebooking_status is PreBookingStatus.sold_out
+            if spec.booking_package_index is None or sold_out:
                 log_types = [lt for lt in log_types if lt not in BOOKING_FLOW_LOG_TYPES]
-            templates = self._load_supplier_templates(supplier_code, log_types)
+            templates = self._load_supplier_templates(
+                supplier_code, log_types, spec.prebooking_status
+            )
             mutated = self._mutate_supplier_templates(
                 plugin=plugin,
                 templates=templates,
@@ -175,23 +193,29 @@ class ScenarioEngine:
                 )
         return built
 
-    def _load_supplier_templates(self, supplier_code: str, log_types: list[str]) -> dict[str, dict]:
+    def _load_supplier_templates(
+        self,
+        supplier_code: str,
+        log_types: list[str],
+        prebooking_status: PreBookingStatus = PreBookingStatus.available,
+    ) -> dict[str, dict]:
         templates: dict[str, dict] = {}
         supplier_dir = self.templates_dir / supplier_code
         if not supplier_dir.exists():
             raise FileNotFoundError(f"Templates not found for supplier {supplier_code}")
 
         for log_type in log_types:
-            if log_type in OPTIONAL_TEMPLATE_LOG_TYPES:
-                path = supplier_dir / log_type / "v1.json"
-                if not path.exists():
+            filename = _template_filename(log_type, prebooking_status)
+            path = supplier_dir / log_type / filename
+            if not path.exists():
+                if log_type in OPTIONAL_TEMPLATE_LOG_TYPES:
                     continue
-            else:
-                path = supplier_dir / log_type / "v1.json"
-                if not path.exists():
-                    raise FileNotFoundError(
-                        f"Missing required template: {supplier_code}/{log_type}/v1.json"
-                    )
+                # Never silently fall back to v1.json for a requested status — the
+                # scenario would provision an 'available' mock while reporting the
+                # status the caller asked for, which is worse than failing.
+                raise FileNotFoundError(
+                    f"Missing required template: {supplier_code}/{log_type}/{filename}"
+                )
             templates[log_type] = json.loads(path.read_text(encoding="utf-8"))
         return templates
 
