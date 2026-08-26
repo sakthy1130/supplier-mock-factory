@@ -37,9 +37,10 @@ import {
   type TemplateKind,
 } from './api/scenarioTemplates'
 import { formatStatus, statusClass, timeAgo } from './utils/scenarioFormat'
-import { parseTemplatePackagesJson } from './utils/templateImport'
+import { looksLikeScenarioJson, parseScenarioJson, parseTemplatePackagesJson } from './utils/templateImport'
 import type { CrawlaScenarioRequest, CrawlaScenarioRunResult } from './types/crawla'
-import type { ScenarioListItem, ScenarioRequest, ScenarioStatus, SupplierCode } from './types/scenario'
+import { PREBOOKING_STATUSES } from './types/scenario'
+import type { PreBookingStatus, ScenarioListItem, ScenarioRequest, ScenarioStatus, SupplierCode } from './types/scenario'
 import type { TestRunState } from './types/testRun'
 
 type Tab = 'home' | 'create' | 'browse' | 'crawla' | 'queue' | 'test-run' | 'templates' | 'suppliers'
@@ -60,6 +61,10 @@ interface ImportSupplierBlock {
   contract_currency: string
   json: string
   assignment_target: 'apikey' | 'sbgroup' | 'both'
+  // Without these a hand-built template could never be a working PreBooking mock —
+  // the form had no way to express the status the scenario was provisioned with.
+  prebooking_status: PreBookingStatus
+  prebooking_changed_price: string
 }
 
 function nextUnusedSupplier(used: SupplierCode[], available: SupplierCode[]): SupplierCode {
@@ -125,11 +130,12 @@ function App() {
   const [importDescription, setImportDescription] = useState('')
   const [importHotelId, setImportHotelId] = useState('')
   const [importSuppliers, setImportSuppliers] = useState<ImportSupplierBlock[]>([
-    { supplier: '', supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey' },
+    { supplier: '', supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey', prebooking_status: 'available', prebooking_changed_price: '' },
   ])
   const [importSbEnabled, setImportSbEnabled] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importBusy, setImportBusy] = useState(false)
+  const [scenarioPaste, setScenarioPaste] = useState('')
   const [env, setEnv] = useState<SmfEnv>(getActiveEnv())
   const [healthOk, setHealthOk] = useState(true)
   const [healthDetails, setHealthDetails] = useState<{ status: string; message?: string; checks?: Record<string, { status: string; message: string }> } | null>(null)
@@ -278,7 +284,7 @@ function App() {
     )
     setImportSuppliers((prev) => [
       ...prev,
-      { supplier: nextSupplier, supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey' },
+      { supplier: nextSupplier, supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey', prebooking_status: 'available' as PreBookingStatus, prebooking_changed_price: '' },
     ])
   }
 
@@ -301,12 +307,39 @@ function App() {
         contract_currency: 'USD',
         json: '',
         assignment_target: 'apikey',
+        prebooking_status: 'available',
+        prebooking_changed_price: '',
       },
     ])
     setImportSbEnabled(false)
     setEditingTemplateId(null)
     setImportError(null)
     setShowImportForm(false)
+  }
+
+  /** Fill the whole import form from a pasted scenario request or detail response. */
+  const applyScenarioJson = (raw: string) => {
+    setImportError(null)
+    try {
+      const parsed = parseScenarioJson(raw)
+      setImportHotelId(parsed.atg_hotel_id)
+      setImportSbEnabled(parsed.sb_enabled)
+      setImportSuppliers(
+        parsed.suppliers.map((entry) => ({
+          supplier: entry.supplier as SupplierCode,
+          supplier_currency: entry.supplier_currency,
+          contract_currency: entry.contract_currency,
+          json: JSON.stringify(entry.rows, null, 2),
+          assignment_target: entry.assignment_target,
+          prebooking_status: entry.prebooking_status,
+          prebooking_changed_price:
+            entry.prebooking_changed_price != null ? String(entry.prebooking_changed_price) : '',
+        })),
+      )
+      setScenarioPaste('')
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Could not read that scenario JSON')
+    }
   }
 
   const handleImportTemplate = async (e: React.FormEvent) => {
@@ -326,6 +359,14 @@ function App() {
         contract_currency: block.contract_currency.toUpperCase().slice(0, 3),
         packages: parseTemplatePackagesJson(block.json),
         assignment_target: block.assignment_target,
+        ...(block.prebooking_status && block.prebooking_status !== 'available'
+          ? {
+              prebooking_status: block.prebooking_status,
+              ...(block.prebooking_status === 'price_changed' && block.prebooking_changed_price.trim()
+                ? { prebooking_changed_price: Number(block.prebooking_changed_price) }
+                : {}),
+            }
+          : {}),
       }))
       if (importSbEnabled && !suppliers.some((s) => s.assignment_target !== 'apikey')) {
         throw new Error('SmartBooking is on — set at least one supplier to SbGroup or Both')
@@ -336,6 +377,13 @@ function App() {
         atg_hotel_id: importHotelId.trim(),
         suppliers,
         sb_enabled: importSbEnabled,
+        // Categorise by what it actually does, so an imported PreBooking template
+        // lands on the tab where it will be looked for.
+        function: importSuppliers.some(
+          (b) => b.prebooking_status && b.prebooking_status !== 'available',
+        )
+          ? TEMPLATE_KIND_PREBOOKING
+          : TEMPLATE_KIND_BEDDING,
       }
       if (editingTemplateId) {
         await updateScenarioTemplate(editingTemplateId, payload)
@@ -365,6 +413,11 @@ function App() {
         contract_currency: entry.contract_currency,
         json: JSON.stringify(entry.packages, null, 2),
         assignment_target: entry.assignment_target ?? 'apikey',
+        // Read back too: without this, opening a PreBooking template to edit it and
+        // saving would quietly turn it into a plain bedding template.
+        prebooking_status: entry.prebooking_status ?? 'available',
+        prebooking_changed_price:
+          entry.prebooking_changed_price != null ? String(entry.prebooking_changed_price) : '',
       })),
     )
     setImportSbEnabled(item.sb_enabled ?? false)
@@ -1052,6 +1105,34 @@ function App() {
                   onSubmit={handleImportTemplate}
                   style={{ marginBottom: '1rem' }}
                 >
+                  {!editingTemplateId && (
+                    <div className="scenario-paste">
+                      <label className="field">
+                        Start from a scenario
+                        <textarea
+                          rows={3}
+                          value={scenarioPaste}
+                          onChange={(e) => setScenarioPaste(e.target.value)}
+                          placeholder='Paste a scenario&apos;s API request here (Scenario detail → Show API request → Copy JSON) and every field below fills in, PreBooking status included.'
+                          spellCheck={false}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        disabled={!scenarioPaste.trim()}
+                        onClick={() => applyScenarioJson(scenarioPaste)}
+                        title={
+                          scenarioPaste.trim() && !looksLikeScenarioJson(scenarioPaste)
+                            ? 'That does not look like a scenario request — it needs a "suppliers" array'
+                            : 'Fill the form from this scenario'
+                        }
+                      >
+                        Fill form from scenario
+                      </button>
+                    </div>
+                  )}
+
                   <div className="wizard-section-title">
                     {editingTemplateId ? 'Edit template' : 'New template'}
                   </div>
@@ -1125,6 +1206,42 @@ function App() {
                         </button>
                       </div>
                       <div className="field-grid" style={{ marginBottom: '0.5rem' }}>
+                        <div className="field" style={{ maxWidth: '200px' }}>
+                          <label>
+                            PreBooking
+                            <select
+                              value={block.prebooking_status}
+                              onChange={(e) =>
+                                updateImportSupplierBlock(index, {
+                                  prebooking_status: e.target.value as PreBookingStatus,
+                                })
+                              }
+                            >
+                              {PREBOOKING_STATUSES.map((status) => (
+                                <option key={status.value} value={status.value}>
+                                  {status.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                        {block.prebooking_status === 'price_changed' && (
+                          <div className="field" style={{ maxWidth: '140px' }}>
+                            <label>
+                              Changed price
+                              <input
+                                value={block.prebooking_changed_price}
+                                onChange={(e) =>
+                                  updateImportSupplierBlock(index, {
+                                    prebooking_changed_price: e.target.value,
+                                  })
+                                }
+                                placeholder="140"
+                                spellCheck={false}
+                              />
+                            </label>
+                          </div>
+                        )}
                         <div className="field" style={{ maxWidth: '140px' }}>
                           <label>
                             Supplier Currency

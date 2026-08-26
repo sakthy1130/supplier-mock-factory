@@ -2438,3 +2438,19 @@ pre.raw-response {
 .modal-card .field { display: block; margin-top: 0.9rem; }
 .modal-card .field input,
 .modal-card .field select { width: 100%; margin-top: 0.3rem; }
+
+/* "Start from a scenario" paste box on the import form. */
+.scenario-paste {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.scenario-paste .field { width: 100%; }
+.scenario-paste textarea { width: 100%; font-family: var(--font-mono, monospace); font-size: 0.75rem; }
