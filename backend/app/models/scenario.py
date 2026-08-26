@@ -151,6 +151,21 @@ class PackageSpec(BaseModel):
             "Search/Packages (and PreBooking/CancellationPolicy where present)."
         ),
     )
+    # EXP explicit pricing. `prices` IS the gross total (totals.inclusive) — there is no
+    # separate total field, because two inputs for one number only invited disagreement.
+    # What `prices` alone cannot express is the split: EXP runs with no business rules, so
+    # the markup a package carries comes from the payload itself
+    # (occupancy_pricing.totals.marketing_fee) and was whatever ratio the captured template
+    # happened to have. Both amounts are in supplier currency, both or neither per package,
+    # and price must equal original_price_with_vat + markup.
+    original_price_with_vat: list[float] = Field(
+        default_factory=list,
+        description="EXP only: pre-markup price per package, i.e. the package price minus markup.",
+    )
+    markup: list[float] = Field(
+        default_factory=list,
+        description="EXP only: markup AMOUNT per package in supplier currency (totals.marketing_fee).",
+    )
     # Occupancy the mocked rates advertise. Derby BTS drops every rate whose occupancy
     # does not match the search request (adultCount + childCount + childAges), returning
     # zero results and no error, so this has to line up with how the search is run.
@@ -202,6 +217,63 @@ class PackageSpec(BaseModel):
                 f"for {self.count} package(s)"
             )
         return self
+
+    @model_validator(mode="after")
+    def _validate_explicit_pricing(self) -> "PackageSpec":
+        """original_price_with_vat and markup arrive together and must add up to the price.
+
+        The package price is the gross total, so the split has to reconcile with it.
+        Rejected rather than back-solved: a set that does not add up means one of the
+        numbers was mistyped, and silently recomputing it would mock a price the tester did
+        not ask for. The 0.01 tolerance is for float arithmetic on 2-decimal money.
+        """
+        if not (self.original_price_with_vat or self.markup):
+            return self
+
+        lengths = {
+            "original_price_with_vat": len(self.original_price_with_vat),
+            "markup": len(self.markup),
+        }
+        missing = [name for name, length in lengths.items() if length == 0]
+        if missing:
+            raise ValueError(
+                "original_price_with_vat and markup must be given together; "
+                f"missing: {', '.join(sorted(missing))}"
+            )
+        if len(set(lengths.values())) != 1:
+            raise ValueError(
+                f"original_price_with_vat and markup must be the same length, got {lengths}"
+            )
+        if lengths["markup"] > len(self.prices):
+            raise ValueError(
+                f"original_price_with_vat and markup cover {lengths['markup']} package(s) "
+                f"but only {len(self.prices)} price(s) were given"
+            )
+
+        for index, (original, markup) in enumerate(
+            zip(self.original_price_with_vat, self.markup)
+        ):
+            price = self.prices[index]
+            if min(original, markup) < 0:
+                raise ValueError(f"package {index + 1}: prices and markup must not be negative")
+            if abs(price - (original + markup)) >= 0.01:
+                raise ValueError(
+                    f"package {index + 1}: price {price} must equal "
+                    f"original_price_with_vat {original} + markup {markup} "
+                    f"(= {round(original + markup, 2)})"
+                )
+        return self
+
+    @property
+    def has_explicit_pricing(self) -> bool:
+        """Whether this spec splits its price into originalPriceWithVAT + markup.
+        The validator guarantees both are present, aligned and reconciled when either is."""
+        return bool(self.markup)
+
+
+def _trim_number(value: float) -> str:
+    """10.0 -> "10", 12.5 -> "12.5" — BR shows these verbatim, so no stray decimals."""
+    return str(int(value)) if value == int(value) else str(value)
 
 
 def instance_key_for(supplier_code: str, instance: int) -> str:
@@ -318,6 +390,23 @@ class ScenarioRequest(BaseModel):
             "regardless of this flag; it only gates the plain scenario-wizard flow."
         ),
     )
+    # BR markup output values for this scenario. Every scenario used to get 10% static and
+    # 15%-25% dynamic, so testing another markup meant editing source. Unset keeps those
+    # defaults (see business_rules.DEFAULT_STATIC_MARKUP / DEFAULT_DYNAMIC_MARKUP).
+    static_markup: Optional[str] = Field(
+        default=None,
+        description=(
+            "Static Markup (rule 3) output value, e.g. '10' or '10%'. Normalized to '10%'. "
+            "Omit for the default 10%."
+        ),
+    )
+    dynamic_markup: Optional[str] = Field(
+        default=None,
+        description=(
+            "Dynamic Markup (rule 4) output value, e.g. '10%-15%' or '10-15'. Normalized to "
+            "'10%-15%'. Omit for the default 15%-25%."
+        ),
+    )
     template_id: Optional[str] = Field(
         default=None,
         description=(
@@ -326,6 +415,43 @@ class ScenarioRequest(BaseModel):
             "Used to look up per-template child BR conditions in field-maps/br_child_conditions.json."
         ),
     )
+
+    @field_validator("static_markup", "dynamic_markup", mode="before")
+    @classmethod
+    def _normalize_markup(cls, value: Any) -> Any:
+        """Accept a bare number or a range, with or without the % signs, and canonicalize.
+
+        BR stores these as '10%' and '15%-25%'. QAs type them either way, so `10`, `10%`,
+        `10-15` and `10%-15%` all land on the shape BR wants rather than being rejected for
+        punctuation. Blank means "not asked for" — the default applies.
+        """
+        if value is None:
+            return None
+        text = str(value).strip().replace(" ", "")
+        if not text:
+            return None
+        parts = text.split("-")
+        if len(parts) > 2:
+            raise ValueError(
+                f"markup {value!r} is not a percentage or percentage range "
+                "(expected e.g. '10' or '10%-15%')"
+            )
+        numbers: list[float] = []
+        for part in parts:
+            number = part[:-1] if part.endswith("%") else part
+            try:
+                parsed = float(number)
+            except ValueError:
+                raise ValueError(
+                    f"markup {value!r} is not a percentage or percentage range "
+                    "(expected e.g. '10' or '10%-15%')"
+                ) from None
+            if parsed < 0:
+                raise ValueError(f"markup {value!r} must not be negative")
+            numbers.append(parsed)
+        if len(numbers) == 2 and numbers[0] > numbers[1]:
+            raise ValueError(f"markup range {value!r} is reversed — low bound must come first")
+        return "-".join(f"{_trim_number(n)}%" for n in numbers)
 
     @model_validator(mode="after")
     def _assign_supplier_instances(self) -> "ScenarioRequest":
@@ -362,6 +488,13 @@ class ScenarioRequest(BaseModel):
             raise ValueError(
                 "existing_api_key only applies to provisioning_depth "
                 "'contract_only' or 'contract_br' — 'full' creates its own apiKey."
+            )
+        if self.provisioning_depth is ProvisioningDepth.contract_only and (
+            self.static_markup or self.dynamic_markup
+        ):
+            raise ValueError(
+                "static_markup / dynamic_markup need BR provisioning — use "
+                "provisioning_depth 'full' or 'contract_br'."
             )
         return self
 

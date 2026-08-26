@@ -19,6 +19,7 @@ from app.ingest.expectation_builder import (
     extract_request_payload_for_mock,
     extract_response_body_payload,
     extract_response_headers,
+    is_error_envelope_payload,
     is_get_order_response_row,
     is_outbound_get_order_row,
     is_target_log_type,
@@ -318,31 +319,60 @@ class TemplateIngestor:
             if selected is None:
                 continue
 
-            row = selected.row
-            log_url = row.get("logUrl", "")
-            full_log = await detail_for(log_url)
+            # The selected row is the preferred one; the rest are fallbacks for when it
+            # logged a failed supplier call. Writing that row's error envelope as the
+            # template is worse than having no template at all — a mock that answers 200
+            # with an exception looks registered and healthy while every scenario using it
+            # fails deep inside core (see is_error_envelope_payload).
+            for candidate in [selected] + [c for c in candidates if c is not selected]:
+                row = candidate.row
+                log_url = row.get("logUrl", "")
+                full_log = await detail_for(log_url)
 
-            http = resolve_http_path_and_method(row, full_log)
-            if not http.path:
-                diagnostics.append(build_diagnostic_json(sid, row, log_url, full_log))
-                continue
+                http = resolve_http_path_and_method(row, full_log)
+                if not http.path:
+                    diagnostics.append(build_diagnostic_json(sid, row, log_url, full_log))
+                    continue
 
-            response_body = extract_response_body_payload(full_log)
-            response_headers = extract_response_headers(full_log)
-            request_payload = extract_request_payload_for_mock(full_log)
-            status_code = resolve_http_status_code(row, full_log)
-            expectation = build_expectation(
-                http.path,
-                http.method,
-                request_payload,
-                response_body,
-                status_code,
-                response_headers,
-            )
-            pending_by_type[canonical_type] = PendingExpectation(
-                expectation=expectation,
-                log_type=canonical_type,
-            )
+                response_body = extract_response_body_payload(full_log)
+                if is_error_envelope_payload(response_body):
+                    logger.warning(
+                        "%s ingest: %s row %s logged a failed supplier call (no payload to "
+                        "replay); trying the next candidate row",
+                        plugin.code,
+                        canonical_type,
+                        log_url,
+                    )
+                    diagnostics.append(
+                        build_diagnostic_json(
+                            sid,
+                            row,
+                            log_url,
+                            full_log,
+                            note=(
+                                "Supplier call failed in this log — its response is an error "
+                                "envelope, not a payload, so it was not written as a template."
+                            ),
+                        )
+                    )
+                    continue
+
+                response_headers = extract_response_headers(full_log)
+                request_payload = extract_request_payload_for_mock(full_log)
+                status_code = resolve_http_status_code(row, full_log)
+                expectation = build_expectation(
+                    http.path,
+                    http.method,
+                    request_payload,
+                    response_body,
+                    status_code,
+                    response_headers,
+                )
+                pending_by_type[canonical_type] = PendingExpectation(
+                    expectation=expectation,
+                    log_type=canonical_type,
+                )
+                break
 
         pending = list(pending_by_type.values())
         apply_aligned_derby_res_ids_for_booking_and_get_order(pending)

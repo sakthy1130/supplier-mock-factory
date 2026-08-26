@@ -191,6 +191,8 @@ def _build_scenario_request(request: CrawlaScenarioRequest) -> ScenarioRequest:
         suppliers=suppliers,
         supplier_mutations=supplier_mutations,
         crawla_export=export.model_dump(mode="json"),
+        static_markup=request.static_markup,
+        dynamic_markup=request.dynamic_markup,
     )
 
 

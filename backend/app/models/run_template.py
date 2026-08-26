@@ -84,6 +84,22 @@ class RunTemplateRequest(BaseModel):
             "detaches the contracts."
         ),
     )
+    static_markup: Optional[str] = Field(
+        default=None,
+        description=(
+            "Static Markup (BR rule 3) output value for this run, e.g. '10' or '10%'. "
+            "Omit for the default 10%."
+        ),
+        examples=["20", "20%"],
+    )
+    dynamic_markup: Optional[str] = Field(
+        default=None,
+        description=(
+            "Dynamic Markup (BR rule 4) output value for this run, e.g. '10%-15%' or "
+            "'10-15'. Omit for the default 15%-25%."
+        ),
+        examples=["30%-40%", "30-40"],
+    )
     force_cleanup: bool = Field(
         default=True,
         description="If true: cleanup even if scenario creation/run fails. If false: skip cleanup on error."

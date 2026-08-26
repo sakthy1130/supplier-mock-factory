@@ -390,6 +390,13 @@ function App() {
         roomBasis: p.room_basis,
         price: String(p.price),
         refundable: p.refundable,
+        // Blank, not "undefined"/"0", when the template predates explicit pricing or
+        // simply does not use it — the wizard treats blank as "not asked for".
+        originalPriceWithVat:
+          p.original_price_with_vat === undefined || p.original_price_with_vat === null
+            ? ''
+            : String(p.original_price_with_vat),
+        markup: p.markup === undefined || p.markup === null ? '' : String(p.markup),
       }))
       packages[code] = [...(packages[code] ?? []), rows]
       enabledSuppliers[code] = true

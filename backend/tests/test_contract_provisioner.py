@@ -427,3 +427,53 @@ async def test_create_contracts_chc_sets_one_slot_cancel_policy():
     assert body["opt"]["availabilityTimeoutSeconds"] == "30"
     assert body["opt"]["searchUrl"].endswith("/api/go/shoppingengine/v4/shopping/multihotels")
     assert body["opt"]["availabilityUrl"].endswith("/api/go/bookingusb/v4/availability")
+
+
+@pytest.mark.asyncio
+async def test_cloned_contract_never_inherits_the_references_priority():
+    """package-merge breaks price ties on contract priority, and the reference contracts
+    disagree — HBS's carries 1 where the others carry 0. Inheriting it would let HBS win
+    every tie in a multi-supplier scenario, which reads as a merge bug rather than a
+    contract difference."""
+    backoffice = AsyncMock()
+    backoffice.__aenter__ = AsyncMock(return_value=backoffice)
+    backoffice.__aexit__ = AsyncMock(return_value=None)
+    backoffice.get_contract = AsyncMock(
+        return_value={
+            "_id": "ref-1",
+            "autoId": "99",
+            "uid": "old-uid",
+            "priority": "1",
+            "opt": {"searchUrl": "http://old/search"},
+            "supplierId": "100004",
+        }
+    )
+    backoffice.create_contract = AsyncMock(return_value="mongo-hbs-clone")
+
+    provisioner = ContractProvisioner(backoffice=backoffice)
+    provisioner.settings.hbs_reference_contract_id = "ref-1"
+    provisioner.settings.mock_server_url = "http://mockserver-staging.tajawal.io"
+
+    await provisioner.create_contracts(_request(), {"HBS": {}}, "http://mockserver-staging.tajawal.io")
+
+    assert backoffice.create_contract.await_args.args[0]["priority"] == "0"
+
+
+@pytest.mark.asyncio
+async def test_minimal_contract_body_uses_the_same_priority():
+    """The synthesized fallback must not differ from a clone on a tie-breaking field."""
+    backoffice = AsyncMock()
+    backoffice.__aenter__ = AsyncMock(return_value=backoffice)
+    backoffice.__aexit__ = AsyncMock(return_value=None)
+    backoffice.create_contract = AsyncMock(return_value="mongo-hbs-minimal")
+
+    provisioner = ContractProvisioner(backoffice=backoffice)
+    provisioner.settings.hbs_reference_contract_id = ""
+    provisioner.settings.mock_server_url = "http://mockserver-staging.tajawal.io"
+
+    with no_reference_contract():
+        await provisioner.create_contracts(
+            _request(), {"HBS": {}}, "http://mockserver-staging.tajawal.io"
+        )
+
+    assert backoffice.create_contract.await_args.args[0]["priority"] == "0"

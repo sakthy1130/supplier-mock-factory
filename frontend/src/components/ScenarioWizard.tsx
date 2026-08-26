@@ -22,6 +22,14 @@ export interface PackageRow {
   roomName: string
   price: string
   refundable: boolean
+  /**
+   * EXP only, both or neither: the split of `price` into pre-markup + markup, in supplier
+   * currency, where price = originalPriceWithVat + markup. `price` is the gross total, so
+   * there is no separate total field. Blank means the existing flow — the mock's markup
+   * rides whatever ratio the captured template had. See docs/REQUIREMENTS.md REQ-002.
+   */
+  originalPriceWithVat?: string
+  markup?: string
 }
 
 const DEFAULT_ROW_PRICES = [100, 200, 300]
@@ -32,7 +40,67 @@ function defaultPackageRow(index: number): PackageRow {
     roomName: DEFAULT_ROOM_NAME,
     price: String(DEFAULT_ROW_PRICES[index] ?? DEFAULT_ROW_PRICES[DEFAULT_ROW_PRICES.length - 1]),
     refundable: true,
+    // Blank on purpose: an EXP scenario only opts into explicit pricing when filled in.
+    originalPriceWithVat: '',
+    markup: '',
   }
+}
+
+/** The two BR markup output values, shown wherever this scenario will provision BR.
+ *
+ *  Sent as typed: the backend normalizes `10` → `10%` and `10-15` → `10%-15%`, so a QA can
+ *  use either spelling. Blank means the BR defaults (10% static, 15%-25% dynamic).
+ */
+function MarkupFields({
+  staticMarkup,
+  dynamicMarkup,
+  onStatic,
+  onDynamic,
+}: {
+  staticMarkup: string
+  dynamicMarkup: string
+  onStatic: (value: string) => void
+  onDynamic: (value: string) => void
+}) {
+  return (
+    <div className="depth-field" style={{ marginTop: '0.75rem' }}>
+      <label htmlFor="static-markup">Static markup (optional)</label>
+      <input
+        id="static-markup"
+        value={staticMarkup}
+        onChange={(e) => onStatic(e.target.value)}
+        placeholder="10"
+        spellCheck={false}
+        autoComplete="off"
+      />
+      <label htmlFor="dynamic-markup" style={{ marginTop: '0.5rem' }}>
+        Dynamic markup (optional)
+      </label>
+      <input
+        id="dynamic-markup"
+        value={dynamicMarkup}
+        onChange={(e) => onDynamic(e.target.value)}
+        placeholder="10%-15%"
+        spellCheck={false}
+        autoComplete="off"
+      />
+      <p className="hint">
+        Output values for Room Static Markup In Percentage (3) and Room Dynamic Markup In
+        Percentage (4). Leave blank for the defaults, 10% and 15%-25%. A plain number is read as
+        a percentage, so <code>10</code> and <code>10%</code> both work, as do <code>10-15</code>{' '}
+        and <code>10%-15%</code>.
+      </p>
+    </div>
+  )
+}
+
+/** Suppliers whose payload carries its own markup, so the price-split fields are shown.
+ *  EXP runs with no business rules — its markup comes from the response — so it is the
+ *  only supplier where setting these means anything. */
+const EXPLICIT_PRICING_SUPPLIERS: SupplierCode[] = ['EXP']
+
+function showExplicitPricing(code: SupplierCode): boolean {
+  return EXPLICIT_PRICING_SUPPLIERS.includes(code)
 }
 
 function defaultPackageRows(count: number): PackageRow[] {
@@ -44,6 +112,27 @@ interface ParsedRows {
   room_names: string[]
   prices: number[]
   refundable: boolean[]
+  original_price_with_vat?: number[]
+  markup?: number[]
+}
+
+/** Parse one explicit-pricing cell, or null when the field was left blank. */
+function parseOptionalAmount(
+  supplierLabel: string,
+  index: number,
+  label: string,
+  raw: string | undefined,
+): number | null {
+  const text = (raw ?? '').trim()
+  if (!text) return null
+  const value = Number(text)
+  if (Number.isNaN(value)) {
+    throw new Error(`${supplierLabel} package ${index + 1}: ${label} must be a number`)
+  }
+  if (value < 0) {
+    throw new Error(`${supplierLabel} package ${index + 1}: ${label} must not be negative`)
+  }
+  return value
 }
 
 function parseRows(supplierLabel: string, rows: PackageRow[]): ParsedRows {
@@ -51,6 +140,9 @@ function parseRows(supplierLabel: string, rows: PackageRow[]): ParsedRows {
   const room_names: string[] = []
   const prices: number[] = []
   const refundable: boolean[] = []
+  const original_price_with_vat: number[] = []
+  const markup: number[] = []
+  let explicitRows = 0
   rows.forEach((row, index) => {
     const basis = row.roomBasis.trim().toUpperCase() || DEFAULT_ROOM_BASIS
     const name = row.roomName.trim() || DEFAULT_ROOM_NAME
@@ -62,8 +154,48 @@ function parseRows(supplierLabel: string, rows: PackageRow[]): ParsedRows {
     room_names.push(name)
     prices.push(price)
     refundable.push(row.refundable)
+
+    const rowOriginal = parseOptionalAmount(
+      supplierLabel, index, 'original price with VAT', row.originalPriceWithVat,
+    )
+    const rowMarkup = parseOptionalAmount(supplierLabel, index, 'markup', row.markup)
+    const filled = [rowOriginal, rowMarkup].filter((value) => value !== null).length
+    if (filled === 0) return
+    if (filled < 2) {
+      throw new Error(
+        `${supplierLabel} package ${index + 1}: fill original price with VAT and markup ` +
+          'together, or leave both blank',
+      )
+    }
+    // The price IS the gross total, so the split has to reconcile with it. Caught here so
+    // the message points at the row, but the backend re-checks — the automation API and
+    // saved templates reach the same validator.
+    if (Math.abs(price - (rowOriginal! + rowMarkup!)) >= 0.01) {
+      throw new Error(
+        `${supplierLabel} package ${index + 1}: price ${price} must equal ` +
+          `original price with VAT ${rowOriginal} + markup ${rowMarkup} ` +
+          `(= ${Number((rowOriginal! + rowMarkup!).toFixed(2))})`,
+      )
+    }
+    explicitRows += 1
+    original_price_with_vat.push(rowOriginal!)
+    markup.push(rowMarkup!)
   })
-  return { room_basis, room_names, prices, refundable }
+
+  // All rows or none: a partial list would price only some packages explicitly, which the
+  // backend rejects for the same reason.
+  if (explicitRows > 0 && explicitRows !== rows.length) {
+    throw new Error(
+      `${supplierLabel}: fill original price with VAT and markup on every package or on none`,
+    )
+  }
+
+  const parsed: ParsedRows = { room_basis, room_names, prices, refundable }
+  if (explicitRows > 0) {
+    parsed.original_price_with_vat = original_price_with_vat
+    parsed.markup = markup
+  }
+  return parsed
 }
 
 /** How many suppliers start ticked when the wizard opens with no template. */
@@ -161,6 +293,9 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
     ),
   )
   const [assignToBr, setAssignToBr] = useState(true)
+  // BR markup output values. Blank = the backend defaults (10% / 15%-25%).
+  const [staticMarkup, setStaticMarkup] = useState('')
+  const [dynamicMarkup, setDynamicMarkup] = useState('')
   // How far provisioning goes. 'full' keeps the historical behaviour.
   const [depth, setDepth] = useState<ProvisioningDepth>('full')
   const [existingApiKey, setExistingApiKey] = useState('')
@@ -325,6 +460,11 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
     })
   }
 
+  // Whether this scenario will provision BR at all — 'full' does it for the checkbox or
+  // for SmartBooking, 'contract_br' always does, 'contract_only' never. Drives both the
+  // markup inputs' visibility and whether their values are sent.
+  const brWillProvision = depth === 'full' ? assignToBr || sbEnabled : depth === 'contract_br'
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError(null)
@@ -365,6 +505,14 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                 prices: parsed.prices,
                 refundable: parsed.refundable,
                 booking_package_index: bookingRow[code]?.[instance] ?? null,
+                // Omitted entirely when unused, so the request body stays exactly what it
+                // was for every scenario that does not price explicitly.
+                ...(parsed.markup
+                  ? {
+                      original_price_with_vat: parsed.original_price_with_vat,
+                      markup: parsed.markup,
+                    }
+                  : {}),
               },
             }
           }),
@@ -375,6 +523,10 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
         assign_to_br: depth === 'full' ? assignToBr : false,
         sb_enabled: depth === 'full' ? sbEnabled : false,
         existing_api_key: depth === 'full' ? null : existingApiKey.trim() || null,
+        // Same rule for the markup: only the depths that actually provision BR accept
+        // them, and contract_only rejects them outright.
+        ...(brWillProvision && staticMarkup.trim() ? { static_markup: staticMarkup.trim() } : {}),
+        ...(brWillProvision && dynamicMarkup.trim() ? { dynamic_markup: dynamicMarkup.trim() } : {}),
       }
       await onSubmit(request)
     } catch (err) {
@@ -531,16 +683,35 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                           </div>
                         )}
                         <div className="package-rows">
-                          <div className="package-row package-row-head">
+                          <div
+                            className={`package-row package-row-head${
+                              showExplicitPricing(meta.code) ? ' package-row-explicit' : ''
+                            }`}
+                          >
                             <span title="Build the Booking/GetOrder flow for this package">Book</span>
                             <span>Room basis</span>
                             <span>Room name</span>
                             <span>Price</span>
+                            {showExplicitPricing(meta.code) && (
+                              <>
+                                <span title="Price minus markup — the pre-markup price">
+                                  Orig. price (VAT)
+                                </span>
+                                <span title="Markup amount in supplier currency (totals.marketing_fee)">
+                                  Markup
+                                </span>
+                              </>
+                            )}
                             <span>Refundable</span>
                             <span />
                           </div>
                           {rows.map((row, index) => (
-                            <div key={index} className="package-row">
+                            <div
+                              key={index}
+                              className={`package-row${
+                                showExplicitPricing(meta.code) ? ' package-row-explicit' : ''
+                              }`}
+                            >
                               <input
                                 type="radio"
                                 name={`booking-${meta.code}-${instance}`}
@@ -569,6 +740,30 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                                 onChange={(e) => updateRow(meta.code, instance, index, { price: e.target.value })}
                                 placeholder="100"
                               />
+                              {showExplicitPricing(meta.code) && (
+                                <>
+                                  <input
+                                    type="number"
+                                    value={row.originalPriceWithVat ?? ''}
+                                    onChange={(e) =>
+                                      updateRow(meta.code, instance, index, {
+                                        originalPriceWithVat: e.target.value,
+                                      })
+                                    }
+                                    placeholder="optional"
+                                    title="Pre-markup price with VAT"
+                                  />
+                                  <input
+                                    type="number"
+                                    value={row.markup ?? ''}
+                                    onChange={(e) =>
+                                      updateRow(meta.code, instance, index, { markup: e.target.value })
+                                    }
+                                    placeholder="optional"
+                                    title="Markup amount in supplier currency"
+                                  />
+                                </>
+                              )}
                               <input
                                 type="checkbox"
                                 checked={row.refundable}
@@ -651,6 +846,16 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
                   ' In Percentage (4), so the contract conditions evaluate under it; only that' +
                   ' assignment is removed on teardown.'}
             </p>
+            {/* contract_br provisions BR on the CONTRACTS, so it needs the markup fields
+                too — and it has no assign-to-BR checkbox to hang them off. */}
+            {depth === 'contract_br' && (
+              <MarkupFields
+                staticMarkup={staticMarkup}
+                dynamicMarkup={dynamicMarkup}
+                onStatic={setStaticMarkup}
+                onDynamic={setDynamicMarkup}
+              />
+            )}
           </div>
         )}
 
@@ -667,6 +872,16 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
               On by default. Cleaned up automatically on teardown. Uncheck to skip BR assignment for
               this scenario.
             </p>
+            {/* SmartBooking provisions BR whether or not the checkbox is ticked, so the
+                fields follow what actually happens rather than the checkbox alone. */}
+            {brWillProvision && (
+              <MarkupFields
+                staticMarkup={staticMarkup}
+                dynamicMarkup={dynamicMarkup}
+                onStatic={setStaticMarkup}
+                onDynamic={setDynamicMarkup}
+              />
+            )}
 
             <label
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500, marginTop: '0.75rem' }}

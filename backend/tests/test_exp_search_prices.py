@@ -335,3 +335,224 @@ def test_integration_exp_search_staging_mockserver(namespace: str):
     assert properties, f"Empty Search body from MockServer for namespace={namespace!r}"
     rates = properties[0]["rooms"][0]["rates"]
     _assert_no_zero_price_rates(rates, f"{namespace} / real MockServer")
+
+
+# ---------------------------------------------------------------------------
+# Explicit pricing — total / originalPriceWithVAT / markup
+# ---------------------------------------------------------------------------
+
+def _explicit_request(namespace: str = "exp-explicit-pricing") -> ScenarioRequest:
+    """One EXP package priced explicitly: 1000 net + 120 markup = 1120 gross."""
+    return ScenarioRequest(
+        namespace=namespace,
+        check_in="2026-09-01",
+        check_out="2026-09-03",
+        atg_hotel_id="1043546",
+        supplier_hotel_ids={"EXP": "2001358"},
+        suppliers=[
+            SupplierScenario(
+                code=SupplierCode.EXP,
+                packages=PackageSpec(
+                    count=1,
+                    room_basis="RO",
+                    prices=[1120.0],
+                    refundable=[False],
+                    original_price_with_vat=[1000.0],
+                    markup=[120.0],
+                ),
+            )
+        ],
+    )
+
+
+def _totals(expectation: dict) -> dict:
+    """The first occupancy's totals, as {node: request_currency value}.
+
+    Finds occupancy_pricing wherever it sits: Search/Packages wrap it in a property →
+    rooms → rates list, while PreBooking's body IS the rate.
+    """
+    from app.plugins.json_utils import walk_nodes
+
+    for node in walk_nodes(expectation["httpResponse"]["body"]):
+        if not isinstance(node, dict):
+            continue
+        occupancy = node.get("occupancy_pricing")
+        if not isinstance(occupancy, dict) or not occupancy:
+            continue
+        totals = occupancy[next(iter(occupancy))].get("totals")
+        if not isinstance(totals, dict):
+            continue
+        return {
+            key: value["request_currency"]["value"]
+            for key, value in totals.items()
+            if isinstance(value, dict) and isinstance(value.get("request_currency"), dict)
+        }
+    raise AssertionError("no occupancy_pricing totals found in expectation")
+
+
+def _template_tax_ratio() -> float:
+    """exclusive / inclusive as captured in templates/EXP/Packages/v1.json."""
+    template = json.loads(
+        (TEMPLATES_DIR / "EXP" / "Packages" / "v1.json").read_text(encoding="utf-8")
+    )
+    totals = _totals(template)
+    return float(totals["exclusive"]) / float(totals["inclusive"])
+
+
+@needs_exp_templates
+def test_explicit_pricing_pins_inclusive_and_marketing_fee():
+    """totals.inclusive is what the adapter reports as total, totals.marketing_fee is what
+    it reports as markup.dynamic (getRoomRateInfo in hotel-connectivity-exp-adapter), so
+    those two nodes must carry the scenario's numbers exactly — not the template's ratio."""
+    built = ScenarioEngine().build_expectations(_explicit_request())
+    totals = _totals(_get_exp_packages(built))
+
+    assert totals["inclusive"] == "1120.00"
+    assert totals["marketing_fee"] == "120.00"
+
+
+@needs_exp_templates
+def test_explicit_pricing_keeps_the_templates_tax_proportion():
+    """The adapter derives tax as inclusive − exclusive. Writing inclusive alone would
+    silently change the tax, so exclusive is rescaled with it."""
+    totals = _totals(_get_exp_packages(ScenarioEngine().build_expectations(_explicit_request())))
+    assert float(totals["exclusive"]) == pytest.approx(1120.0 * _template_tax_ratio(), abs=0.02)
+    # And the tax it implies is a real amount, not zero — exclusive did not just track
+    # inclusive.
+    assert float(totals["inclusive"]) - float(totals["exclusive"]) > 0
+
+
+@needs_exp_templates
+def test_explicit_pricing_agrees_across_search_and_packages():
+    """Search and Packages must report the SAME markup for the same package.
+
+    They are captured from different SIDs, so their templates carry different
+    marketing_fee/inclusive ratios — scaling alone gives the adapter two different markups
+    for one package (107.78 vs 117.11 on the current templates). Setting the value fixes
+    both to what was asked for.
+    """
+    built = ScenarioEngine().build_expectations(_explicit_request())
+    for log_type in ("Search", "Packages"):
+        expectation = next(
+            item.expectation for item in built
+            if item.supplier_code == "EXP" and item.log_type == log_type
+        )
+        totals = _totals(expectation)
+        assert totals["inclusive"] == "1120.00", log_type
+        assert totals["marketing_fee"] == "120.00", log_type
+
+
+@needs_exp_templates
+def test_prebooking_pricing_is_untouched_by_the_scenario():
+    """Documents a PRE-EXISTING gap, not a decision of the explicit-pricing work.
+
+    EXP PreBooking's body is a bare rate, so `_exp_property_entries` finds nothing to walk
+    and no price is applied — the mock replays the template's captured price whatever the
+    scenario asked for. True with and without explicit pricing. Left as-is here because
+    fixing it changes what every existing EXP scenario returns from price-check; if that is
+    ever wired up, this test is the reminder to price it from the same numbers.
+    """
+    built = ScenarioEngine().build_expectations(_explicit_request())
+    prebooking = next(
+        item.expectation for item in built
+        if item.supplier_code == "EXP" and item.log_type == "PreBooking"
+    )
+    template = json.loads(
+        (TEMPLATES_DIR / "EXP" / "PreBooking" / "v1.json").read_text(encoding="utf-8")
+    )
+    assert _totals(prebooking)["inclusive"] == _totals(template)["inclusive"]
+
+
+@needs_exp_templates
+def test_without_explicit_pricing_the_mock_is_unchanged():
+    """The whole point of the opt-in: absent the three fields, every byte is as before.
+
+    Compares against a spec whose price equals the explicit total, so only the markup
+    handling can differ — and it must, since the template's ratio no longer applies.
+    """
+    plain = ScenarioRequest(
+        namespace="exp-explicit-pricing",
+        check_in="2026-09-01",
+        check_out="2026-09-03",
+        atg_hotel_id="1043546",
+        supplier_hotel_ids={"EXP": "2001358"},
+        suppliers=[
+            SupplierScenario(
+                code=SupplierCode.EXP,
+                packages=PackageSpec(
+                    count=1, room_basis="RO", prices=[1120.0], refundable=[False]
+                ),
+            )
+        ],
+    )
+    plain_totals = _totals(_get_exp_packages(ScenarioEngine().build_expectations(plain)))
+    explicit_totals = _totals(_get_exp_packages(ScenarioEngine().build_expectations(_explicit_request())))
+
+    assert plain_totals["inclusive"] == explicit_totals["inclusive"] == "1120.00"
+    # Scaled off the template instead of set, so it is NOT the requested 120.
+    assert plain_totals["marketing_fee"] != "120.00"
+    # Everything the adapter does not read stays on the scaling path in both.
+    for node in ("gross_profit", "property_inclusive"):
+        if node in plain_totals:
+            assert plain_totals[node] == explicit_totals[node], node
+
+
+@needs_exp_templates
+def test_explicit_pricing_syncs_the_get_order_mock():
+    """A retrieved order has to match the package that was booked, so GetOrder follows the
+    explicit total rather than the wizard's price entry."""
+    request = _explicit_request("exp-explicit-booking")
+    request.suppliers[0].packages.booking_package_index = 0
+    built = ScenarioEngine().build_expectations(request)
+
+    get_order = next(
+        item.expectation for item in built
+        if item.supplier_code == "EXP" and item.log_type == "GetOrder"
+    )
+    pricing = get_order["httpResponse"]["body"]["rooms"][0]["rate"]["pricing"]
+    inclusive = pricing["totals"]["inclusive"]["billable_currency"]["value"]
+    assert float(inclusive) == pytest.approx(1120.0, abs=0.02)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected"),
+    [
+        # Mistyped figure: 1000 + 100 is 1100, but the package price is 1120.
+        ({"original_price_with_vat": [1000.0], "markup": [100.0]}, "must equal"),
+        # One without the other: the split is only defined by both.
+        ({"original_price_with_vat": [1000.0]}, "given together"),
+        ({"markup": [120.0]}, "given together"),
+        ({"original_price_with_vat": [1240.0], "markup": [-120.0]}, "negative"),
+        # Ragged lists would silently price only some packages.
+        (
+            {"original_price_with_vat": [1000.0, 2000.0], "markup": [120.0]},
+            "same length",
+        ),
+        # More splits than packages: the extra one could never be applied.
+        (
+            {"original_price_with_vat": [1000.0, 2000.0], "markup": [120.0, 240.0]},
+            "only 1 price",
+        ),
+    ],
+)
+def test_explicit_pricing_rejects_inconsistent_input(kwargs, expected):
+    """Rejected, never back-solved: a set that does not add up means a typo, and quietly
+    recomputing it would mock a price nobody asked for."""
+    with pytest.raises(ValueError, match=expected):
+        PackageSpec(count=1, room_basis="RO", prices=[1120.0], refundable=[False], **kwargs)
+
+
+def test_explicit_pricing_tolerates_two_decimal_rounding():
+    """Money carries 2 decimals and floats do not add exactly, so the check has a 0.01
+    tolerance — 1000.02 + 120.03 must not be rejected for failing to equal the 1120.05 price."""
+    spec = PackageSpec(
+        count=1,
+        prices=[1120.05],
+        original_price_with_vat=[1000.02],
+        markup=[120.03],
+    )
+    assert spec.has_explicit_pricing
+
+
+def test_a_spec_without_the_fields_is_not_explicit():
+    assert not PackageSpec(count=1, prices=[100.0]).has_explicit_pricing

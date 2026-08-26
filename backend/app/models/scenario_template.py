@@ -15,6 +15,12 @@ class TemplatePackageRow(BaseModel):
     room_basis: str = "RO"
     price: float
     refundable: bool = True
+    # EXP explicit pricing: the split of `price` into pre-markup + markup (see
+    # PackageSpec.original_price_with_vat / markup). Optional so every template saved before
+    # this existed keeps loading; the two travel together and must add up to `price`, which
+    # PackageSpec's validator enforces once they reach a scenario.
+    original_price_with_vat: Optional[float] = None
+    markup: Optional[float] = None
 
     @field_validator("room_basis")
     @classmethod

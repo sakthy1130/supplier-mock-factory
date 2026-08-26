@@ -1,5 +1,6 @@
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
 import pytest
 
 from app.integrations.core_app import CoreAppClient
@@ -104,3 +105,46 @@ async def test_core_app_client_returns_logs_on_timeout():
     assert result.error_message and "timed out" in result.error_message
     assert len(result.logs) == 19
     assert result.logs[-1]["step"] == "packages"
+
+
+@pytest.mark.asyncio
+async def test_core_app_client_converts_read_timeout_to_error_message():
+    """An httpx timeout must not escape as an unhandled ASGI error — the run
+    reports it (with the trace so far) like any other core failure."""
+    client = AsyncMock()
+    client.request = AsyncMock(
+        side_effect=[
+            _Response({"sId": "sid-1"}),
+            httpx.ReadTimeout("timed out"),
+        ]
+    )
+
+    core = CoreAppClient(client=client)
+    core.settings.core_app_url = "http://core.example"
+
+    result = await core.run_search_and_packages(
+        api_key="api-key-1",
+        check_in="2026-09-01",
+        check_out="2026-09-03",
+        hotel_id="1043546",
+    )
+
+    assert result.search_s_id == "sid-1"
+    assert result.error_message and "Core app timed out" in result.error_message
+    assert "/search/poll/sid-1" in result.error_message
+    assert len(result.logs) == 1
+
+
+@pytest.mark.asyncio
+async def test_get_order_gets_a_longer_read_budget_than_other_calls():
+    client = AsyncMock()
+    client.request = AsyncMock(return_value=_Response({}))
+
+    core = CoreAppClient(client=client)
+    core.settings.core_app_url = "http://core.example"
+
+    await core._request_json("/search", method="POST", api_key="k", payload={})
+    await core._request_json("/booking/get-order", method="POST", api_key="k", payload={})
+
+    reads = [call.kwargs["timeout"].read for call in client.request.await_args_list]
+    assert reads == [60.0, 180.0]

@@ -6,7 +6,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import httpx
 
@@ -31,9 +31,58 @@ CONTRACT_INPUT_DETAIL_ID = 30
 STATIC_MARKUP_OUTPUT_DETAIL_ID = 4
 DYNAMIC_MARKUP_OUTPUT_DETAIL_ID = 8
 
+# The markup a scenario gets when it does not ask for one. Every scenario carried exactly
+# these two until they became per-scenario inputs (ScenarioRequest.static_markup /
+# dynamic_markup), so an unset scenario still provisions byte-identical bodies.
+DEFAULT_STATIC_MARKUP = "10%"
+DEFAULT_DYNAMIC_MARKUP = "15%-25%"
+
 
 class BusinessRulesError(RuntimeError):
     pass
+
+
+class MarkupRule(NamedTuple):
+    """One markup condition to create. ``step`` names it in the setup log/errors and is
+    used by the apiKey path only; the contract path reports per-contract instead."""
+
+    step: str
+    rule_id: int
+    parent_condition_id: int
+    output_detail_id: int
+    output_value: str
+
+
+def markup_rules(
+    static_markup: str | None = None,
+    dynamic_markup: str | None = None,
+) -> tuple[MarkupRule, ...]:
+    """The two markup conditions, in creation order.
+
+    Single source for both provisioning paths. They must agree on rule, parent, output
+    detail AND value — the contract path exists to mirror the apiKey path with a different
+    input — and building the pair here is what keeps them from drifting the way four
+    separate literals did.
+
+    Order matters: the dynamic condition is created second and its id is the parent the
+    per-template child conditions hang off.
+    """
+    return (
+        MarkupRule(
+            "condition_static",
+            STATIC_MARKUP_RULE_ID,
+            STATIC_MARKUP_PARENT_CONDITION_ID,
+            STATIC_MARKUP_OUTPUT_DETAIL_ID,
+            static_markup or DEFAULT_STATIC_MARKUP,
+        ),
+        MarkupRule(
+            "condition_dynamic",
+            DYNAMIC_MARKUP_RULE_ID,
+            DYNAMIC_MARKUP_PARENT_CONDITION_ID,
+            DYNAMIC_MARKUP_OUTPUT_DETAIL_ID,
+            dynamic_markup or DEFAULT_DYNAMIC_MARKUP,
+        ),
+    )
 
 
 class BusinessRulesClient:
@@ -189,7 +238,13 @@ class CrawlaBusinessRulesProvisioner:
     def __init__(self, client: BusinessRulesClient | None = None) -> None:
         self.client = client or BusinessRulesClient()
 
-    async def provision(self, api_key: str, template_id: str | None = None) -> dict[str, Any]:
+    async def provision(
+        self,
+        api_key: str,
+        template_id: str | None = None,
+        static_markup: str | None = None,
+        dynamic_markup: str | None = None,
+    ) -> dict[str, Any]:
         setup: dict[str, Any] = {
             "enabled": True,
             "status": "SUCCESS",
@@ -200,26 +255,17 @@ class CrawlaBusinessRulesProvisioner:
         async with self.client:
             await self._run_step(setup, "assign_static", self._assign_rule, STATIC_MARKUP_RULE_ID, api_key)
             await self._run_step(setup, "assign_dynamic", self._assign_rule, DYNAMIC_MARKUP_RULE_ID, api_key)
-            await self._run_step(
-                setup,
-                "condition_static",
-                self._create_condition,
-                STATIC_MARKUP_RULE_ID,
-                STATIC_MARKUP_PARENT_CONDITION_ID,
-                STATIC_MARKUP_OUTPUT_DETAIL_ID,
-                api_key,
-                "10%",
-            )
-            await self._run_step(
-                setup,
-                "condition_dynamic",
-                self._create_condition,
-                DYNAMIC_MARKUP_RULE_ID,
-                DYNAMIC_MARKUP_PARENT_CONDITION_ID,
-                DYNAMIC_MARKUP_OUTPUT_DETAIL_ID,
-                api_key,
-                "15%-25%",
-            )
+            for rule in markup_rules(static_markup, dynamic_markup):
+                await self._run_step(
+                    setup,
+                    rule.step,
+                    self._create_condition,
+                    rule.rule_id,
+                    rule.parent_condition_id,
+                    rule.output_detail_id,
+                    api_key,
+                    rule.output_value,
+                )
             if template_id:
                 dynamic_parent_id = _rule_data(setup, DYNAMIC_MARKUP_RULE_ID).get("condition_id")
                 if dynamic_parent_id:
@@ -263,6 +309,8 @@ class CrawlaBusinessRulesProvisioner:
         self,
         contracts: list[dict[str, Any]],
         api_key: str | None = None,
+        static_markup: str | None = None,
+        dynamic_markup: str | None = None,
     ) -> dict[str, Any]:
         """Assign CONTRACTS (not an apiKey) to the markup rules — the contract_br depth.
 
@@ -344,29 +392,24 @@ class CrawlaBusinessRulesProvisioner:
                     setup, "assign_dynamic", self._assign_rule, DYNAMIC_MARKUP_RULE_ID, api_key
                 )
             if payloads:
-                # Per-env override: raw bodies straight from the field-map.
+                # Per-env override: raw bodies straight from the field-map, including their
+                # own outputValue. A scenario's markup deliberately does NOT apply here —
+                # the file exists for sites whose whole condition shape differs, so it owns
+                # its values. Both envs are {} today, so this branch is dormant.
                 for input_value in input_values:
                     for payload in payloads:
                         await self._create_condition_tree(setup, payload, input_value)
             else:
                 # Default: mirror the apiKey path, swapping only the input.
                 for input_value in input_values:
-                    for rule_id, parent_id, output_detail_id, output_value in (
-                        (
-                            STATIC_MARKUP_RULE_ID,
-                            STATIC_MARKUP_PARENT_CONDITION_ID,
-                            STATIC_MARKUP_OUTPUT_DETAIL_ID,
-                            "10%",
-                        ),
-                        (
-                            DYNAMIC_MARKUP_RULE_ID,
-                            DYNAMIC_MARKUP_PARENT_CONDITION_ID,
-                            DYNAMIC_MARKUP_OUTPUT_DETAIL_ID,
-                            "15%-25%",
-                        ),
-                    ):
+                    for rule in markup_rules(static_markup, dynamic_markup):
                         await self._create_contract_condition(
-                            setup, rule_id, parent_id, output_detail_id, input_value, output_value
+                            setup,
+                            rule.rule_id,
+                            rule.parent_condition_id,
+                            rule.output_detail_id,
+                            input_value,
+                            rule.output_value,
                         )
             await self._run_step(setup, "refresh", self.client.refresh)
         if setup["errors"]:
@@ -412,7 +455,14 @@ class CrawlaBusinessRulesProvisioner:
         if condition_id:
             setup["contract_condition_ids"].append(condition_id)
         setup["rules"].setdefault(str(rule_id), {}).update(
-            {"parent_condition_id": parent_condition_id, "condition_id": condition_id}
+            {
+                "parent_condition_id": parent_condition_id,
+                "condition_id": condition_id,
+                # Recorded like the apiKey path does: br_setup is what the UI shows the QA,
+                # and without this a contract_br scenario could not say what markup it
+                # provisioned.
+                "output_value": output_value,
+            }
         )
 
     async def _create_condition_tree(

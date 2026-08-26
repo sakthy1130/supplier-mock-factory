@@ -189,3 +189,76 @@ async def test_provision_no_op_when_template_id_not_in_config(monkeypatch):
     assert setup["status"] == "SUCCESS"
     # Only the two normal static/dynamic conditions — nothing extra for an unmapped template.
     assert len(condition_bodies) == 2
+
+
+# --- markup output values ------------------------------------------------
+
+
+def _markup_transport() -> tuple[httpx.MockTransport, list[dict]]:
+    """A BR stub that records every rule-value-mapping body it is sent."""
+    bodies: list[dict] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/rulevaluemappings"):
+            bodies.append(json.loads(request.content.decode()))
+            return httpx.Response(201, json={"id": 900 + len(bodies)})
+        if "/create-assign/rule/" in request.url.path:
+            return httpx.Response(200, json={"id": 300})
+        if request.url.path.endswith("/refresh"):
+            return httpx.Response(204)
+        return httpx.Response(404)
+
+    return httpx.MockTransport(handler), bodies
+
+
+async def _provision_markups(monkeypatch, **kwargs) -> list[dict]:
+    transport, bodies = _markup_transport()
+    async with httpx.AsyncClient(transport=transport, base_url="http://br.test") as http_client:
+        client = BusinessRulesClient(http_client)
+        monkeypatch.setattr(client, "base_url", "http://br.test")
+        await CrawlaBusinessRulesProvisioner(client).provision("smf-markup-test", **kwargs)
+    return bodies
+
+
+@pytest.mark.asyncio
+async def test_default_markup_values_go_on_the_wire(monkeypatch):
+    """Pins the values every scenario gets when it asks for nothing. Nothing asserted the
+    actual outputValue before, which is how four copies of these literals went unnoticed."""
+    bodies = await _provision_markups(monkeypatch)
+
+    by_rule = {body["ruleId"]: body["outputValue"] for body in bodies}
+    assert by_rule == {STATIC_MARKUP_RULE_ID: "10%", DYNAMIC_MARKUP_RULE_ID: "15%-25%"}
+
+
+@pytest.mark.asyncio
+async def test_scenario_markup_values_reach_the_condition_bodies(monkeypatch):
+    bodies = await _provision_markups(
+        monkeypatch, static_markup="20%", dynamic_markup="30%-40%"
+    )
+
+    by_rule = {body["ruleId"]: body["outputValue"] for body in bodies}
+    assert by_rule == {STATIC_MARKUP_RULE_ID: "20%", DYNAMIC_MARKUP_RULE_ID: "30%-40%"}
+
+
+@pytest.mark.asyncio
+async def test_one_markup_given_leaves_the_other_on_its_default(monkeypatch):
+    """The two are independent: setting static must not silently blank dynamic."""
+    bodies = await _provision_markups(monkeypatch, static_markup="20%")
+
+    by_rule = {body["ruleId"]: body["outputValue"] for body in bodies}
+    assert by_rule == {STATIC_MARKUP_RULE_ID: "20%", DYNAMIC_MARKUP_RULE_ID: "15%-25%"}
+
+
+@pytest.mark.asyncio
+async def test_markup_values_do_not_disturb_the_rest_of_the_condition(monkeypatch):
+    """Only outputValue changes — the ids, overwrite and executionOrder BR matches on stay
+    exactly as they were, or a custom markup would create a different KIND of condition."""
+    default_bodies = await _provision_markups(monkeypatch)
+    custom_bodies = await _provision_markups(
+        monkeypatch, static_markup="20%", dynamic_markup="30%-40%"
+    )
+
+    def without_value(body: dict) -> dict:
+        return {key: value for key, value in body.items() if key != "outputValue"}
+
+    assert [without_value(b) for b in default_bodies] == [without_value(b) for b in custom_bodies]

@@ -5,6 +5,9 @@ export interface ApiTemplatePackageRow {
   room_basis: string
   price: number
   refundable: boolean
+  /** EXP explicit pricing, both or neither: price = original_price_with_vat + markup. */
+  original_price_with_vat?: number
+  markup?: number
 }
 
 export interface ApiSupplierTemplatePackages {

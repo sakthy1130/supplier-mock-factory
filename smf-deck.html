@@ -1,0 +1,917 @@
+<title>Supplier Mock Factory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+  /* ────────────────────────────────────────────────────────────────────
+     Almosafer brand tokens, taken from the live design system:
+       primary   bronze  #80604A   primaryLight #A28367
+       secondary teal    #0C9AB0   secondaryDark #008296  secondaryLight #23A5B9
+       petrol #003143 · sand #E1D4CA · tints #E9F6F8 #EDF1F3 #F3F4F6
+       greys  #66797F #D8DCDE
+       Typeface: Open Sans (brand). Mono is ours, for technical data.
+     Light is the base; both dark states re-declare the same token names.
+     ──────────────────────────────────────────────────────────────────── */
+  :root {
+    --ground:      #F3F4F6;
+    --surface:     #FFFFFF;
+    --surface-2:   #EDF1F3;
+    --ink:         #003143;
+    --ink-2:       #66797F;
+    --line:        #D8DCDE;
+    --line-strong: #B3BFC4;
+    --accent:      #006B7D;
+    --accent-lift: #008296;
+    --accent-soft: #E9F6F8;
+    --warn:        #80604A;
+    --warn-lift:   #A28367;
+    --warn-soft:   #F4EDE6;
+
+    --sans: 'Open Sans', 'Segoe UI', Helvetica, Arial, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+    --rail: 50px;
+    --pad-x: clamp(28px, 6vw, 96px);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #00212D;
+      --surface:     #003143;
+      --surface-2:   #013A4E;
+      --ink:         #EAF3F5;
+      --ink-2:       #9DB4BC;
+      --line:        #0B4759;
+      --line-strong: #1C5E72;
+      --accent:      #3EB6C9;
+      --accent-lift: #23A5B9;
+      --accent-soft: #013645;
+      --warn:        #C2A184;
+      --warn-lift:   #A28367;
+      --warn-soft:   #2A2119;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #00212D;
+    --surface:     #003143;
+    --surface-2:   #013A4E;
+    --ink:         #EAF3F5;
+    --ink-2:       #9DB4BC;
+    --line:        #0B4759;
+    --line-strong: #1C5E72;
+    --accent:      #3EB6C9;
+    --accent-lift: #23A5B9;
+    --accent-soft: #013645;
+    --warn:        #C2A184;
+    --warn-lift:   #A28367;
+    --warn-soft:   #2A2119;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .logo { display: block; height: auto; color: var(--ink); }
+
+  /* ── Fixed chrome ─────────────────────────────────────────────────── */
+  .rail {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: var(--rail);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 var(--pad-x);
+    background: color-mix(in srgb, var(--ground) 90%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .rail-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .rail-left .logo { width: 104px; flex: none; }
+  .rail-div { width: 1px; height: 18px; background: var(--line-strong); flex: none; }
+  .rail-name { color: var(--ink); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rail-right { display: flex; align-items: center; gap: 14px; flex: none; }
+  .counter { font-variant-numeric: tabular-nums; color: var(--ink); }
+  @media (max-width: 620px) { .rail-div, .rail-name { display: none; } }
+
+  .navbtn {
+    font: inherit;
+    letter-spacing: 0;
+    background: none;
+    border: 1px solid var(--line-strong);
+    color: var(--ink-2);
+    border-radius: 4px;
+    width: 26px;
+    height: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+  }
+  .navbtn:hover { color: var(--ink); border-color: var(--ink-2); }
+  .navbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .progress {
+    position: fixed;
+    inset: auto 0 0 0;
+    height: 3px;
+    background: var(--line);
+    z-index: 20;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0;
+    background: var(--accent-lift);
+    transition: width 220ms ease;
+  }
+
+  /* ── Slides ───────────────────────────────────────────────────────── */
+  .slide {
+    display: none;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: calc(var(--rail) + clamp(24px, 4vh, 52px)) var(--pad-x) clamp(40px, 7vh, 76px);
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(18px, 2.6vh, 30px);
+  }
+  .slide.is-active { display: flex; }
+
+  /* The slide's children arrive in sequence rather than the whole block landing
+     at once — eyebrow, headline, body, then the data the audience needs to read.
+     `both` holds the from-state before the delay elapses; opacity:0 lives only in
+     the keyframe, so disabling the animation leaves everything visible. */
+  .slide.is-active > * { animation: rise 380ms cubic-bezier(.22, .61, .36, 1) both; }
+  .slide.is-active > *:nth-child(1) { animation-delay: 0ms; }
+  .slide.is-active > *:nth-child(2) { animation-delay: 55ms; }
+  .slide.is-active > *:nth-child(3) { animation-delay: 110ms; }
+  .slide.is-active > *:nth-child(4) { animation-delay: 165ms; }
+  .slide.is-active > *:nth-child(5) { animation-delay: 220ms; }
+  .slide.is-active > *:nth-child(6) { animation-delay: 275ms; }
+  .slide.is-active > *:nth-child(7) { animation-delay: 330ms; }
+  .slide.is-active > *:nth-child(8) { animation-delay: 385ms; }
+  .slide.is-active > *:nth-child(n+9) { animation-delay: 440ms; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(9px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide.is-active > * { animation: none; }
+    .progress-fill { transition: none; }
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: clamp(11px, 1.1vw, 13px);
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+  }
+
+  h1 {
+    font-size: clamp(44px, 7vw, 98px);
+    font-weight: 800;
+    letter-spacing: -0.028em;
+    line-height: 0.98;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h2 {
+    font-size: clamp(29px, 3.9vw, 52px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    margin: 0;
+    max-width: 20ch;
+    text-wrap: balance;
+  }
+  .lede {
+    font-size: clamp(18px, 1.9vw, 25px);
+    line-height: 1.45;
+    color: var(--ink-2);
+    max-width: 46ch;
+    margin: 0;
+  }
+
+  /* ── Slide 1 ──────────────────────────────────────────────────────── */
+  .title-logo { width: clamp(190px, 24vw, 280px); margin-bottom: clamp(4px, 1.4vh, 16px); }
+  .title-rule {
+    width: 84px;
+    height: 4px;
+    background: var(--accent-lift);
+    border-radius: 2px;
+  }
+  .manifest {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px 12px;
+    margin-top: clamp(8px, 1.8vh, 20px);
+  }
+  .code-chip {
+    font-family: var(--mono);
+    font-size: clamp(13px, 1.35vw, 17px);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 7px 13px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .manifest-note {
+    font-family: var(--mono);
+    font-size: clamp(11.5px, 1.1vw, 14px);
+    color: var(--ink-2);
+    letter-spacing: 0.04em;
+    margin-left: 4px;
+  }
+  .byline {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    margin: clamp(12px, 2.6vh, 30px) 0 0;
+  }
+
+  /* ── Chain strip (slide 2) ────────────────────────────────────────── */
+  .chain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 6px;
+  }
+  .chain-step {
+    font-family: var(--mono);
+    font-size: clamp(12px, 1.15vw, 15px);
+    padding: 7px 11px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--surface);
+    white-space: nowrap;
+  }
+  .chain-arrow { color: var(--ink-2); font-size: 15px; }
+  .chain-plus {
+    font-family: var(--mono);
+    font-size: clamp(12px, 1.15vw, 15px);
+    padding: 7px 11px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 4px;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+
+  .cost-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: clamp(20px, 4vw, 56px);
+  }
+  .bignum {
+    font-size: clamp(38px, 5.4vw, 72px);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    color: var(--warn);
+    font-variant-numeric: tabular-nums;
+  }
+  .bignum-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    margin-top: 8px;
+  }
+  .quote {
+    border-left: 3px solid var(--warn);
+    padding-left: 18px;
+    max-width: 40ch;
+    font-size: clamp(15px, 1.5vw, 19px);
+    line-height: 1.45;
+    color: var(--ink);
+  }
+
+  /* ── Diagram (slide 3) ────────────────────────────────────────────── */
+  figure { margin: 0; }
+  .diagram {
+    width: 100%;
+    max-width: 880px;
+    height: auto;
+    display: block;
+  }
+  figcaption {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    margin-top: 14px;
+    max-width: 78ch;
+  }
+
+  .dg-box  { fill: var(--surface); stroke: var(--line-strong); stroke-width: 1.25; }
+  .dg-box--accent { stroke: var(--accent-lift); stroke-width: 2; }
+  .dg-box--ghost  { fill: var(--surface-2); stroke: var(--line-strong); stroke-width: 1.25; stroke-dasharray: 6 5; }
+  .dg-title { fill: var(--ink); font-family: var(--mono); font-size: 15.5px; font-weight: 500; }
+  .dg-sub   { fill: var(--ink-2); font-family: var(--sans); font-size: 13.5px; }
+  .dg-sub--ghost { fill: var(--ink-2); font-family: var(--sans); font-size: 13.5px; }
+  .dg-band  { fill: var(--ink-2); font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; }
+  .dg-lbl   { fill: var(--ink-2); font-family: var(--mono); font-size: 12.5px; }
+  .dg-lbl--accent { fill: var(--accent); font-family: var(--mono); font-size: 12.5px; font-weight: 500; }
+  .dg-line  { stroke: var(--ink-2); stroke-width: 1.4; fill: none; }
+  .dg-line--accent { stroke: var(--accent-lift); stroke-width: 1.9; fill: none; }
+  .dg-line--ghost  { stroke: var(--line-strong); stroke-width: 1.4; fill: none; stroke-dasharray: 6 5; }
+  .dg-rule { stroke: var(--line); stroke-width: 1; }
+  .dg-head { fill: var(--ink-2); }
+  .dg-head--accent { fill: var(--accent-lift); }
+  .dg-head--ghost { fill: var(--line-strong); }
+
+  /* ── Compare table (slide 4) ──────────────────────────────────────── */
+  .compare {
+    display: grid;
+    grid-template-columns: minmax(96px, 0.7fr) 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 1080px;
+  }
+  .compare > * {
+    background: var(--surface);
+    padding: clamp(11px, 1.5vh, 17px) clamp(12px, 1.6vw, 22px);
+  }
+  .compare .ch {
+    font-family: var(--mono);
+    font-size: clamp(11px, 1.1vw, 13px);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: var(--surface-2);
+    color: var(--ink-2);
+  }
+  .compare .ch-manual { color: var(--warn); }
+  .compare .ch-smf    { color: var(--accent); }
+  .compare .rk {
+    font-family: var(--mono);
+    font-size: clamp(11px, 1.1vw, 13px);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+  }
+  .compare .cell {
+    font-size: clamp(14px, 1.45vw, 18px);
+    line-height: 1.35;
+  }
+  .compare .cell-manual { color: var(--ink-2); }
+  .compare .cell-smf { color: var(--ink); }
+  .compare .cell b {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .compare .cell-smf b { color: var(--accent); }
+  .compare .cell-manual b { color: var(--warn); }
+
+  /* The SMF column is tinted so it reads as one thing from the back of the room.
+     Placed after `.compare .ch` — same specificity, so source order decides. */
+  .compare .ch-smf,
+  .compare .cell-smf { background: var(--accent-soft); }
+
+  /* The time row is the payoff, so it gets display-size numerals; every other
+     row stays plain text. One hero, not six. */
+  .compare .cell-hero { display: flex; flex-direction: column; gap: 6px; }
+  .hero-n {
+    font-size: clamp(27px, 3.5vw, 45px);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .cell-manual .hero-n { color: var(--warn); }
+  .cell-smf .hero-n { color: var(--accent); }
+  .hero-c {
+    font-family: var(--mono);
+    font-size: clamp(10.5px, 1.05vw, 12.5px);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    line-height: 1.35;
+  }
+
+  /* ── Coverage (slide 5) ───────────────────────────────────────────── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    max-width: 1080px;
+  }
+  .stat {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: clamp(12px, 1.8vh, 18px) clamp(14px, 1.6vw, 20px);
+  }
+  .stat-n {
+    font-size: clamp(30px, 3.5vw, 46px);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-l {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    margin-top: 9px;
+  }
+  .stat-codes {
+    font-family: var(--mono);
+    font-size: clamp(11px, 1.05vw, 13px);
+    color: var(--ink-2);
+    margin-top: 7px;
+    letter-spacing: 0.04em;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: clamp(20px, 3vw, 44px);
+    align-items: start;
+    max-width: 1080px;
+  }
+  @media (max-width: 820px) {
+    .two-col { grid-template-columns: 1fr; }
+    .compare { grid-template-columns: 1fr; }
+    .compare .rk { padding-bottom: 2px; }
+  }
+
+  .feat { list-style: none; margin: 0; padding: 0; display: grid; gap: 11px; }
+  .feat li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    align-items: baseline;
+    font-size: clamp(14.5px, 1.45vw, 18px);
+    line-height: 1.4;
+  }
+  .feat li::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 1px;
+    background: var(--accent-lift);
+    transform: translateY(-2px);
+  }
+  .feat span { color: var(--ink-2); }
+  .feat b { color: var(--ink); font-weight: 700; }
+  /* Doubled class so the accent colour outranks `.feat span`, which is 0,1,1. */
+  .kbd.kbd {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 3px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+
+  .callout {
+    border: 1px solid var(--accent-lift);
+    background: var(--accent-soft);
+    border-radius: 8px;
+    padding: clamp(15px, 2vh, 22px) clamp(16px, 1.8vw, 24px);
+  }
+  .callout code {
+    font-family: var(--mono);
+    font-size: clamp(13px, 1.3vw, 16px);
+    font-weight: 500;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 9px;
+    overflow-wrap: anywhere;
+  }
+  .callout p { margin: 0; font-size: clamp(14px, 1.4vw, 17px); line-height: 1.45; }
+
+  /* ── Next (slide 6) ───────────────────────────────────────────────── */
+  .next {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px;
+    max-width: 1080px;
+  }
+  .next-card {
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent-lift);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: clamp(15px, 2vh, 22px) clamp(15px, 1.7vw, 22px);
+  }
+  .next-card h3 {
+    margin: 0 0 9px;
+    font-size: clamp(16px, 1.6vw, 20px);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .next-card p { margin: 0; font-size: clamp(13.5px, 1.35vw, 16px); line-height: 1.45; color: var(--ink-2); }
+  .next-card p b { color: var(--ink); font-weight: 700; }
+  /* Steps 1 and 2 are a real dependency — hosting has to land before the
+     pipeline can call it. The third is deliberately not numbered. */
+  .step {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .whereto .arrow { color: var(--accent); }
+
+  .whereto {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 28px;
+    font-family: var(--mono);
+    font-size: clamp(12px, 1.2vw, 14px);
+    color: var(--ink-2);
+    padding-top: clamp(8px, 1.6vh, 18px);
+    border-top: 1px solid var(--line);
+    max-width: 1080px;
+  }
+  .whereto b { color: var(--ink); font-weight: 500; }
+
+  /* ── Speaker notes ────────────────────────────────────────────────── */
+  .note {
+    display: none;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    border-left: 2px solid var(--line-strong);
+    padding-left: 14px;
+    max-width: 84ch;
+  }
+  body.notes-on .note { display: block; }
+
+  .hint {
+    position: fixed;
+    right: var(--pad-x);
+    bottom: 14px;
+    z-index: 20;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  @media (max-width: 620px) { .hint { display: none; } }
+</style>
+
+<!-- Almosafer wordmark, from the corporate asset library. The wordmark paths
+     take currentColor so it sits correctly on either theme; the mark keeps its
+     brand teal and red. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="alm-logo" viewBox="0 0 524 77"><defs><path d="M55.123 24.804v16.508a.641.641 0 0 1-.641.642H18.089a.639.639 0 0 1-.641-.642V15.398a.64.64 0 0 1 .64-.64h36.394a.64.64 0 0 1 .64.64M71.205.302H1.354A1.184 1.184 0 0 0 .167 1.489v53.734c0 .656.53 1.185 1.185 1.185h69.85a1.184 1.184 0 0 0 1.184-1.185V1.49c0-.655-.53-1.186-1.184-1.187" id="alm-a"/><path d="M55.123 24.804v16.508a.641.641 0 0 1-.641.642H18.089a.639.639 0 0 1-.641-.642V15.398a.64.64 0 0 1 .64-.64h36.394a.64.64 0 0 1 .64.64M71.205.302H1.354A1.184 1.184 0 0 0 .167 1.489v53.734c0 .656.53 1.185 1.185 1.185h69.85a1.184 1.184 0 0 0 1.184-1.185V1.49c0-.655-.53-1.186-1.184-1.187" id="alm-c"/><path d="M55.123 24.804v16.508a.641.641 0 0 1-.641.642H18.089a.639.639 0 0 1-.641-.642V15.398a.64.64 0 0 1 .64-.64h36.394a.64.64 0 0 1 .64.64M71.205.302H1.354A1.184 1.184 0 0 0 .167 1.489v53.734c0 .656.53 1.185 1.185 1.185h69.85a1.184 1.184 0 0 0 1.184-1.185V1.49c0-.655-.53-1.186-1.184-1.187" id="alm-e"/></defs><g fill="none" fill-rule="evenodd"><g transform="translate(182.88 19.477)"><mask id="alm-b" fill="#fff"><use xlink:href="#alm-a"/></mask><path d="M17.448 41.312V15.398a.64.64 0 0 1 .64-.64h21.056L19.268.303H1.354A1.187 1.187 0 0 0 .17 1.489v54.92s11.399-6.567 25.109-14.455h-7.19a.639.639 0 0 1-.641-.642" fill="currentColor" fill-rule="nonzero" mask="url(#alm-b)"/></g><g transform="translate(182.88 19.477)"><mask id="alm-d" fill="#fff"><use xlink:href="#alm-c"/></mask><path d="M71.204.302H19.268l19.876 14.457h15.338a.64.64 0 0 1 .64.639v9.408c9.66-5.54 17.128-9.6 17.267-9.626V1.489c0-.655-.53-1.186-1.185-1.187" fill="#DD424C" fill-rule="nonzero" mask="url(#alm-d)"/></g><g transform="translate(182.88 19.477)"><mask id="alm-f" fill="#fff"><use xlink:href="#alm-e"/></mask><path d="M72.389 15.218v-.04c-.14.026-7.607 4.086-17.266 9.623V41.31a.641.641 0 0 1-.641.641H25.279C11.569 49.841.167 56.408.167 56.408h71.035a1.184 1.184 0 0 0 1.184-1.197V15.218" fill="#2B9CA7" fill-rule="nonzero" mask="url(#alm-f)"/></g><path d="M213.364 14.033c0-.354.287-.644.643-.644h10.334c.355 0 .642.288.642.644v4.027h5.264V9.415a1.185 1.185 0 0 0-1.187-1.187h-19.8a1.184 1.184 0 0 0-1.184 1.187v8.642h5.288v-4.024" fill="#DD424C" fill-rule="nonzero"/><path d="M353.262 51.261v5.516c0 .464-.24.922-.615 1.19-4.072 2.894-8.082 4.357-11.927 4.357-3.738 0-5.472-1.496-5.472-4.716v-2.069c0-2.896 1.356-4.215 4.385-4.278h13.63zm-4.182-32.23c-9.002 0-18.455.887-28.102 2.627l-.792.144 1.734 12.455.778-.048c9.142-.579 16.74-.869 22.573-.869 3.983 0 5.675.675 6.395 1.238.984.773 1.532 1.293 1.596 3.754v1.558h-18.309c-5.328 0-9.57 1.276-12.604 3.787-3.087 2.55-4.659 6.136-4.659 10.663v5.449c0 5.099 1.749 9.144 5.2 12.022 3.397 2.842 7.823 4.28 13.152 4.28 7.508 0 13.992-2.86 19.304-8.505l1.216 6.08a1.39 1.39 0 0 0 1.363 1.118h11.725a1.39 1.39 0 0 0 1.39-1.393v-34.95c0-7.475-1.833-11.698-5.422-14.794-3.546-3.062-9.109-4.615-16.538-4.615zm105.924 23.885h-14.349c.27-4.225 1.053-7.064 2.34-8.443 1.352-1.453 4-2.188 7.872-2.188 3.283 0 5.53.438 6.678 1.304 1.08.81 1.627 2.36 1.627 4.609 0 1.625-.294 2.85-.87 3.646-.525.71-1.63 1.072-3.298 1.072zm17.5 7.373c2.728-2.654 4.116-6.65 4.116-11.883-.08-6.555-2.237-11.515-6.42-14.756-4.118-3.187-10.803-4.803-19.873-4.803-10.052 0-17.333 2.21-21.645 6.565-4.314 4.352-6.5 11.989-6.5 22.697 0 10.205 2.244 16.626 6.66 21.121 4.42 4.5 11.868 6.785 22.138 6.785 10.085 0 18.074-1.389 23.75-4.115l.557-.27-1.737-11.42-.792.081c-7.563.793-14.268 1.197-19.931 1.197-4.082 0-7.01-.622-8.7-1.86-1.503-1.087-2.529-2.197-3.063-5.343h18.4c5.932 0 10.32-1.345 13.04-3.998v.002zm-68.526-35.25c.885-.855 2.579-1.29 5.022-1.29h10.844l1.74-12.188-.79-.146c-4.03-.73-9.935-1.101-17.558-1.101-12.25 0-18.462 5.853-18.462 17.392v7.378l-9.356-.005v12.415h9.356V73.56c0 .768.622 1.393 1.392 1.393h15.1c.771 0 1.393-.622 1.393-1.393V37.494h14.794V25.079H402.66v-5.197c0-2.366.445-3.998 1.316-4.843h.003zm115.658 3.023c-6.987 0-14.108 2.909-21.19 8.642l-1.077-6.528a1.393 1.393 0 0 0-1.368-1.144h-11.492c-.77 0-1.393.624-1.393 1.393v53.136c0 .768.622 1.393 1.393 1.393h14.995c.765 0 1.39-.622 1.39-1.393v-34.41c0-.609.426-1.164 1.005-1.348 6.491-2.088 11.391-3.141 14.583-3.141h5.104l1.813-16.6h-3.763zM39.527 45.461H26.411a1.206 1.206 0 0 1-1.14-1.515C29.455 27.99 32 17.94 32.905 13.8c.228 1.202.606 2.834 1.13 4.903.507 1.999 2.718 10.411 6.632 25.234a1.21 1.21 0 0 1-1.139 1.525v-.002zm6.147-43.565a1.187 1.187 0 0 0-1.146-.876h-23.39c-.54 0-1.006.359-1.147.878L.569 74.148a1.188 1.188 0 0 0 1.147 1.496H16.83c.533-.001 1-.358 1.142-.872l4.426-15.948c.142-.514.61-.87 1.144-.87h18.675c.53 0 .997.355 1.141.87l4.426 15.948c.142.515.608.872 1.142.872H64.04c.78 0 1.35-.742 1.147-1.499L45.674 1.896zm41.72-.879H71.512c-.656 0-1.187.532-1.187 1.188v72.361c0 .656.534 1.188 1.187 1.188h15.88c.656 0 1.187-.532 1.187-1.188V2.202c0-.655-.531-1.187-1.187-1.187v.002zm87.545 18.764H106.25c-5.935.003-10.745 4.818-10.743 10.756v43.92c0 .655.526 1.187 1.184 1.187h15.88a1.187 1.187 0 0 0 1.185-1.188V35.64c0-.656.533-1.188 1.187-1.188h10.559c.655 0 1.186.532 1.186 1.188v38.817c0 .656.532 1.188 1.187 1.188h15.88a1.187 1.187 0 0 0 1.185-1.188v-38.95c0-.655.531-1.186 1.187-1.186h10.561c.653 0 1.184.531 1.184 1.185v38.949c0 .658.532 1.19 1.187 1.19h15.88a1.187 1.187 0 0 0 1.185-1.188V20.97c0-.655-.53-1.187-1.185-1.188zM296.885 40.3h-14.38c-.969 0-1.785-.328-2.426-.968a3.31 3.31 0 0 1-.964-2.425c0-.979.318-1.484.964-2.135.646-.646 1.462-.972 2.429-.972h23.685c.646 0 1.168-.522 1.168-1.168V20.906c0-.645-.523-1.168-1.168-1.168h-29.851c-4.683 0-8.494 1.436-11.337 4.276-2.833 2.832-4.27 6.65-4.27 11.352v3.595c0 4.702 1.435 8.518 4.27 11.35 2.833 2.837 6.647 4.273 11.337 4.273h17.773v3.392c0 .97-.326 1.786-.967 2.425-.65.652-1.447.97-2.426.97h-28.818a1.17 1.17 0 0 0-1.17 1.17v11.946c0 .647.527 1.173 1.173 1.173h34.98c4.69 0 8.505-1.44 11.337-4.275 2.833-2.835 4.269-6.655 4.269-11.35v-4.108c0-4.7-1.436-8.52-4.269-11.352-2.832-2.84-6.651-4.275-11.339-4.275z" fill="currentColor" fill-rule="nonzero"/></g></symbol>
+</svg>
+
+<header class="rail">
+  <span class="rail-left">
+    <svg class="logo" role="img" aria-label="Almosafer" viewBox="0 0 524 77"><use href="#alm-logo"></use></svg>
+    <span class="rail-div"></span>
+    <span class="rail-name">Supplier Mock Factory</span>
+  </span>
+  <span class="rail-right">
+    <button class="navbtn" id="prev" type="button" aria-label="Previous slide">‹</button>
+    <span class="counter"><span id="cur">1</span>/6</span>
+    <button class="navbtn" id="next" type="button" aria-label="Next slide">›</button>
+  </span>
+</header>
+
+<main id="deck">
+
+  <!-- ─────────────────────────── 1 ─────────────────────────── -->
+  <section class="slide" aria-label="Slide 1: Title">
+    <svg class="logo title-logo" role="img" aria-label="Almosafer" viewBox="0 0 524 77"><use href="#alm-logo"></use></svg>
+    <p class="eyebrow">Enigma Core · QA tooling</p>
+    <h1>Supplier<br>Mock Factory</h1>
+    <div class="title-rule"></div>
+    <p class="lede">Supplier mocks, contracts and apiKeys for hotel connectivity QA — provisioned on demand.</p>
+    <div class="manifest">
+      <span class="code-chip">HBS</span>
+      <span class="code-chip">EXP</span>
+      <span class="code-chip">EXT</span>
+      <span class="code-chip">HIL</span>
+      <span class="manifest-note">4 suppliers · 7 log types each · dev + stg</span>
+    </div>
+    <p class="byline">Sakthy · Hotels QA</p>
+    <p class="note">Ten minutes, six slides. Goal is visibility — what this is and why it matters. No ask at the end.</p>
+  </section>
+
+  <!-- ─────────────────────────── 2 ─────────────────────────── -->
+  <section class="slide" aria-label="Slide 2: The problem">
+    <p class="eyebrow">02 · The problem</p>
+    <h2>Every supplier scenario had to be built by hand.</h2>
+    <p class="lede">To test one price, one cancellation rule, one refundability flag, you first had to fabricate the supplier's entire call chain — and make every link agree with the others.</p>
+
+    <div class="chain">
+      <span class="chain-step">Search</span><span class="chain-arrow">→</span>
+      <span class="chain-step">Packages</span><span class="chain-arrow">→</span>
+      <span class="chain-step">CancellationPolicy</span><span class="chain-arrow">→</span>
+      <span class="chain-step">PreBooking</span><span class="chain-arrow">→</span>
+      <span class="chain-step">Booking</span><span class="chain-arrow">→</span>
+      <span class="chain-step">GetOrder</span><span class="chain-arrow">→</span>
+      <span class="chain-step">CancelOrder</span>
+      <span class="chain-plus">+ contract</span>
+      <span class="chain-plus">+ fresh apiKey</span>
+      <span class="chain-plus">+ markup rules</span>
+    </div>
+
+    <div class="cost-row">
+      <div>
+        <div class="bignum">½–1 day</div>
+        <div class="bignum-label">Per scenario · estimated</div>
+      </div>
+      <p class="quote">Miss one rateKey, one booking id, one price — and the scenario fails three services downstream, silently.</p>
+    </div>
+    <p class="note">Land the cost, not the mechanics. The point: this was skilled, slow work, and it had to be redone for every variation.</p>
+  </section>
+
+  <!-- ─────────────────────────── 3 ─────────────────────────── -->
+  <section class="slide" aria-label="Slide 3: What SMF does">
+    <p class="eyebrow">03 · What it does</p>
+    <h2>One form. A complete, wired scenario.</h2>
+
+    <figure>
+      <svg class="diagram" viewBox="0 0 980 525" role="img"
+           aria-label="SMF turns one scenario spec into MockServer expectations, a contract, an apiKey and the Static and Dynamic Markup business-rule conditions; at test time the contract routes the core app to the mock instead of the real supplier.">
+        <defs>
+          <marker id="ah" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="9" refX="10.5" refY="4.5" orient="auto">
+            <polygon class="dg-head" points="0 0, 11 4.5, 0 9"></polygon>
+          </marker>
+          <marker id="ah-a" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="9" refX="10.5" refY="4.5" orient="auto">
+            <polygon class="dg-head--accent" points="0 0, 11 4.5, 0 9"></polygon>
+          </marker>
+          <marker id="ah-g" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="9" refX="10.5" refY="4.5" orient="auto">
+            <polygon class="dg-head--ghost" points="0 0, 11 4.5, 0 9"></polygon>
+          </marker>
+        </defs>
+
+        <!-- Band 1 -->
+        <text class="dg-band" x="24" y="22">WHAT SMF PROVISIONS</text>
+
+        <rect class="dg-box" x="24" y="109" width="170" height="86" rx="6"></rect>
+        <text class="dg-title" x="109" y="139" text-anchor="middle">Scenario spec</text>
+        <text class="dg-sub" x="109" y="161" text-anchor="middle">dates · hotel · prices</text>
+        <text class="dg-sub" x="109" y="179" text-anchor="middle">refundability · markup</text>
+
+        <text class="dg-lbl" x="225" y="141" text-anchor="middle">one form</text>
+        <line class="dg-line" x1="194" y1="152" x2="250" y2="152" marker-end="url(#ah)"></line>
+
+        <rect class="dg-box dg-box--accent" x="256" y="97" width="180" height="110" rx="6"></rect>
+        <text class="dg-title" x="346" y="147" text-anchor="middle">Supplier Mock</text>
+        <text class="dg-title" x="346" y="169" text-anchor="middle">Factory</text>
+
+        <polyline class="dg-line" points="436,152 458,152 458,56 494,56" marker-end="url(#ah)"></polyline>
+        <polyline class="dg-line" points="436,152 458,152 458,120 494,120" marker-end="url(#ah)"></polyline>
+        <polyline class="dg-line" points="436,152 458,152 458,184 494,184" marker-end="url(#ah)"></polyline>
+        <polyline class="dg-line" points="436,152 458,152 458,248 494,248" marker-end="url(#ah)"></polyline>
+
+        <rect class="dg-box" x="500" y="30" width="456" height="52" rx="6"></rect>
+        <text class="dg-title" x="520" y="53">MockServer expectations</text>
+        <text class="dg-sub" x="520" y="71">7 log types per supplier, namespaced so scenarios never collide</text>
+
+        <rect class="dg-box" x="500" y="94" width="456" height="52" rx="6"></rect>
+        <text class="dg-title" x="520" y="117">Contract</text>
+        <text class="dg-sub" x="520" y="135">supplier endpoints repointed at MockServer</text>
+
+        <rect class="dg-box" x="500" y="158" width="456" height="52" rx="6"></rect>
+        <text class="dg-title" x="520" y="181">apiKey</text>
+        <text class="dg-sub" x="520" y="199">new for every scenario, with the contracts attached</text>
+
+        <rect class="dg-box" x="500" y="222" width="456" height="52" rx="6"></rect>
+        <text class="dg-title" x="520" y="245">Business Rule conditions</text>
+        <text class="dg-sub" x="520" y="263">Static + Dynamic Markup, bound to the apiKey or the contract</text>
+
+        <line class="dg-rule" x1="24" y1="300" x2="956" y2="300"></line>
+
+        <!-- Band 2 -->
+        <text class="dg-band" x="24" y="330">WHEN YOU RUN THE TEST</text>
+
+        <rect class="dg-box" x="24" y="390" width="196" height="70" rx="6"></rect>
+        <text class="dg-title" x="122" y="420" text-anchor="middle">Core app</text>
+        <text class="dg-sub" x="122" y="440" text-anchor="middle">search · book · getOrder</text>
+
+        <text class="dg-lbl" x="260" y="415" text-anchor="middle">apiKey</text>
+        <line class="dg-line" x1="220" y1="425" x2="294" y2="425" marker-end="url(#ah)"></line>
+
+        <rect class="dg-box" x="300" y="390" width="150" height="70" rx="6"></rect>
+        <text class="dg-title" x="375" y="420" text-anchor="middle">Contract</text>
+        <text class="dg-sub" x="375" y="440" text-anchor="middle">routes traffic</text>
+
+        <text class="dg-lbl--accent" x="525" y="361" text-anchor="middle">with SMF</text>
+        <polyline class="dg-line--accent" points="450,425 490,425 490,370 554,370" marker-end="url(#ah-a)"></polyline>
+
+        <text class="dg-lbl" x="525" y="471" text-anchor="middle">normally</text>
+        <polyline class="dg-line--ghost" points="450,425 490,425 490,480 554,480" marker-end="url(#ah-g)"></polyline>
+
+        <rect class="dg-box dg-box--accent" x="560" y="340" width="396" height="60" rx="6"></rect>
+        <text class="dg-title" x="580" y="366">MockServer — your scenario</text>
+        <text class="dg-sub" x="580" y="386">returns exactly the packages you asked for</text>
+
+        <rect class="dg-box dg-box--ghost" x="560" y="450" width="396" height="60" rx="6"></rect>
+        <text class="dg-title" x="580" y="476">Real supplier — HBS · EXP · …</text>
+        <text class="dg-sub--ghost" x="580" y="496">whatever it happens to return today</text>
+      </svg>
+      <figcaption>
+        SMF provisions all four pieces together, so they always agree — including the markup the
+        scenario should price at. At test time the core app is unchanged: it authenticates with the
+        apiKey, follows the contract to the mock instead of the live supplier, and the markup rules
+        apply on the way back.
+      </figcaption>
+    </figure>
+    <p class="note">The one sentence to say out loud: the core app never knows the difference — we just change where the contract points. If asked about the fourth box: SMF creates the markup conditions under the Static and Dynamic Markup rules and binds them to the scenario's apiKey, or to the contract when no apiKey is created. Teardown removes them again.</p>
+  </section>
+
+  <!-- ─────────────────────────── 4 ─────────────────────────── -->
+  <section class="slide" aria-label="Slide 4: Before and after">
+    <p class="eyebrow">04 · The difference</p>
+    <h2>Same scenario, two orders of magnitude.</h2>
+
+    <div class="compare">
+      <div class="ch"></div>
+      <div class="ch ch-manual">By hand</div>
+      <div class="ch ch-smf">With SMF</div>
+
+      <div class="rk">Time</div>
+      <div class="cell cell-manual cell-hero">
+        <span class="hero-n">½–1 day</span>
+        <span class="hero-c">Estimated</span>
+      </div>
+      <div class="cell cell-smf cell-hero">
+        <span class="hero-n">21–95 s</span>
+        <span class="hero-c">Measured · create → run → tear down</span>
+      </div>
+
+      <div class="rk">Who</div>
+      <div class="cell cell-manual">Whoever knows the supplier payloads</div>
+      <div class="cell cell-smf">Any QA, from a form</div>
+
+      <div class="rk">Repeat</div>
+      <div class="cell cell-manual">Rebuilt from scratch each time</div>
+      <div class="cell cell-smf">Saved as a template, re-run by id</div>
+
+      <div class="rk">Isolation</div>
+      <div class="cell cell-manual">Shared mocks; someone else's edits leak in</div>
+      <div class="cell cell-smf">Namespaced per scenario — runs don't collide</div>
+
+      <div class="rk">Cleanup</div>
+      <div class="cell cell-manual">Manual, and often skipped</div>
+      <div class="cell cell-smf">One click, or automatic when the run ends</div>
+    </div>
+    <p class="note">Isolation and cleanup matter as much as the time saved — stale mocks were a recurring source of false failures.</p>
+  </section>
+
+  <!-- ─────────────────────────── 5 ─────────────────────────── -->
+  <section class="slide" aria-label="Slide 5: What it covers today">
+    <p class="eyebrow">05 · Today</p>
+    <h2>Already in use.</h2>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-n">4</div>
+        <div class="stat-l">Suppliers</div>
+        <div class="stat-codes">HBS EXP EXT HIL</div>
+      </div>
+      <div class="stat">
+        <div class="stat-n">7</div>
+        <div class="stat-l">Log types each</div>
+        <div class="stat-codes">search → cancel, fully linked</div>
+      </div>
+      <div class="stat">
+        <div class="stat-n">2</div>
+        <div class="stat-l">Environments</div>
+        <div class="stat-codes">dev · stg, switched live</div>
+      </div>
+      <div class="stat">
+        <div class="stat-n">346</div>
+        <div class="stat-l">Backend tests</div>
+        <div class="stat-codes">across 44 files</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <ul class="feat">
+        <li><span><b>Scenario wizard</b> — packages, prices, board, refundability.</span></li>
+        <li><span><b>Business rules</b> — Static and Dynamic Markup conditions created per scenario, default <span class="kbd">10%</span> and <span class="kbd">15%–25%</span>, any value you ask for.</span></li>
+        <li><span><b>Crawla mocks</b> — mock prices pinned to live competitor prices.</span></li>
+        <li><span><b>Queue runner</b> — every price-comparison bucket, back to back.</span></li>
+        <li><span><b>Saved templates</b> — a scenario becomes a reusable id.</span></li>
+        <li><span><b>Test-run dashboard</b> — live Smart Booking and Crawla results.</span></li>
+      </ul>
+      <div class="callout">
+        <code>POST /api/v1/run-template/{id}</code>
+        <p>The same thing, without the UI. The Java regression suite provisions its own test data, runs against it, and tears it down when the run ends.</p>
+      </div>
+    </div>
+    <p class="note">If they ask "who uses it" — this is the slide to slow down on. The API is the bridge to qaBackend_Enigma. The business-rules line is the one non-obvious capability: it means a scenario can test pricing behaviour, not just what the supplier returned.</p>
+  </section>
+
+  <!-- ─────────────────────────── 6 ─────────────────────────── -->
+  <section class="slide" aria-label="Slide 6: Where it goes next">
+    <p class="eyebrow">06 · Next</p>
+    <h2>Where it goes from here.</h2>
+
+    <div class="next">
+      <div class="next-card">
+        <span class="step">Step 1</span>
+        <h3>Into tajawal, as a service</h3>
+        <p>The code sits on a personal GitHub account and runs on laptops. Move it under the <b>tajawal</b> org and deploy it as a service — team-owned, always on, one URL for everyone.</p>
+      </div>
+      <div class="next-card">
+        <span class="step">Step 2</span>
+        <h3>Into the pipeline</h3>
+        <p>With a hosted URL, the run-template endpoint goes into regression — the suite provisions and cleans up its own test data on every run.</p>
+      </div>
+      <div class="next-card">
+        <span class="step">Ongoing</span>
+        <h3>More suppliers</h3>
+        <p>Each one is the same shape: templates, a field map, a small plugin. New suppliers have gone in without touching the engine.</p>
+      </div>
+    </div>
+
+    <div class="whereto">
+      <span><b>Repo</b> &nbsp;supplier-mock-factory &nbsp;<span class="arrow">→</span>&nbsp; tajawal</span>
+      <span><b>Docs</b> &nbsp;docs/ARCHITECTURE.md · docs/AUTOMATION_API.md</span>
+      <span><b>API</b> &nbsp;/docs (OpenAPI)</span>
+      <span><b>Ask</b> &nbsp;Sakthy</span>
+    </div>
+    <p class="note">Step 1 is the one that needs a decision eventually — say it plainly, don't push for an answer today. Offer a hands-on walkthrough to anyone who wants one.</p>
+  </section>
+
+</main>
+
+<div class="progress"><div class="progress-fill" id="fill"></div></div>
+<div class="hint">← → move &nbsp;·&nbsp; N notes</div>
+
+<script>
+  (function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var cur = document.getElementById('cur');
+    var fill = document.getElementById('fill');
+    var i = 0;
+
+    function show(n, push) {
+      i = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach(function (s, k) { s.classList.toggle('is-active', k === i); });
+      cur.textContent = String(i + 1);
+      fill.style.width = ((i + 1) / slides.length * 100) + '%';
+      if (push) history.replaceState(null, '', '#' + (i + 1));
+      window.scrollTo(0, 0);
+    }
+
+    document.getElementById('next').addEventListener('click', function () { show(i + 1, true); });
+    document.getElementById('prev').addEventListener('click', function () { show(i - 1, true); });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      var k = e.key;
+      if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') { e.preventDefault(); show(i + 1, true); }
+      else if (k === 'ArrowLeft' || k === 'PageUp') { e.preventDefault(); show(i - 1, true); }
+      else if (k === 'Home') { e.preventDefault(); show(0, true); }
+      else if (k === 'End') { e.preventDefault(); show(slides.length - 1, true); }
+      else if (k === 'n' || k === 'N') { document.body.classList.toggle('notes-on'); }
+    });
+
+    var start = parseInt((location.hash || '').replace('#', ''), 10);
+    show(isNaN(start) ? 0 : start - 1, false);
+  })();
+</script>

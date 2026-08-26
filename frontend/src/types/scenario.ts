@@ -23,6 +23,15 @@ export interface PackageSpec {
   // null/undefined means no booking flow (only search + package mocks).
   booking_package_index?: number | null
   /**
+   * EXP explicit pricing, per package, both or neither: the split of `prices` into
+   * pre-markup + markup, in supplier currency, where price = original_price_with_vat +
+   * markup. The price becomes the mock's totals.inclusive and `markup` its
+   * totals.marketing_fee, which is what the EXP adapter reports as markup.dynamic. Omit to
+   * keep the price-only flow.
+   */
+  original_price_with_vat?: number[]
+  markup?: number[]
+  /**
    * Occupancy the mocked rates advertise. Derby BTS (CHC, HIL) drops every rate whose
    * occupancy differs from the searched one — silently, with zero results. Omit to take
    * the backend default of 2 adults, which is what the default search uses.
@@ -92,6 +101,13 @@ export interface ScenarioRequest {
   // Attach the contracts to this existing apiKey instead of creating one.
   // Only meaningful for the contract_only / contract_br depths.
   existing_api_key?: string | null
+  /**
+   * BR markup output values for the Static (rule 3) and Dynamic (rule 4) Markup rules.
+   * Sent as typed — the backend normalizes `10` → `10%` and `10-15` → `10%-15%`. Omit for
+   * the defaults (10% and 15%-25%). Only the depths that provision BR accept them.
+   */
+  static_markup?: string
+  dynamic_markup?: string
 }
 
 export interface ScenarioBundle {

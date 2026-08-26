@@ -1,0 +1,233 @@
+{
+  "request": {
+    "headers": {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Accept-Encoding": "gzip",
+      "Customer-Ip": "179.12.0.1",
+      "User-Agent": "undefined",
+      "Authorization": "EAN APIKey=<redacted>,Signature=<redacted>,timestamp=<redacted>"
+    },
+    "url": {
+      "url": "https://api.ean.com/v3/properties/54473706/rooms?token=QFlCEVhQRmxHFg4EXVpVOlEBCFQAAVQAUEB6UVBXCEsTXFsBAQxSVQ1VDV0H",
+      "priceCheckSupplierRequest": {
+        "rooms": [
+          {
+            "traveler_reference": "Room1",
+            "href": "/v3/properties/54473706/rooms/314009151/rates/396958583?token=F~Oj06ZD8lNik1Z2NIMVNeSG02B2BjeFgzVFYLDxgEWxVUBiQ5BwlWVRlUAUkHV3k1bDZxNkAAUgJXXVNSCktVAVAOGgdXBgYYVlUEVhlWVA4IUgQFUlAEUAs_FA4NCgQKA1QEHgJZBwYVAFZXDBULVAhTGFxQAwgEBlsFVQBSCwY_AAALBgwFFjMNV1IEGzEDu2A6ZDF56zlgBfMzMVVUAQcEqGRsBEJ_XA9WRnZWUJBgH2oZQEIbE1QWWEd6XF1ecVIGFUgUSlEbURsJFi1cV14SThdJRFINQF1EHRAOVE44yjNl12QyU1fyYjcAUQBNCQXYZTXbNWfEZzftZDb2OmT8NjfDMDTJNUIGA1YIBwAEAEwNUQ4PFQNQXFNPDwtRU0hSBVYDU1UEWAEAAwSBMn8DAwVSSAMASwRTbQMJXwYOXgoNTFUABFIBUgkFV27fYDEQUtZyi2Y="
+          },
+          {
+            "traveler_reference": "Room2",
+            "href": "/v3/properties/54473706/rooms/314009153/rates/396958585?token=F~Oj06ZDMlNSk1Z2NIMVNeSG02B2BjeFgzVFYLDxgEWxVUBiQ5BwlWVRlUAUkHV3k1bDZxNkBQBlMDD1dXAUsOVwMHGgdUUAIYDwdSBBkFUFMBCQZWDVddAQ4_FAIBC1AKBFECHgVUVVIVAFIAUhVQAg1WGFMCU1pTBQUADgcCAgY_AAALBgwFFjMNV1IEGzEDu2A6ZDF56zlgBfMzMVVUAQcEqGRsBEJ_XA9WRnZWUJBgH2oZQEIbE1QWWEd6XF1ecVIGFUgUSlEbURsJFi1cV14SThdJRFINQF1EHRAOVE44yjNl12QyU1fyYjcAUAdNCwLYZTXbNWfEZzftZDb2OmT8NjfDMDTJNUIAAgZcXQZZBkxeBwIHFQMCUFJPDl0CUUhWBwwGCAQGUVlcUgSBMn8DAwVSSAMASwRTbQMJXwYOXgoNTFUBAFIIXAoFVm7fYDEQUgC3nrw="
+          }
+        ]
+      }
+    },
+    "method": "post"
+  },
+  "response": {
+    "body": {
+      "rooms": [
+        {
+          "traveler_reference": "Room1",
+          "status": "available",
+          "available_rooms": 1,
+          "occupancy_pricing": {
+            "2-9": {
+              "nightly": [
+                [
+                  {
+                    "type": "tax_and_service_fee",
+                    "value": "11.42",
+                    "currency": "USD"
+                  },
+                  {
+                    "type": "extra_person_fee",
+                    "value": "5.25",
+                    "currency": "USD"
+                  },
+                  {
+                    "type": "base_rate",
+                    "value": "98.57",
+                    "currency": "USD"
+                  }
+                ],
+                [
+                  {
+                    "type": "tax_and_service_fee",
+                    "value": "11.42",
+                    "currency": "USD"
+                  },
+                  {
+                    "type": "extra_person_fee",
+                    "value": "5.25",
+                    "currency": "USD"
+                  },
+                  {
+                    "type": "base_rate",
+                    "value": "98.57",
+                    "currency": "USD"
+                  }
+                ],
+                [
+                  {
+                    "type": "tax_and_service_fee",
+                    "value": "11.42",
+                    "currency": "USD"
+                  },
+                  {
+                    "type": "extra_person_fee",
+                    "value": "5.25",
+                    "currency": "USD"
+                  },
+                  {
+                    "type": "base_rate",
+                    "value": "98.57",
+                    "currency": "USD"
+                  }
+                ],
+                [
+                  {
+                    "type": "tax_and_service_fee",
+                    "value": "9.45",
+                    "currency": "USD"
+                  },
+                  {
+                    "type": "extra_person_fee",
+                    "value": "5.25",
+                    "currency": "USD"
+                  },
+                  {
+                    "type": "base_rate",
+                    "value": "80.69",
+                    "currency": "USD"
+                  }
+                ]
+              ],
+              "totals": {
+                "exclusive": {
+                  "billable_currency": {
+                    "value": "397.40",
+                    "currency": "USD"
+                  },
+                  "request_currency": {
+                    "value": "397.40",
+                    "currency": "USD"
+                  }
+                },
+                "gross_profit": {
+                  "billable_currency": {
+                    "value": "94.02",
+                    "currency": "USD"
+                  },
+                  "request_currency": {
+                    "value": "94.02",
+                    "currency": "USD"
+                  }
+                },
+                "inclusive": {
+                  "billable_currency": {
+                    "value": "441.11",
+                    "currency": "USD"
+                  },
+                  "request_currency": {
+                    "value": "441.11",
+                    "currency": "USD"
+                  }
+                },
+                "property_inclusive": {
+                  "billable_currency": {
+                    "value": "378.16",
+                    "currency": "EUR"
+                  },
+                  "request_currency": {
+                    "value": "441.11",
+                    "currency": "USD"
+                  }
+                },
+                "marketing_fee": {
+                  "billable_currency": {
+                    "value": "64.53",
+                    "currency": "USD"
+                  },
+                  "request_currency": {
+                    "value": "64.53",
+                    "currency": "USD"
+                  }
+                },
+                "strikethrough": {
+                  "billable_currency": {
+                    "value": "648.33",
+                    "currency": "USD"
+                  },
+                  "request_currency": {
+                    "value": "648.33",
+                    "currency": "USD"
+                  }
+                },
+                "inclusive_strikethrough": {
+                  "billable_currency": {
+                    "value": "719.65",
+                    "currency": "USD"
+                  },
+                  "request_currency": {
+                    "value": "719.65",
+                    "currency": "USD"
+                  }
+                },
+                "property_inclusive_strikethrough": {
+                  "billable_currency": {
+                    "value": "616.96",
+                    "currency": "EUR"
+                  },
+                  "request_currency": {
+                    "value": "719.65",
+                    "currency": "USD"
+                  }
+                }
+              }
+            }
+          },
+          "cancel_penalties": [
+            {
+              "start": "2026-08-26T23:28:34.157+03:00",
+              "end": "2026-08-27T23:59:00.000+03:00",
+              "percent": "100%",
+              "currency": "USD"
+            }
+          ]
+        },
+        {
+          "traveler_reference": "Room2",
+          "status": "sold_out",
+          "links": {
+            "additional_rates": {
+              "method": "GET",
+              "href": "/v3/properties/54473706/availability?token=Ql1WAERHXV1QOxULUAsCV1pWAQMHCE9dVlIIFAFSAA9LCAdWURRcB1ZdDVwMBABUCAcTCQFHAAlQVxZrXQBpQFFVWEFSDnVtZydwLHUSEl9MVGpBTRQAD00XUVJcTA9XXgVabFUTXBRLURZHW1tRFEkHWwZICghIBkVWTlcKRhdQWV4OFllSClBNBwVRXFVdFDRqFxBZFV0-WhFGXQkND1ZHXRYVahFRWQ0UUXdeUV8DVUNEEVkXEVJRXxdQRVpdHkcQXgdTFFsJUVpYEgNUSVBUXwUeUlsGV19ZCg8GVQFTTwJcSFcHRxNKDFZGBFw8W1tcAQoVRAJGElsAFGgWSgoCXVgGbVwHClABXgIAUxMMVAxaAEULTEVHAEUBQkoWVQtUGglnYyYTDFlLXwBHWQ9WbFQMBF1WA1pbCRdaDVFVD1dBFl4CAFEGSAgMTAdURFILBAtaRkpnB1hMBwNfE0EMRBZIUQdbAgUDVhIXWl4SEQ8LVj0WAhEOX2d2ISlzd31vJGJhdXB_QggMV1pFAV1YZTB5eidmJS58en5rLm0qZS9sZ3YrLhIWXAJRFEFfVwJqFwtAEQJUBBBVQg9SH0REXlBTHlNdUgFfQ1dBEkJXXFBHaxcAQUoMX1hqUQIFVQEEAQFUUFAVDAFWBRUGA1pUGF1UUVhIAlJWDwxVUF0KDgMEFkZSCFJLOQFcAF5dXA0ERgdaElEVUEdBURUQW1pbbQwCCFtWBlkDVgMFGVRQCVBPVlBVVRwNVlBTGApdUA4DAQUOCw5YAh9BVRJQZklcA1tnUlwWWkANVgcEQ0AEDlcXOgBeFwpKDF9ZAF8XBVxXEFJfaxNVBV4EAVJAXwAKUUYCRlAHaBJYC1EEVwVTB0wIXRoEDWMAVUZRdgpcFVZ2UAAcAlIFUA4AA1EFakdXWlsQAEEFQFUJTF9NF01pB1dQB15jcUVzDV1XCkcQDw5RU1EECgAMVwA="
+            }
+          }
+        }
+      ]
+    },
+    "headers": {
+      "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+      "connection": "keep-alive",
+      "content-encoding": "gzip",
+      "content-length": "1314",
+      "content-type": "application/json",
+      "date": "Tue, 25 Aug 2026 20:28:34 GMT",
+      "expires": "0",
+      "pragma": "no-cache",
+      "referrer-policy": "no-referrer",
+      "region": "us-west-2",
+      "strict-transport-security": "max-age=31536000 ; includeSubDomains",
+      "transaction-id": "22b34a71-d041-4fc7-9aed-8db9488b3b1b",
+      "vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Accept-Encoding",
+      "x-akamai-reference-id": "0.4fb01302.1787689713.7f056b2f",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "x-xss-protection": "0"
+    },
+    "httpStatusCode": 200
+  }
+}

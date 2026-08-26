@@ -112,6 +112,10 @@ export function CrawlaMocksWizard({ onSubmit, busy }: Props) {
   const [selectedPackageHotelId, setSelectedPackageHotelId] = useState<string>('')
   const [selectedOfferId, setSelectedOfferId] = useState<string>('')
 
+  // BR markup output values (rules 3 and 4). Crawla scenarios always provision BR;
+  // blank keeps the backend defaults of 10% / 15%-25%.
+  const [staticMarkup, setStaticMarkup] = useState('')
+  const [dynamicMarkup, setDynamicMarkup] = useState('')
   const [searchExpPrice, setSearchExpPrice] = useState(0)
   const [searchHbsPrice, setSearchHbsPrice] = useState(0)
   const [packageExpPrice, setPackageExpPrice] = useState(0)
@@ -283,6 +287,10 @@ export function CrawlaMocksWizard({ onSubmit, busy }: Props) {
         exp_price: packageExpPrice,
         hbs_price: packageHbsPrice,
       },
+      // Omitted when blank so the backend applies the BR defaults rather than receiving
+      // an empty string.
+      ...(staticMarkup.trim() ? { static_markup: staticMarkup.trim() } : {}),
+      ...(dynamicMarkup.trim() ? { dynamic_markup: dynamicMarkup.trim() } : {}),
     }
 
     await onSubmit(request)
@@ -633,6 +641,31 @@ export function CrawlaMocksWizard({ onSubmit, busy }: Props) {
             </label>
             <p className="hint" style={{ marginTop: '0.35rem' }}>
               Used when the mode is Higher or Lower.
+            </p>
+          </div>
+          <div className="field">
+            <label>
+              Static markup
+              <input
+                value={staticMarkup}
+                onChange={(e) => setStaticMarkup(e.target.value)}
+                placeholder="10"
+                spellCheck={false}
+              />
+            </label>
+          </div>
+          <div className="field">
+            <label>
+              Dynamic markup
+              <input
+                value={dynamicMarkup}
+                onChange={(e) => setDynamicMarkup(e.target.value)}
+                placeholder="10%-15%"
+                spellCheck={false}
+              />
+            </label>
+            <p className="hint" style={{ marginTop: '0.35rem' }}>
+              BR rules 3 + 4. Blank = the defaults, 10% and 15%-25%.
             </p>
           </div>
         </div>

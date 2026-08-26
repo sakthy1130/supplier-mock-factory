@@ -1,0 +1,45 @@
+{
+  "request": {
+    "headers": {
+      "Accept-Encoding": "gzip",
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      "Customer-Ip": "179.12.0.1",
+      "User-Agent": "undefined",
+      "Authorization": "EAN APIKey=<redacted>,Signature=<redacted>,timestamp=<redacted>"
+    },
+    "url": "https://api.ean.com/v3/properties/16166/rooms/212711516/rates/397269806?token=F~OjogZCw3NzEdYQQMGWNjVzo2dFg6C1ILUEsJARgGVHpsA1YBAxRUWxlWAC43M2Bya0EGBlUNUFZSCE8MBQMGHwBQDgEbCwUCBU8NAQRVAgEMBANUAAc_Fg0DUwVQWVYIHQEOVVRMBwFdDElZBV4DTAAHDVEFVA8BAwUEUFZgBVQBAAkFQjEGVQcIHGME4zEwbDJ4u2M5UapgMFIFB1RSqDQ_A0UtXAxTFSNUApYyG2kaEkUbElNAWRN_CwtWd1ZdERtARA1MXBpbFnJaWgEXFRtBF1RWRVoXTRYKVU9pzTJk0DNmV1H6YGQJUwgESwhX2DU5jDY3xGI27jdk9jVnoGdnlDZimDdHBVcCUwdYXAVMBVMAURoCAQ8LSFsEAwpJUQZUVwcBAFUHVwkBhmctAlEDBRpUXR4KU2JUCgsJUg4CVxYNUVoCB1AIUQpu2zZnFACK8kup",
+    "method": "get"
+  },
+  "response": {
+    "body": {
+      "status": "sold_out",
+      "links": {
+        "additional_rates": {
+          "method": "GET",
+          "href": "/v3/properties/16166/availability?token=Ql1WAERHXV1QOxULUAsJBg1cBVBSC09bVlEBFAEMVwtLU1RRDBQCUQZRAF0GVgFXAVATCQFHAAlQVxZrXQBpQFFVWEFSDnVtZydwLHUSEl9MVGpBTRQAD00XUVJcTA9XXgVabFUTXBRLURZHW1tRFEkHWwZICghDVhtQWkEVWgtXCxZfUVtUEVZfA19RDx1makdLUBZdPlcRQQhdWlsAQFpGQToVUA5YEFZyC1FeVlcTFkINF0QBBgxGAxVYUR5JQV4BUklVUV0CXx9WVRZcXQQARFZQVFAIXVoNVgIGUx5VWh9WUkNAEwxfEVBZOlIMXFEFQkdSRhdaA0c6FkUJXgwIUWsKVghVB14HXwIfCFAMUwRKWENETVIUBhYQRV0KUxwKNmd2FghAE1FKUAxQRAheXWgHClddW2M1eBdUBEZdAUxdDARvUwtRC1ZRDQlVRFAOBAZYXUZMWQsIUFIdUQAcUFseWQ4DWV1HH2sHU0UHBgkXSF9AFxUPBgoCU1ICFktYCkZFXV1QOxEDQF4NNXkmfiN3fD14MjJ4en0SEV0AVBRBXFcDPEcLTBZXAw5EWBVcAElFEQhSXE9XWgNVWRJVQkBCXF1QRT1HAEdHCFlWblxRCVYACwldVg5XFQBbCQAbBwEFBU5ZUgVQGQlWVQhWUwcFVVpVV0VAV1gDQDtaXlFdXlBfWUBdBBFdFVUVSgRKQgtXD2cIUVwGUgVQV1QFAkgDDQRXGFVTAwweDAMHARxbAw5WV1ICBlVXAlUfQVYWUjtGVVkPa1pcQQhBBAsFUhNLUF8GR2tVCkRdF1wLD1cKEVhYDhddD25EBFIIWVNdQlBWWgZGB0EAAmgSUQgBCQZTAANOB14cVAFtVwZEAiAIXRIFeQcBS1VQAABQAlMBVG4UVgtZFV1LCUNQXxRfR0UdOlBXAlNbanAfJlxTB1NHFw4NA1sEVw8AUwdUUg=="
+        }
+      }
+    },
+    "headers": {
+      "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+      "connection": "keep-alive",
+      "content-encoding": "gzip",
+      "content-length": "828",
+      "content-type": "application/json",
+      "date": "Tue, 25 Aug 2026 23:08:03 GMT",
+      "expires": "0",
+      "pragma": "no-cache",
+      "referrer-policy": "no-referrer",
+      "region": "us-west-2",
+      "strict-transport-security": "max-age=31536000 ; includeSubDomains",
+      "transaction-id": "9c5902b2-b078-4843-b2b9-f22599202a85",
+      "vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Accept-Encoding",
+      "x-akamai-reference-id": "0.8c9bd817.1787699283.bda7e5c",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "x-xss-protection": "0"
+    },
+    "httpStatusCode": 200
+  }
+}

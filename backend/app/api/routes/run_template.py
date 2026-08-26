@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.db.database import get_db
 from app.db.repository import MongoStore
-from app.db.models import ScenarioRecord
 from app.env_context import get_current_env, use_env
 from app.models.run_template import RunTemplateRequest, RunTemplateResponse
 from app.services import scenario_service
@@ -55,6 +54,18 @@ def build_scenario_request_from_template(
         supplier_book_idx = (
             book_idx if (book_idx is not None and book_idx < len(packages_data)) else None
         )
+        # EXP explicit pricing is all-or-nothing per supplier: passing a partial list
+        # would trip PackageSpec's validator, so only send the pair when every row of this
+        # supplier carries it.
+        explicit_pricing: dict[str, list[float]] = {}
+        if all(
+            pkg.original_price_with_vat is not None and pkg.markup is not None
+            for pkg in packages_data
+        ):
+            explicit_pricing = {
+                "original_price_with_vat": [pkg.original_price_with_vat for pkg in packages_data],
+                "markup": [pkg.markup for pkg in packages_data],
+            }
         package_spec = PackageSpec(
             count=len(packages_data),
             room_basis=[pkg.room_basis for pkg in packages_data],
@@ -63,6 +74,7 @@ def build_scenario_request_from_template(
             refundable=[pkg.refundable for pkg in packages_data],
             supplier_currency=supplier_entry.supplier_currency,
             booking_package_index=supplier_book_idx,
+            **explicit_pricing,
         )
         suppliers.append(
             SupplierScenario(
@@ -84,6 +96,8 @@ def build_scenario_request_from_template(
         template_id=template_id,
         provisioning_depth=request_data.provisioning_depth,
         existing_api_key=request_data.existing_api_key,
+        static_markup=request_data.static_markup,
+        dynamic_markup=request_data.dynamic_markup,
     )
 
 
@@ -293,11 +307,10 @@ async def run_template_endpoint(
         except Exception as e:
             tracker.log(f"Scenario run error: {e}")
 
-        # Refresh database session to see updates from the standalone session
-        db.expire_all()
-
-        # Re-fetch the full record object with fresh data
-        record = db.query(ScenarioRecord).filter(ScenarioRecord.id == scenario_id).first()
+        # Re-fetch the record: run_create_scenario writes through its own store, so
+        # the copy we created above is stale. Every read hits Mongo, so there is no
+        # session cache to invalidate first.
+        record = db.scenarios.get(scenario_id)
 
         if not record:
             tracker.log(f"Scenario record not found after creation")

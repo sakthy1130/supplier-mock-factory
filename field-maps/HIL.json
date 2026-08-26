@@ -10,9 +10,11 @@
   ],
   "paths": {
     "check_in": [
+      "httpResponse.body.reservations[0].stayRange.checkin",
       "httpResponse.body.stayRange.checkin"
     ],
     "check_out": [
+      "httpResponse.body.reservations[0].stayRange.checkout",
       "httpResponse.body.stayRange.checkout"
     ],
     "price": [
@@ -478,6 +480,10 @@
       "httpResponse.body.availHotels[0].availRoomRates[99].amountBeforeTax",
       "httpResponse.body.availHotels[0].availRoomRates[9].amountAfterTax",
       "httpResponse.body.availHotels[0].availRoomRates[9].amountBeforeTax",
+      "httpResponse.body.reservations[0].roomRates[0].amountAfterTax",
+      "httpResponse.body.reservations[0].roomRates[0].amountBeforeTax",
+      "httpResponse.body.reservations[0].total.amountAfterTax",
+      "httpResponse.body.reservations[0].total.amountBeforeTax",
       "httpResponse.body.roomRates[0].amountAfterTax",
       "httpResponse.body.roomRates[0].amountBeforeTax",
       "httpResponse.body.roomRates[100].amountAfterTax",
@@ -790,11 +796,15 @@
     "booking_id": [
       "httpResponse.body.reservationIds.derbyResId",
       "httpResponse.body.reservationIds.distributorResId",
-      "httpResponse.body.reservationIds.supplierResId"
+      "httpResponse.body.reservationIds.supplierResId",
+      "httpResponse.body.reservations[0].reservationIds.derbyResId",
+      "httpResponse.body.reservations[0].reservationIds.distributorResId",
+      "httpResponse.body.reservations[0].reservationIds.supplierResId"
     ],
     "hotel_id": [
       "httpResponse.body.availHotels[0].hotelId",
-      "httpResponse.body.hotelId"
+      "httpResponse.body.hotelId",
+      "httpResponse.body.reservations[0].hotelId"
     ],
     "package_id": [
       "httpResponse.body.availHotels[0].availRoomRates[0].rateId",
@@ -1029,6 +1039,7 @@
       "httpResponse.body.availHotels[0].availRoomRates[99].rateId",
       "httpResponse.body.availHotels[0].availRoomRates[9].rateId",
       "httpResponse.body.productCandidate.rateId",
+      "httpResponse.body.reservations[0].roomRates[0].rateId",
       "httpResponse.body.roomRates[0].rateId",
       "httpResponse.body.roomRates[100].rateId",
       "httpResponse.body.roomRates[101].rateId",
@@ -1416,6 +1427,7 @@
       "httpResponse.body.availHotels[0].availRoomRates[98].mealPlan",
       "httpResponse.body.availHotels[0].availRoomRates[99].mealPlan",
       "httpResponse.body.availHotels[0].availRoomRates[9].mealPlan",
+      "httpResponse.body.reservations[0].roomRates[0].mealPlan",
       "httpResponse.body.roomRates[0].mealPlan",
       "httpResponse.body.roomRates[100].mealPlan",
       "httpResponse.body.roomRates[101].mealPlan",
@@ -1804,6 +1816,7 @@
       "httpResponse.body.availHotels[0].availRoomRates[99].roomId",
       "httpResponse.body.availHotels[0].availRoomRates[9].roomId",
       "httpResponse.body.productCandidate.roomId",
+      "httpResponse.body.reservations[0].roomRates[0].roomId",
       "httpResponse.body.roomRates[0].roomId",
       "httpResponse.body.roomRates[100].roomId",
       "httpResponse.body.roomRates[101].roomId",
@@ -2191,6 +2204,7 @@
       "httpResponse.body.availHotels[0].availRoomRates[98].currency",
       "httpResponse.body.availHotels[0].availRoomRates[99].currency",
       "httpResponse.body.availHotels[0].availRoomRates[9].currency",
+      "httpResponse.body.reservations[0].roomRates[0].currency",
       "httpResponse.body.roomRates[0].currency",
       "httpResponse.body.roomRates[100].currency",
       "httpResponse.body.roomRates[101].currency",

@@ -583,3 +583,177 @@ def test_a_supplier_with_no_forced_permission_is_left_alone():
     _apply_forced_permission(body, _config_with({}))
     assert body["permission"]["canBook"] == "false"
 
+
+
+# ── ingest: a logged failure must not become the template ───────────────────────
+
+
+def _derby_get_order_detail(supplier_id: str = "HILTON") -> dict:
+    """A successful reservation-detail log, shaped like templates/HIL/GetOrder/v1.json."""
+    header = {"version": "v1.2", "supplierId": supplier_id, "distributorId": "ALTAYYAR"}
+    return {
+        "request": {
+            "url": "https://derby.example.com/bts/api/reservation/detail",
+            "body": {"header": header, "reservationIds": {"derbyResId": "GP721114932T8E491E91J"}},
+        },
+        "response": {
+            "body": {
+                "header": header,
+                "reservations": [
+                    {
+                        "status": "Confirmed",
+                        "hotelId": "DXBAS",
+                        "reservationIds": {"derbyResId": "GP721114932T8E491E91J"},
+                        "roomRates": [{"roomId": "K1D", "rateId": "OD25DN", "mealPlan": "HB"}],
+                    }
+                ],
+            }
+        },
+    }
+
+
+def _derby_failed_get_order_detail(supplier_id: str = "HILTON") -> dict:
+    """What the log holds when the supplier call itself failed: the outbound request is
+    intact (so attribution still claims the row) but the response is Enigma's error
+    envelope, with the upstream status and an empty body."""
+    detail = _derby_get_order_detail(supplier_id)
+    detail["response"] = {
+        "exception": "com.fasterxml.jackson.databind.exc.MismatchedInputException: "
+        "No content to map due to end-of-input",
+        "headers": {"content-length": ["0"]},
+        "body": "",
+        "httpStatusCode": 404,
+    }
+    return detail
+
+
+@pytest.mark.asyncio
+async def test_ingest_skips_a_failed_get_order_row_for_the_next_candidate(tmp_path):
+    """The newest GetOrder row wins normally — but not when it logged a failed call."""
+    import json
+
+    list_json = {
+        "details": [
+            {
+                "logType": "GetOrder",
+                "source": DERBY_SOURCE,
+                "logUrl": "logs/get_order_ok.gz",
+                "timestamp": "2026-02-20T15:00:00Z",
+            },
+            {
+                "logType": "GetOrder",
+                "source": DERBY_SOURCE,
+                "logUrl": "logs/get_order_failed.gz",
+                "timestamp": "2026-02-20T15:09:31Z",
+            },
+        ]
+    }
+    details = {
+        "logs/get_order_ok.gz": _derby_get_order_detail(),
+        "logs/get_order_failed.gz": _derby_failed_get_order_detail(),
+    }
+
+    async def fetch(log_url: str) -> dict:
+        return details[log_url]
+
+    ingestor = TemplateIngestor(
+        templates_dir=tmp_path / "templates", field_maps_dir=tmp_path / "field-maps"
+    )
+    assert await ingestor.ingest_from_list_json("HIL", "sid-1", list_json, fetch) == 1
+
+    body = json.loads(
+        (tmp_path / "templates" / "HIL" / "GetOrder" / "v1.json").read_text(encoding="utf-8")
+    )["httpResponse"]["body"]
+    assert "exception" not in body
+    assert body["reservations"][0]["status"] == "Confirmed"
+
+
+@pytest.mark.asyncio
+async def test_ingest_writes_no_template_when_every_row_logged_a_failure(tmp_path):
+    """No template beats a poison one: the log type is reported missing and dumped to
+    _diagnostics instead of becoming a mock that answers 200 with a stack trace."""
+    list_json = {
+        "details": [
+            {
+                "logType": "GetOrder",
+                "source": DERBY_SOURCE,
+                "logUrl": "logs/get_order_failed.gz",
+                "timestamp": "2026-02-20T15:09:31Z",
+            }
+        ]
+    }
+
+    async def fetch(log_url: str) -> dict:
+        return _derby_failed_get_order_detail()
+
+    ingestor = TemplateIngestor(
+        templates_dir=tmp_path / "templates", field_maps_dir=tmp_path / "field-maps"
+    )
+    result = await ingestor._ingest_supplier(
+        HilMockPlugin(), "sid-1", list_json["details"], fetch_detail=fetch
+    )
+
+    assert "GetOrder" in result.missing
+    assert not (tmp_path / "templates" / "HIL" / "GetOrder" / "v1.json").exists()
+    assert list((tmp_path / "templates" / "HIL" / "_diagnostics").glob("*.json"))
+
+
+# ── booking-flow ids ────────────────────────────────────────────────────────────
+
+
+def test_hil_booking_flow_mocks_all_describe_the_same_reservation(api_client):
+    """Booking, GetOrder and CancelOrder must carry one reservation id after injection.
+
+    Derby keeps the ids at body level in Booking/CancelOrder but nested under
+    ``reservations[0]`` in GetOrder, so the field map has to list both — it is generated
+    from the templates, and while HIL's GetOrder template was a captured failure it
+    contained no ids at all, leaving GetOrder pointing at the template's stale ones while
+    Booking got the fresh id. The adapter then reports an order for a reservation nobody
+    booked. Takes api_client for the seeded HIL row.
+    """
+    import json
+    import pathlib
+
+    from app.core.booking_id_injector import BookingIdInjector
+    from app.core.scenario_engine import ScenarioEngine
+    from app.models.scenario import ScenarioRequest, SupplierScenario
+
+    spec = PackageSpec(
+        count=2,
+        room_basis=["BB", "HB"],
+        prices=[500.0, 750.0],
+        refundable=[True, False],
+        supplier_currency="SAR",
+        booking_package_index=0,
+    )
+    request = ScenarioRequest(
+        namespace="qa-derby-ids",
+        check_in="2026-09-10",
+        check_out="2026-09-12",
+        atg_hotel_id="1446194",
+        supplier_hotel_ids={"HIL": "HL-DXBAS"},
+        suppliers=[SupplierScenario(code="HIL", packages=spec, contract_currency="USD")],
+    )
+    field_map = json.loads(
+        (pathlib.Path(__file__).resolve().parents[2] / "field-maps" / "HIL.json").read_text()
+    )
+
+    with use_env("stg"):
+        supplier_service.invalidate_cache()
+        by_type = {
+            item.log_type: item.expectation
+            for item in ScenarioEngine().build_expectations(request)
+        }
+        new_id = BookingIdInjector().inject(by_type, "HIL", field_map)
+
+    booking_ids = by_type["Booking"]["httpResponse"]["body"]["reservationIds"]
+    cancel_ids = by_type["CancelOrder"]["httpResponse"]["body"]["reservationIds"]
+    reservation = by_type["GetOrder"]["httpResponse"]["body"]["reservations"][0]
+
+    assert set(booking_ids.values()) == {new_id}
+    assert set(cancel_ids.values()) == {new_id}
+    assert set(reservation["reservationIds"].values()) == {new_id}
+    # The order has to read back as confirmed for the booked dates, or booking-service
+    # rejects it however well the ids line up.
+    assert reservation["status"] == "Confirmed"
+    assert reservation["stayRange"] == {"checkin": "2026-09-10", "checkout": "2026-09-12"}

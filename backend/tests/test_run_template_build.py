@@ -144,3 +144,83 @@ def test_sb_on_with_no_group_member_is_rejected():
     tmpl = _template(sb_enabled=True, targets={"HBS": "apikey", "EXT": "apikey"})
     with pytest.raises(ValidationError, match="no supplier targets the SB group"):
         build_scenario_request_from_template(tmpl, RunTemplateRequest(environment="stg"), **BUILD_KW)
+
+
+# --- EXP explicit pricing -------------------------------------------------
+
+
+def _exp_template(rows: list[TemplatePackageRow]) -> ScenarioTemplate:
+    return ScenarioTemplate(
+        id="tmpl-exp",
+        label="EXP explicit",
+        description="",
+        atg_hotel_id="1500003",
+        created_at=datetime(2026, 8, 24),
+        suppliers=[SupplierTemplatePackages(supplier="EXP", packages=rows)],
+    )
+
+
+def test_explicit_pricing_carries_from_a_saved_template():
+    """A template that stores the three amounts must replay them, or an automation run
+    prices differently from the UI scenario it was saved from."""
+    template = _exp_template([
+        TemplatePackageRow(
+            room_name="EXP Room",
+            price=1120.0,
+            original_price_with_vat=1000.0,
+            markup=120.0,
+        )
+    ])
+    request = build_scenario_request_from_template(
+        template=template, request_data=RunTemplateRequest(), **BUILD_KW
+    )
+    spec = request.suppliers[0].packages
+    assert spec.has_explicit_pricing
+    assert (spec.prices, spec.original_price_with_vat, spec.markup) == ([1120.0], [1000.0], [120.0])
+
+
+def test_a_template_without_the_amounts_stays_price_only():
+    """Every template saved before the fields existed keeps building the same spec."""
+    template = _exp_template([TemplatePackageRow(room_name="EXP Room", price=1120.0)])
+    request = build_scenario_request_from_template(
+        template=template, request_data=RunTemplateRequest(), **BUILD_KW
+    )
+    spec = request.suppliers[0].packages
+    assert not spec.has_explicit_pricing
+    assert spec.original_price_with_vat == [] and spec.markup == []
+
+
+def test_a_template_with_the_amounts_on_only_some_rows_is_ignored_not_rejected():
+    """Partial rows cannot be sent as a list (PackageSpec rejects ragged input), so the
+    builder drops them rather than failing the whole automation run."""
+    template = _exp_template([
+        TemplatePackageRow(
+            room_name="A", price=1120.0, original_price_with_vat=1000.0, markup=120.0
+        ),
+        TemplatePackageRow(room_name="B", price=500.0),
+    ])
+    request = build_scenario_request_from_template(
+        template=template, request_data=RunTemplateRequest(), **BUILD_KW
+    )
+    assert not request.suppliers[0].packages.has_explicit_pricing
+
+
+# --- BR markup ------------------------------------------------------------
+
+
+def test_markup_values_thread_from_the_run_request():
+    """The automation API is how scripted runs set markup; unset must stay unset so the
+    provisioner applies its own defaults rather than a blank string."""
+    request = build_scenario_request_from_template(
+        template=_template(),
+        request_data=RunTemplateRequest(static_markup="20", dynamic_markup="30%-40%"),
+        **BUILD_KW,
+    )
+    assert (request.static_markup, request.dynamic_markup) == ("20%", "30%-40%")
+
+
+def test_no_markup_on_the_run_request_leaves_the_scenario_unset():
+    request = build_scenario_request_from_template(
+        template=_template(), request_data=RunTemplateRequest(), **BUILD_KW
+    )
+    assert request.static_markup is None and request.dynamic_markup is None

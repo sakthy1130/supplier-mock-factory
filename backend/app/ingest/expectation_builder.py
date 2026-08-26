@@ -94,6 +94,28 @@ def resolve_http_status_code(list_row: dict, full_log: dict) -> int:
     return 200
 
 
+# A supplier call that failed upstream carries no payload worth mocking: the log's
+# response node is Enigma's error envelope (exception text, the upstream status, an
+# empty body) instead of the supplier's own JSON. extract_response_body_payload falls
+# back to that whole node when there is no body, so without this check the envelope is
+# written as the template — the mock then answers 200 with a stack trace, the adapter
+# cannot deserialize it, booking-service rejects the GetOrder as invalid, and core polls
+# for the order until the caller times out. Checked at ingest, where the next candidate
+# row can still be tried.
+def is_error_envelope_payload(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("exception"):
+        return True
+    status = payload.get("httpStatusCode")
+    if isinstance(status, int) and status >= 400:
+        return True
+    # An envelope whose inner body is empty has nothing to replay either. EXP's Search
+    # and Packages logs legitimately keep the payload wrapped (inner 200 + a populated
+    # body list), so only the empty case is rejected.
+    return "httpStatusCode" in payload and not payload.get("body")
+
+
 def extract_response_body_payload(full_log: dict) -> dict:
     if not full_log:
         return {}
@@ -561,7 +583,13 @@ def apply_aligned_derby_res_ids_for_booking_and_get_order(pending: list[PendingE
             _replace_field_values_deep(item.expectation, "derbyResId", old_to_new)
 
 
-def build_diagnostic_json(sid: str, list_row: dict, log_url: str, full_log: dict) -> dict:
+def build_diagnostic_json(
+    sid: str,
+    list_row: dict,
+    log_url: str,
+    full_log: dict,
+    note: str = "Could not resolve HTTP path for MockServer httpRequest.",
+) -> dict:
     meta_keys = list((list_row.get("meta") or {}).keys())
     detail_keys = list(full_log.keys()) if isinstance(full_log, dict) else []
     return {
@@ -572,5 +600,5 @@ def build_diagnostic_json(sid: str, list_row: dict, log_url: str, full_log: dict
         "logUrl": log_url,
         "metaKeys": meta_keys,
         "detailTopLevelKeys": detail_keys,
-        "note": "Could not resolve HTTP path for MockServer httpRequest.",
+        "note": note,
     }

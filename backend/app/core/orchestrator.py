@@ -217,6 +217,8 @@ class SupplierMockScenarioOrchestrator:
             br_setup = await self.br_provisioner.provision_for_contracts(
                 _contract_refs(request, bundle.contracts, auto_ids),
                 api_key=api_key,
+                static_markup=request.static_markup,
+                dynamic_markup=request.dynamic_markup,
             )
             if api_key:
                 rule_configs = {
@@ -231,13 +233,27 @@ class SupplierMockScenarioOrchestrator:
             request.crawla_export or request.sb_config is not None or request.assign_to_br
         ):
             logger.info("Provisioning Business Rules for api_key=%s", api_key)
-            br_setup = await self.br_provisioner.provision(api_key, template_id=request.template_id)
+            br_setup = await self.br_provisioner.provision(
+                api_key,
+                template_id=request.template_id,
+                static_markup=request.static_markup,
+                dynamic_markup=request.dynamic_markup,
+            )
 
         if br_setup is not None:
             bundle.br_setup = br_setup
             br_status = br_setup.get("status", "?")
             br_errors = br_setup.get("errors", [])
-            plog.append(f"[br] Provisioning status={br_status} errors={br_errors}")
+            # The markup actually provisioned, defaults included — the log is where a QA
+            # checks what a scenario got without opening the BR UI.
+            markups = {
+                rule_id: data.get("output_value")
+                for rule_id, data in (br_setup.get("rules") or {}).items()
+                if data.get("output_value")
+            }
+            plog.append(
+                f"[br] Provisioning status={br_status} markups={markups} errors={br_errors}"
+            )
             if br_status != "SUCCESS":
                 bundle.error_message = br_setup.get("warning") or "BR setup failed"
                 logger.warning("BR provisioning had errors: %s", bundle.error_message)

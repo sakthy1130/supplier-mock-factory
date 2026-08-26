@@ -14,6 +14,9 @@ from app.models.scenario import ScenarioRequest
 from app.models.supplier import SupplierConfig
 from app.services.supplier_service import get_supplier_config
 
+#: Priority every SMF contract is created with. Backoffice takes it as a string.
+DEFAULT_CONTRACT_PRIORITY = "0"
+
 
 class ContractProvisioner:
     def __init__(self, backoffice: BackofficeClient | None = None) -> None:
@@ -144,6 +147,12 @@ def _clone_contract(
     uid = _contract_uid(namespace, instance_key)
     body["uid"] = uid
     body["label"] = f"SMF {namespace} {instance_key}"
+    # Never inherited from the reference: package-merge breaks price ties on contract
+    # priority, and the reference contracts do not agree (HBS's carries 1 where the others
+    # carry 0). A cloned contract that keeps that would quietly win every tie against the
+    # other suppliers in the same scenario, which reads as a merge bug rather than a
+    # contract difference. Every SMF contract sits at the same priority.
+    body["priority"] = DEFAULT_CONTRACT_PRIORITY
     _apply_dynamic_market_type(body, config)
     opt = body.setdefault("opt", {})
     if isinstance(opt, dict):
@@ -181,7 +190,7 @@ def _minimal_contract_body(
         "label": f"SMF {namespace} {instance_key}",
         "userName": uid,
         "password": "smf-password",
-        "priority": "1",
+        "priority": DEFAULT_CONTRACT_PRIORITY,
         "supplierId": config.supplier_id,
         "supplierDetail": config.supplier_detail,
         "supplierType": config.supplier_type,
