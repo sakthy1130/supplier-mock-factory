@@ -188,6 +188,10 @@
   border-color: color-mix(in srgb, var(--warning) 55%, transparent);
 }
 
+.env-switcher select.env-odis {
+  border-color: color-mix(in srgb, var(--success) 55%, transparent);
+}
+
 .env-badge {
   display: inline-block;
   padding: 0.05rem 0.4rem;
@@ -209,6 +213,12 @@
   color: var(--warning);
   border-color: color-mix(in srgb, var(--warning) 55%, transparent);
   background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+
+.env-badge.env-odis {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 55%, transparent);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
 }
 
 .stat-chip {
@@ -288,6 +298,10 @@
 
 .sidebar-select.env-stg {
   border-color: color-mix(in srgb, var(--warning) 55%, transparent);
+}
+
+.sidebar-select.env-odis {
+  border-color: color-mix(in srgb, var(--success) 55%, transparent);
 }
 
 .sidebar-status {

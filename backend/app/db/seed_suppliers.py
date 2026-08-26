@@ -41,7 +41,7 @@ log = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIELD_MAPS_DIR = REPO_ROOT / "field-maps"
 
-SEED_ENVS = ("dev", "stg")
+SEED_ENVS = ("dev", "stg", "odis")
 
 # Backoffice ids per env. Dev does NOT share stg's supplier records — a dev contract
 # referencing stg's HBS _id caused a NullPointerException in hotel-connectivity-core
@@ -66,6 +66,13 @@ _BACKOFFICE_IDS: dict[str, dict[str, tuple[str, int]]] = {
         "CHC": ("69ef11d11a41325a74bab5da", 107017),
         "EXT": ("642c33cbff075a612ab6ad06", 100423),
     },
+    # ODIS Staging (Discover Saudi tenant, enigma-portal-sandbox). Deliberately EMPTY.
+    # ODIS is a different tenant with its own Backoffice supplier records, and seeding
+    # another env's _id is exactly what NPE'd connectivity-core for dev. The seed loop
+    # skips a code with no ids here, so ODIS starts with no suppliers and they are added
+    # once their real _id / autoId are read off the ODIS Backoffice — either here or
+    # through SMF's Suppliers screen, which writes the same fields at runtime.
+    "odis": {},
 }
 
 _FULL_BOOKING_FLOW = ["Search", "Packages", "PreBooking", "Booking", "GetOrder", "CancelOrder"]

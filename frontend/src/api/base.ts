@@ -13,13 +13,24 @@ export const API_BASE = resolveApiBase()
 // resolves the matching Settings + supplier registry + Quickwit index for that
 // env. Persisted in localStorage so a page refresh keeps the last selection.
 
-export type SmfEnv = 'dev' | 'stg'
+export type SmfEnv = 'dev' | 'stg' | 'odis'
+
+export const SMF_ENVS: readonly SmfEnv[] = ['dev', 'stg', 'odis']
+
+export const SMF_ENV_LABELS: Record<SmfEnv, string> = {
+  dev: 'Dev',
+  stg: 'Staging',
+  odis: 'ODIS Staging',
+}
 
 const ENV_STORAGE_KEY = 'smf-active-env'
 
 function readInitialEnv(): SmfEnv {
   if (typeof window === 'undefined') return 'dev'
-  return window.localStorage.getItem(ENV_STORAGE_KEY) === 'stg' ? 'stg' : 'dev'
+  // Membership test rather than a stg/dev ternary — with three envs the old
+  // binary check silently rewrote anything that wasn't 'stg' back to 'dev'.
+  const stored = window.localStorage.getItem(ENV_STORAGE_KEY) as SmfEnv | null
+  return stored && SMF_ENVS.includes(stored) ? stored : 'dev'
 }
 
 let activeEnv: SmfEnv = readInitialEnv()

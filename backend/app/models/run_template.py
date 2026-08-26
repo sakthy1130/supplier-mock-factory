@@ -15,8 +15,8 @@ class RunTemplateRequest(BaseModel):
 
     environment: str = Field(
         default="dev",
-        description="Target environment: 'dev' or 'stg'",
-        examples=["dev", "stg"]
+        description="Target environment: 'dev', 'stg' or 'odis' (ODIS Staging)",
+        examples=["dev", "stg", "odis"]
     )
     check_in: Optional[str] = Field(
         default=None,

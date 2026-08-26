@@ -45,12 +45,14 @@ def _ready_bundle(namespace: str) -> ScenarioBundle:
 
 def test_env_context_normalize_and_defaults():
     assert DEFAULT_ENV == "dev"
-    assert set(SUPPORTED_ENVS) == {"dev", "stg"}
+    assert set(SUPPORTED_ENVS) == {"dev", "stg", "odis"}
     assert normalize_env(None) == "dev"
     assert normalize_env("") == "dev"
     assert normalize_env("bogus") == "dev"
     assert normalize_env("STG") == "stg"
     assert normalize_env(" dev ") == "dev"
+    assert normalize_env("ODIS") == "odis"
+    assert normalize_env(" odis ") == "odis"
 
 
 def test_settings_layering_is_distinct_per_env(tmp_path, monkeypatch):
@@ -59,6 +61,7 @@ def test_settings_layering_is_distinct_per_env(tmp_path, monkeypatch):
     (tmp_path / ".env.shared").write_text("CRAWLA_API_KEY=shared-key\n")
     (tmp_path / ".env.dev").write_text("MOCK_SERVER_URL=http://mock-dev.example\n")
     (tmp_path / ".env.stg").write_text("MOCK_SERVER_URL=http://mock-stg.example\n")
+    (tmp_path / ".env.odis").write_text("MOCK_SERVER_URL=http://mock-odis.example\n")
     monkeypatch.setattr(config_module, "BACKEND_DIR", tmp_path)
     monkeypatch.setattr(config_module, "BACKEND_ENV_FILE", tmp_path / ".env")
     monkeypatch.delenv("MOCK_SERVER_URL", raising=False)
@@ -67,12 +70,15 @@ def test_settings_layering_is_distinct_per_env(tmp_path, monkeypatch):
     try:
         dev = get_settings("dev")
         stg = get_settings("stg")
+        odis = get_settings("odis")
         assert dev.env == "dev"
         assert stg.env == "stg"
+        assert odis.env == "odis"
         assert dev.mock_server_url == "http://mock-dev.example"
         assert stg.mock_server_url == "http://mock-stg.example"
-        # shared values (from .env.shared) are inherited by both
-        assert dev.crawla_api_key == stg.crawla_api_key == "shared-key"
+        assert odis.mock_server_url == "http://mock-odis.example"
+        # shared values (from .env.shared) are inherited by every env
+        assert dev.crawla_api_key == stg.crawla_api_key == odis.crawla_api_key == "shared-key"
     finally:
         clear_settings_cache()  # don't leak throwaway-path settings into other tests
 
@@ -80,6 +86,7 @@ def test_settings_layering_is_distinct_per_env(tmp_path, monkeypatch):
 def test_health_reports_resolved_env(api_client):
     assert api_client.get("/health").json()["env"] == "dev"
     assert api_client.get("/health", headers={"X-SMF-Env": "stg"}).json()["env"] == "stg"
+    assert api_client.get("/health", headers={"X-SMF-Env": "odis"}).json()["env"] == "odis"
     # unknown header value falls back to default, never 500s
     assert api_client.get("/health", headers={"X-SMF-Env": "prod"}).json()["env"] == "dev"
 
@@ -87,9 +94,14 @@ def test_health_reports_resolved_env(api_client):
 def test_api_env_endpoint(api_client):
     data = api_client.get("/api/env").json()
     assert data["default"] == "dev"
-    assert set(data["available"]) == {"dev", "stg"}
+    assert set(data["available"]) == {"dev", "stg", "odis"}
     assert data["current"] == "dev"
     assert api_client.get("/api/env", headers={"X-SMF-Env": "stg"}).json()["current"] == "stg"
+    assert api_client.get("/api/env", headers={"X-SMF-Env": "odis"}).json()["current"] == "odis"
+    # options carry a display label per env so the UI does not hardcode the list
+    labels = {o["code"]: o["label"] for o in data["options"]}
+    assert labels["odis"] == "ODIS Staging"
+    assert set(labels) == set(data["available"])
 
 
 @pytest.mark.usefixtures("api_client")
@@ -186,3 +198,23 @@ class TestScenarioEnvTagging:
 
         remaining_stg = api_client.get("/api/scenarios", headers={"X-SMF-Env": "stg"}).json()
         assert any(item["namespace"] == "env-teardown-stg" for item in remaining_stg)
+
+
+def test_odis_seeds_no_suppliers_until_its_backoffice_ids_are_known():
+    """ODIS is a separate tenant, so no other env's supplier _id may leak into it.
+
+    Seeding a supplier with another env's Backoffice _id is what NPE'd
+    hotel-connectivity-core for dev (see seed_suppliers._BACKOFFICE_IDS). Until the
+    real ODIS ids are read off its Backoffice, the env must seed empty rather than
+    wrong — the seed loop skips any code with no ids for the env.
+    """
+    from app.db.seed_suppliers import SEED_ENVS, _BACKOFFICE_IDS
+
+    assert "odis" in SEED_ENVS
+    assert _BACKOFFICE_IDS["odis"] == {}, (
+        "ODIS supplier ids must come from the ODIS Backoffice, never copied from "
+        "another env"
+    )
+    # and nothing else may have been borrowed from stg
+    for code, ids in _BACKOFFICE_IDS["stg"].items():
+        assert code not in _BACKOFFICE_IDS["odis"], f"{code} copied stg's ids into odis"

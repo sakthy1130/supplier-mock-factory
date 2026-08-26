@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { createCrawlaScenario, runCrawlaScenario } from './api/crawla'
-import { getActiveEnv, setActiveEnv, type SmfEnv } from './api/base'
+import { getActiveEnv, setActiveEnv, SMF_ENVS, SMF_ENV_LABELS, type SmfEnv } from './api/base'
 import {
   clearAllScenarios,
   createScenario,
@@ -1307,12 +1307,15 @@ function App() {
         <div className="sidebar-section">
           <label className="sidebar-label">🌐 Environment</label>
           <select
-            className={`sidebar-select ${env === 'stg' ? 'env-stg' : 'env-dev'}`}
+            className={`sidebar-select env-${env}`}
             value={env}
             onChange={(e) => handleEnvChange(e.target.value as SmfEnv)}
           >
-            <option value="dev">Dev</option>
-            <option value="stg">Staging</option>
+            {SMF_ENVS.map((code) => (
+              <option key={code} value={code}>
+                {SMF_ENV_LABELS[code]}
+              </option>
+            ))}
           </select>
         </div>
 

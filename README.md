@@ -8,9 +8,10 @@ Automate supplier mock creation for hotel connectivity QA: templates from SIDs �
 
 ```bash
 cd backend
-cp .env.shared.example .env.shared   # values common to dev + stg
+cp .env.shared.example .env.shared   # values common to every env
 cp .env.dev.example .env.dev         # dev URLs/creds
 cp .env.stg.example .env.stg         # staging URLs/creds
+cp .env.odis.example .env.odis       # ODIS Staging URLs/creds
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -20,10 +21,11 @@ uvicorn app.main:app --reload --port 8001
 Health: http://localhost:8001/health  
 API docs: http://localhost:8001/docs
 
-#### Environments (dev / stg)
+#### Environments (dev / stg / odis)
 
-SMF runs against **dev** or **stg** — selectable live in the UI (top-left dropdown), no
-restart required. Every request carries an `X-SMF-Env: dev|stg` header; the backend
+SMF runs against **dev**, **stg** or **odis** (ODIS Staging, the Discover Saudi tenant) —
+selectable live in the UI (top-left dropdown), no restart required. Every request carries
+an `X-SMF-Env: dev|stg|odis` header; the backend
 resolves settings, supplier registry, and Quickwit index per that header. Default is
 **dev**. Each scenario is tagged with the env it was created in and its whole lifecycle
 (run/refresh/teardown) always targets that env, regardless of the dropdown's current
@@ -62,7 +64,7 @@ The compose stack is tuned for local development:
 
 Use this flow for staging QA or a fresh local session:
 
-1. Fill `backend/.env.shared` / `.env.dev` / `.env.stg` from their `.example` files.
+1. Fill `backend/.env.shared` / `.env.dev` / `.env.stg` / `.env.odis` from their `.example` files.
 2. Start the stack with `docker compose up --build` or run backend/frontend manually.
 3. Confirm backend health at `/health` before creating scenarios — check the `env` field matches the UI's dropdown.
 4. Create a scenario from the UI with namespace, dates, hotel id, and supplier package data.
