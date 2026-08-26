@@ -66,13 +66,26 @@ _BACKOFFICE_IDS: dict[str, dict[str, tuple[str, int]]] = {
         "CHC": ("69ef11d11a41325a74bab5da", 107017),
         "EXT": ("642c33cbff075a612ab6ad06", 100423),
     },
-    # ODIS Staging (Discover Saudi tenant, enigma-portal-sandbox). Deliberately EMPTY.
-    # ODIS is a different tenant with its own Backoffice supplier records, and seeding
-    # another env's _id is exactly what NPE'd connectivity-core for dev. The seed loop
-    # skips a code with no ids here, so ODIS starts with no suppliers and they are added
-    # once their real _id / autoId are read off the ODIS Backoffice — either here or
-    # through SMF's Suppliers screen, which writes the same fields at runtime.
-    "odis": {},
+    # ODIS Staging (Discover Saudi tenant, enigma-portal-sandbox). Read off that
+    # Backoffice on 2026-08-26 via /api/suppliers and /api/contracts — every _id
+    # differs from stg's, which is why they could not be copied across.
+    #
+    # The third tuple element pins the reference contract in git rather than relying on
+    # a gitignored *_REFERENCE_CONTRACT_ID; a missing .env entry is what makes a
+    # supplier's contract come out wrong on a fresh machine.
+    #
+    # Absent on purpose:
+    #   RHK — supplier record exists (6540eecfad90767464dcf4db / 100033) but ODIS has
+    #         NO RHK contract, and provisioning without a reference falls back to a
+    #         synthesized body with a wrong supplier_id ("Cannot find Supplier of id",
+    #         empty search). Add it here once a reference contract exists.
+    #   CHC — no supplier record and no contract on ODIS at all.
+    "odis": {
+        "HBS": ("604873bf68777c04b37da613", 100004, "64f5cb45909ab56c0b8e59c8"),
+        "EXP": ("5f8ff98c1207af02523388d3", 100002, "66c254378d7aa16aef6ab5b1"),
+        "EXT": ("64d33867d28bd10c11af3e69", 100061, "64d33d2ffe7d9e19491a9134"),
+        "HIL": ("64d39e3dd28bd10c11af3e6a", 100062, "6954ef3cae55765fe37dd9fe"),
+    },
 }
 
 _FULL_BOOKING_FLOW = ["Search", "Packages", "PreBooking", "Booking", "GetOrder", "CancelOrder"]

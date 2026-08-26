@@ -200,21 +200,31 @@ class TestScenarioEnvTagging:
         assert any(item["namespace"] == "env-teardown-stg" for item in remaining_stg)
 
 
-def test_odis_seeds_no_suppliers_until_its_backoffice_ids_are_known():
+def test_odis_supplier_ids_are_its_own_never_borrowed_from_another_env():
     """ODIS is a separate tenant, so no other env's supplier _id may leak into it.
 
     Seeding a supplier with another env's Backoffice _id is what NPE'd
-    hotel-connectivity-core for dev (see seed_suppliers._BACKOFFICE_IDS). Until the
-    real ODIS ids are read off its Backoffice, the env must seed empty rather than
-    wrong — the seed loop skips any code with no ids for the env.
+    hotel-connectivity-core for dev (see seed_suppliers._BACKOFFICE_IDS). Every ODIS
+    _id was read off the ODIS Backoffice and every one of them differs from stg's —
+    this pins that they stay distinct.
     """
     from app.db.seed_suppliers import SEED_ENVS, _BACKOFFICE_IDS
 
     assert "odis" in SEED_ENVS
-    assert _BACKOFFICE_IDS["odis"] == {}, (
-        "ODIS supplier ids must come from the ODIS Backoffice, never copied from "
-        "another env"
-    )
-    # and nothing else may have been borrowed from stg
-    for code, ids in _BACKOFFICE_IDS["stg"].items():
-        assert code not in _BACKOFFICE_IDS["odis"], f"{code} copied stg's ids into odis"
+    odis = _BACKOFFICE_IDS["odis"]
+    assert set(odis) == {"HBS", "EXP", "EXT", "HIL"}
+
+    # RHK has an ODIS supplier record but no ODIS contract, and CHC has neither.
+    # Seeding either would provision against a missing reference contract.
+    assert "RHK" not in odis and "CHC" not in odis
+
+    for env in ("stg", "dev"):
+        for code, ids in odis.items():
+            other = _BACKOFFICE_IDS[env].get(code)
+            if other is not None:
+                assert ids[0] != other[0], f"{code} reuses {env}'s supplier _id on odis"
+
+    # Every ODIS supplier pins its reference contract in git rather than relying on a
+    # gitignored env var, so a fresh machine cannot provision a wrong contract.
+    for code, ids in odis.items():
+        assert len(ids) == 3 and ids[2], f"{code} on odis has no pinned reference contract"
