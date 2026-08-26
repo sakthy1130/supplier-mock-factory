@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.db.database import get_db
 from app.db.repository import MongoStore
 from app.env_context import get_current_env, use_env
+from app.integrations.business_rules import STATIC_MARKUP_RULE_ID, dynamic_markup_enabled
 from app.models.run_template import RunTemplateRequest, RunTemplateResponse
 from app.services import scenario_service
 from app.services import scenario_template_service
@@ -218,6 +219,11 @@ async def run_template_endpoint(
     )
 
     try:
+        # Resolve the target env FIRST — everything below is env-scoped: which BR rules
+        # exist, which mapping service resolves the hotel id, which Backoffice the
+        # contract is created in.
+        env = request_data.environment or get_current_env()
+
         # Load template
         tracker.start_step("scenario_creation")
         templates = scenario_template_service.list_templates(db)
@@ -237,6 +243,22 @@ async def run_template_endpoint(
             return response
 
         tracker.log(f"Loaded template: {template.label}")
+
+        # Static-only envs (ODIS) do not configure DynamicMarkup, so a dynamic_markup
+        # here can never be provisioned. Reject it rather than accept the request and
+        # silently drop the value — the caller would otherwise believe it was applied.
+        if request_data.dynamic_markup and not dynamic_markup_enabled(env):
+            tracker.end_step("scenario_creation", success=False, error="dynamic markup unsupported")
+            response.status = "FAILED"
+            response.error = {
+                "code": "DYNAMIC_MARKUP_NOT_SUPPORTED",
+                "message": (
+                    f"environment '{env}' runs Static Markup (rule "
+                    f"{STATIC_MARKUP_RULE_ID}) only and has no DynamicMarkup rule; "
+                    "drop dynamic_markup from the request."
+                ),
+            }
+            return response
 
         # Determine dates
         check_in = request_data.check_in or datetime.now().strftime("%Y-%m-%d")
@@ -275,13 +297,10 @@ async def run_template_endpoint(
             template_id=template_id,
         )
 
-        # Resolve the target env FIRST — the mapping service is per-env (dev vs
-        # staging hosts return different supplier hotel ids), so the resolution
-        # below MUST run under the requested env or it silently bakes the wrong
-        # env's hotel id into the mock (e.g. dev's 12323 for a stg scenario, which
-        # the stg HMS can't map -> 0 search results).
-        env = request_data.environment or get_current_env()
-
+        # The mapping service is per-env (dev vs staging hosts return different
+        # supplier hotel ids), so the resolution below MUST run under the requested env
+        # or it silently bakes the wrong env's hotel id into the mock (e.g. dev's 12323
+        # for a stg scenario, which the stg HMS can't map -> 0 search results).
         # Resolve ATG hotel ID to supplier-specific hotel IDs via mapping API,
         # pinned to the requested env's mapping service.
         tracker.log(f"Resolving hotel mapping for ATG hotel: {hotel_id} (env={env})")

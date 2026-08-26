@@ -53,11 +53,23 @@ class MarkupRule(NamedTuple):
     output_value: str
 
 
+# Envs that run Static Markup (rule 3) ONLY. ODIS does not configure DynamicMarkup
+# (rule 4), so assigning it or hanging a condition off it has nothing to attach to.
+# Everything downstream keys off this one set: the rule pair, the rule assignment, and
+# the per-template child conditions (which parent onto the dynamic condition).
+STATIC_ONLY_ENVS = frozenset({"odis"})
+
+
+def dynamic_markup_enabled(env: str | None) -> bool:
+    return (env or "") not in STATIC_ONLY_ENVS
+
+
 def markup_rules(
     static_markup: str | None = None,
     dynamic_markup: str | None = None,
+    env: str | None = None,
 ) -> tuple[MarkupRule, ...]:
-    """The two markup conditions, in creation order.
+    """The markup conditions to create, in creation order.
 
     Single source for both provisioning paths. They must agree on rule, parent, output
     detail AND value — the contract path exists to mirror the apiKey path with a different
@@ -65,9 +77,10 @@ def markup_rules(
     separate literals did.
 
     Order matters: the dynamic condition is created second and its id is the parent the
-    per-template child conditions hang off.
+    per-template child conditions hang off. On a static-only env the dynamic condition is
+    omitted entirely, so there is no such parent and no child conditions.
     """
-    return (
+    rules = (
         MarkupRule(
             "condition_static",
             STATIC_MARKUP_RULE_ID,
@@ -75,6 +88,10 @@ def markup_rules(
             STATIC_MARKUP_OUTPUT_DETAIL_ID,
             static_markup or DEFAULT_STATIC_MARKUP,
         ),
+    )
+    if not dynamic_markup_enabled(env):
+        return rules
+    return rules + (
         MarkupRule(
             "condition_dynamic",
             DYNAMIC_MARKUP_RULE_ID,
@@ -252,10 +269,16 @@ class CrawlaBusinessRulesProvisioner:
             "rules": {},
             "errors": [],
         }
+        env = self.client.settings.env
+        dynamic_on = dynamic_markup_enabled(env)
+        setup["dynamic_markup_enabled"] = dynamic_on
         async with self.client:
             await self._run_step(setup, "assign_static", self._assign_rule, STATIC_MARKUP_RULE_ID, api_key)
-            await self._run_step(setup, "assign_dynamic", self._assign_rule, DYNAMIC_MARKUP_RULE_ID, api_key)
-            for rule in markup_rules(static_markup, dynamic_markup):
+            if dynamic_on:
+                await self._run_step(
+                    setup, "assign_dynamic", self._assign_rule, DYNAMIC_MARKUP_RULE_ID, api_key
+                )
+            for rule in markup_rules(static_markup, dynamic_markup, env):
                 await self._run_step(
                     setup,
                     rule.step,
@@ -266,7 +289,10 @@ class CrawlaBusinessRulesProvisioner:
                     api_key,
                     rule.output_value,
                 )
-            if template_id:
+            # Child conditions parent onto the dynamic condition, so a static-only env
+            # has nothing to hang them from. Skip silently rather than reporting a
+            # missing parent as an error — on ODIS its absence is the design.
+            if template_id and dynamic_on:
                 dynamic_parent_id = _rule_data(setup, DYNAMIC_MARKUP_RULE_ID).get("condition_id")
                 if dynamic_parent_id:
                     await self._run_step(
@@ -349,7 +375,10 @@ class CrawlaBusinessRulesProvisioner:
             "contract_condition_ids": [],
             "errors": [],
         }
-        config = _load_contract_conditions().get(self.client.settings.env) or {}
+        env = self.client.settings.env
+        dynamic_on = dynamic_markup_enabled(env)
+        setup["dynamic_markup_enabled"] = dynamic_on
+        config = _load_contract_conditions().get(env) or {}
         payloads = config.get("conditions") or []
 
         value_field = config.get("contract_value_field") or "autoId"
@@ -388,9 +417,10 @@ class CrawlaBusinessRulesProvisioner:
                 await self._run_step(
                     setup, "assign_static", self._assign_rule, STATIC_MARKUP_RULE_ID, api_key
                 )
-                await self._run_step(
-                    setup, "assign_dynamic", self._assign_rule, DYNAMIC_MARKUP_RULE_ID, api_key
-                )
+                if dynamic_on:
+                    await self._run_step(
+                        setup, "assign_dynamic", self._assign_rule, DYNAMIC_MARKUP_RULE_ID, api_key
+                    )
             if payloads:
                 # Per-env override: raw bodies straight from the field-map, including their
                 # own outputValue. A scenario's markup deliberately does NOT apply here —
@@ -402,7 +432,7 @@ class CrawlaBusinessRulesProvisioner:
             else:
                 # Default: mirror the apiKey path, swapping only the input.
                 for input_value in input_values:
-                    for rule in markup_rules(static_markup, dynamic_markup):
+                    for rule in markup_rules(static_markup, dynamic_markup, env):
                         await self._create_contract_condition(
                             setup,
                             rule.rule_id,

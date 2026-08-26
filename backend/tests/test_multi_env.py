@@ -228,3 +228,50 @@ def test_odis_supplier_ids_are_its_own_never_borrowed_from_another_env():
     # gitignored env var, so a fresh machine cannot provision a wrong contract.
     for code, ids in odis.items():
         assert len(ids) == 3 and ids[2], f"{code} on odis has no pinned reference contract"
+
+
+def test_odis_runs_static_markup_only():
+    """ODIS has no DynamicMarkup rule, so rule 4 must never be built for it."""
+    from app.integrations.business_rules import (
+        DYNAMIC_MARKUP_RULE_ID,
+        STATIC_MARKUP_RULE_ID,
+        dynamic_markup_enabled,
+        markup_rules,
+    )
+
+    assert dynamic_markup_enabled("dev") and dynamic_markup_enabled("stg")
+    assert not dynamic_markup_enabled("odis")
+
+    odis = markup_rules(env="odis")
+    assert [r.rule_id for r in odis] == [STATIC_MARKUP_RULE_ID]
+
+    # ...and the other envs are untouched: still the static+dynamic pair, in order.
+    for env in ("dev", "stg", None):
+        pair = markup_rules(env=env)
+        assert [r.rule_id for r in pair] == [STATIC_MARKUP_RULE_ID, DYNAMIC_MARKUP_RULE_ID]
+
+    # A dynamic value passed for odis is dropped, never smuggled onto rule 3. The
+    # static value passes through verbatim — normalising "20" to "20%" is
+    # ScenarioRequest._normalize_markup's job, upstream of here.
+    only = markup_rules("20", "30%-40%", "odis")
+    assert len(only) == 1
+    assert only[0].rule_id == STATIC_MARKUP_RULE_ID
+    assert only[0].output_value == "20"
+
+
+def test_odis_runs_exp_as_net_not_gross():
+    """EXP is gross everywhere else; ODIS prices it net, so its contract must say so."""
+    from app.db.seed_suppliers import SEED_SUPPLIERS, _BACKOFFICE_IDS, _spec_for_env
+
+    exp = next(s for s in SEED_SUPPLIERS if s["code"] == "EXP")
+    assert exp["supplier_type"] == "gross"
+    assert _spec_for_env(exp, "stg")["supplier_type"] == "gross"
+    assert _spec_for_env(exp, "odis")["supplier_type"] == "net"
+
+    # the pinned ODIS reference contract is the NET one
+    assert _BACKOFFICE_IDS["odis"]["EXP"][2] == "695e4ddb121a5d00683e7ae8"
+
+    # no other supplier is altered on odis
+    for spec in SEED_SUPPLIERS:
+        if spec["code"] != "EXP":
+            assert _spec_for_env(spec, "odis") is spec

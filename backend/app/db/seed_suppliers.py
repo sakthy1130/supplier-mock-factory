@@ -82,11 +82,28 @@ _BACKOFFICE_IDS: dict[str, dict[str, tuple[str, int]]] = {
     #   CHC — no supplier record and no contract on ODIS at all.
     "odis": {
         "HBS": ("604873bf68777c04b37da613", 100004, "64f5cb45909ab56c0b8e59c8"),
-        "EXP": ("5f8ff98c1207af02523388d3", 100002, "66c254378d7aa16aef6ab5b1"),
+        # NET reference contract (exp-general-contract-net-positive). ODIS runs EXP net
+        # only — see _ENV_SUPPLIER_OVERRIDES.
+        "EXP": ("5f8ff98c1207af02523388d3", 100002, "695e4ddb121a5d00683e7ae8"),
         "EXT": ("64d33867d28bd10c11af3e69", 100061, "64d33d2ffe7d9e19491a9134"),
         "HIL": ("64d39e3dd28bd10c11af3e6a", 100062, "6954ef3cae55765fe37dd9fe"),
     },
 }
+
+# Per-env deviations from a supplier's global spec. Kept separate from _BACKOFFICE_IDS
+# because these change BEHAVIOUR, not identity: supplier_type drives the contract's
+# supplierType field (contract_provisioner) and therefore how the adapter prices.
+_ENV_SUPPLIER_OVERRIDES: dict[str, dict[str, dict[str, Any]]] = {
+    # EXP is gross everywhere else, but ODIS runs it NET only — a gross contract there
+    # prices against a markup node the tenant does not populate.
+    "odis": {"EXP": {"supplier_type": "net"}},
+}
+
+
+def _spec_for_env(spec: dict[str, Any], env: str) -> dict[str, Any]:
+    """The supplier spec as it applies in `env`, with any per-env overrides applied."""
+    override = _ENV_SUPPLIER_OVERRIDES.get(env, {}).get(str(spec["code"]))
+    return {**spec, **override} if override else spec
 
 _FULL_BOOKING_FLOW = ["Search", "Packages", "PreBooking", "Booking", "GetOrder", "CancelOrder"]
 
@@ -455,6 +472,7 @@ def seed_suppliers(store=None) -> int:
                 # the supplier absent here rather than wrong.
                 continue
             supplier_id, auto_id = ids[0], ids[1]
+            spec = _spec_for_env(spec, env)
             resolved.suppliers.save(
                 SupplierRecord(
                     id=str(uuid.uuid4()),
