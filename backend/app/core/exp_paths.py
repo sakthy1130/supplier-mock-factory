@@ -75,24 +75,32 @@ def apply_exp_mock_path(expectation: dict[str, Any], log_type: str) -> dict[str,
 PRICE_CHECK_CANONICAL_PREFIX = "/v3/properties/"
 
 
-def apply_namespace_to_price_check_hrefs(
+def apply_namespace_to_response_hrefs(
     expectation: dict[str, Any],
     path_prefix: str,
 ) -> dict[str, Any]:
-    """Prefix every ``links.price_check.href`` in the response body with `path_prefix`.
+    """Prefix every RELATIVE ``links.*.href`` in the response body with `path_prefix`.
 
     `path_prefix` is the same leading segment(s) the mock path gets — ``/{namespace}``,
     plus an instance segment when the supplier appears twice in one scenario. Pass a
     bare namespace and it is treated as that single segment.
 
-    The EXP adapter reaches price-check by following the href embedded in the
-    Search/Packages response, not via a contract URL. ``apply_namespace_path_prefix``
-    only rewrites ``httpRequest.path``, so without this the adapter calls the
-    canonical ``/v3/properties/...`` while the PreBooking mock is registered at
-    ``/{namespace}/v3/properties/...`` — MockServer finds no match and the booking
-    never gets past price-check.
+    EXP is a HATEOAS API: the adapter reaches the next step by following an href
+    embedded in the previous response, not via a contract URL.
+    ``apply_namespace_path_prefix`` only rewrites ``httpRequest.path``, so an
+    un-prefixed href sends the adapter to the canonical ``/v3/...`` while the mock is
+    registered at ``/{namespace}/v3/...`` — MockServer finds no match.
 
-    Idempotent: an already-prefixed href no longer starts with ``/v3/properties/``.
+    This was originally price_check only, which fixed Search/Packages → PreBooking and
+    left every other link broken. The Booking response's ``links.retrieve`` is the one
+    that bit: the adapter followed ``/v3/itineraries/{id}``, got a 404, and the core
+    reported E3027.3 "unexpected or unhandled get order response". ``links.book``,
+    ``additional_rates``, ``payment_options`` and ``recommendations`` had the same hole.
+
+    Only RELATIVE hrefs are touched. An absolute one (``https://www.example.com...`` in
+    the GetOrder conversations block) is left alone — prefixing it would corrupt it.
+
+    Idempotent: an already-prefixed href starts with the prefix, not ``/``+canonical.
     """
     prefix = _normalized_prefix(path_prefix)
     if not prefix:
@@ -101,15 +109,18 @@ def apply_namespace_to_price_check_hrefs(
     if not isinstance(http_response, dict):
         return expectation
     for node in _walk_nodes(http_response.get("body")):
-        if not isinstance(node, dict):
-            continue
-        _prefix_price_check(node.get("links"), prefix)
-        bed_groups = node.get("bed_groups")
-        if isinstance(bed_groups, dict):
-            for bed_group in bed_groups.values():
-                if isinstance(bed_group, dict):
-                    _prefix_price_check(bed_group.get("links"), prefix)
+        if isinstance(node, dict):
+            _prefix_links(node.get("links"), prefix)
+            bed_groups = node.get("bed_groups")
+            if isinstance(bed_groups, dict):
+                for bed_group in bed_groups.values():
+                    if isinstance(bed_group, dict):
+                        _prefix_links(bed_group.get("links"), prefix)
     return expectation
+
+
+# Kept as the old name so nothing importing it breaks; the behaviour is a superset.
+apply_namespace_to_price_check_hrefs = apply_namespace_to_response_hrefs
 
 
 def _normalized_prefix(path_prefix: str) -> str:
@@ -128,15 +139,19 @@ def _normalized_prefix(path_prefix: str) -> str:
     return "/" + "/".join(segments)
 
 
-def _prefix_price_check(links: Any, prefix: str) -> None:
+def _prefix_links(links: Any, prefix: str) -> None:
+    """Prefix every relative href under a ``links`` object (retrieve, book, price_check,
+    additional_rates, payment_options, recommendations — whatever EXP adds next)."""
     if not isinstance(links, dict):
         return
-    price_check = links.get("price_check")
-    if not isinstance(price_check, dict):
-        return
-    href = price_check.get("href")
-    if isinstance(href, str) and href.startswith(PRICE_CHECK_CANONICAL_PREFIX):
-        price_check["href"] = f"{prefix}{href}"
+    for link in links.values():
+        if not isinstance(link, dict):
+            continue
+        href = link.get("href")
+        # Relative only: an absolute URL is the supplier's own, not ours to rewrite.
+        # Already-prefixed hrefs start with the prefix, so this stays idempotent.
+        if isinstance(href, str) and href.startswith("/") and not href.startswith(f"{prefix}/"):
+            link["href"] = f"{prefix}{href}"
 
 
 def _walk_nodes(node: Any) -> list[Any]:

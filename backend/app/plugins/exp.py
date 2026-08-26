@@ -55,6 +55,14 @@ class ExpMockPlugin(SupplierMockPlugin):
             {
                 "checkInDate": lambda _value: check_in,
                 "checkOutDate": lambda _value: check_out,
+                # EXP's GetOrder body spells the stay lowercase on rooms[] —
+                # "checkin"/"checkout", not camelCase and not a URL query param, so
+                # neither branch below reached it. The retrieved order therefore kept the
+                # captured template's stay (2026-08-13 → 18) whatever the scenario booked,
+                # and the adapter answered E3027.3 "unexpected or unhandled get order
+                # response". GetOrder is the only EXP template carrying these as body keys.
+                "checkin": lambda _value: check_in,
+                "checkout": lambda _value: check_out,
             },
         )
 
