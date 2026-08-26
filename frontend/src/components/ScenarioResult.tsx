@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { CrawlaScenarioRunResult } from '../types/crawla'
 import type { ScenarioBundle } from '../types/scenario'
+import type { RunMode } from '../api/scenarios'
 
 interface Props {
   bundle: ScenarioBundle
   onRefreshBookingIds?: () => void
   onTeardown?: () => void
-  onRunCrawlaScenario?: () => Promise<void>
+  onRunCrawlaScenario?: (mode: RunMode) => Promise<void>
   onToggleLogs?: () => void
   crawlaRunResult?: CrawlaScenarioRunResult | null
   showLogs?: boolean
@@ -78,6 +79,11 @@ export function ScenarioResult({
   const [showCredentials, setShowCredentials] = useState(false)
   const [showScenarioInfo, setShowScenarioInfo] = useState(false)
   const [showRunDetails, setShowRunDetails] = useState(false)
+
+  // Booking ids only exist when the Booking/GetOrder/CancelOrder mocks were built —
+  // i.e. a package was picked for booking and PreBooking is not sold_out. Without
+  // them E2E has nothing to drive, so the button says why instead of failing later.
+  const canRunE2e = Object.keys(bundle.booking_ids ?? {}).length > 0
 
   useEffect(() => {
     setShowCredentials(false)
@@ -373,9 +379,31 @@ export function ScenarioResult({
       {bundle.status === 'READY' && (onRunCrawlaScenario || onRefreshBookingIds || onTeardown) && (
         <div className="actions">
           {onRunCrawlaScenario && (
-            <button type="button" className="btn" disabled={actionBusy || runBusy} onClick={onRunCrawlaScenario}>
-              {runBusy ? 'Running…' : 'Run scenario'}
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn secondary"
+                disabled={actionBusy || runBusy}
+                onClick={() => onRunCrawlaScenario('packages')}
+                title="Drive the core through search → packages and stop there"
+              >
+                {runBusy ? 'Running…' : '▸ Run till packages'}
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={actionBusy || runBusy || !canRunE2e}
+                onClick={() => onRunCrawlaScenario('e2e')}
+                title={
+                  canRunE2e
+                    ? 'Drive the core all the way through book → poll → getOrder'
+                    : 'No package was selected for booking when this scenario was created, ' +
+                      'so no Booking/GetOrder mocks exist. Re-create it and pick a Book package.'
+                }
+              >
+                {runBusy ? 'Running…' : '⏵ Run E2E (till getOrder)'}
+              </button>
+            </>
           )}
           {crawlaRunResult && (crawlaRunResult.logs.length > 0 || crawlaRunResult.error_message) ? (
             <button type="button" className="btn secondary" onClick={onToggleLogs}>

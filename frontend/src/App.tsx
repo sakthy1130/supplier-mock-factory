@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { createCrawlaScenario, runCrawlaScenario } from './api/crawla'
 import { getActiveEnv, setActiveEnv, SMF_ENVS, SMF_ENV_LABELS, type SmfEnv } from './api/base'
+import type { RunMode } from './api/scenarios'
 import {
   clearAllScenarios,
   createScenario,
@@ -462,7 +463,7 @@ function App() {
     }
   }
 
-  const handleRunCrawlaScenario = async () => {
+  const handleRunCrawlaScenario = async (mode: RunMode = 'e2e') => {
     if (!activeScenarioId) return
     setCrawlaRunning(true)
     setBackendError(null)
@@ -471,7 +472,7 @@ function App() {
       // regular scenarios use the generic scenarios run route (no export required).
       const result = bundle?.crawla_export
         ? await runCrawlaScenario(activeScenarioId)
-        : await runScenario(activeScenarioId)
+        : await runScenario(activeScenarioId, mode)
       setCrawlaRunResult(result)
       setShowCrawlaLogs(false)
       await refreshBundle()

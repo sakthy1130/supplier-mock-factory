@@ -176,3 +176,18 @@ def test_a_missing_variant_file_fails_loudly(tmp_path):
     engine = ScenarioEngine(templates_dir=tmp_path)
     with pytest.raises(FileNotFoundError, match="sold_out.json"):
         engine._load_supplier_templates("EXP", ["PreBooking"], PreBookingStatus.sold_out)
+
+
+# ── run mode: the same READY scenario, driven two different distances ──────────
+
+def test_run_mode_values():
+    """'packages' stops after packages even when a package was picked for booking."""
+    from app.api.routes.scenarios import RunMode
+
+    assert [m.value for m in RunMode] == ["packages", "e2e"]
+    # e2e is the default, so existing callers that post no mode keep today's behaviour
+    import inspect
+    from app.api.routes import scenarios as scenarios_module
+
+    default = inspect.signature(scenarios_module.run_scenario).parameters["mode"].default
+    assert default.default is RunMode.e2e

@@ -41,8 +41,11 @@ export function getScenario(id: string) {
   return request<ScenarioBundle>(`/api/scenarios/${id}`)
 }
 
-export function runScenario(id: string) {
-  return request<CrawlaScenarioRunResult>(`/api/scenarios/${id}/run`, {
+/** How far a run drives the core. Chosen per run, not baked into the scenario. */
+export type RunMode = 'packages' | 'e2e'
+
+export function runScenario(id: string, mode: RunMode = 'e2e') {
+  return request<CrawlaScenarioRunResult>(`/api/scenarios/${id}/run?mode=${mode}`, {
     method: 'POST',
   })
 }
