@@ -21,6 +21,14 @@ from app.utils.request_tracker import RequestTracker
 router = APIRouter(prefix="/api/v1")
 
 
+def _status_value(status: object) -> Optional[str]:
+    """The wire value of a PreBookingStatus, or None. The request sends a plain string
+    and the template a enum, so both paths meet here."""
+    if status is None:
+        return None
+    return str(getattr(status, "value", status))
+
+
 def build_scenario_request_from_template(
     template,
     request_data: "RunTemplateRequest",
@@ -46,13 +54,6 @@ def build_scenario_request_from_template(
     sb_enabled = (
         request_data.sb_enabled if request_data.sb_enabled is not None else template.sb_enabled
     )
-    # Omitted rather than passed as None so PackageSpec's own defaults apply and an
-    # unset request still builds a byte-identical scenario.
-    prebooking_kwargs: dict[str, object] = {}
-    if request_data.prebooking_status:
-        prebooking_kwargs["prebooking_status"] = request_data.prebooking_status
-    if request_data.prebooking_changed_price is not None:
-        prebooking_kwargs["prebooking_changed_price"] = request_data.prebooking_changed_price
 
     suppliers: list[SupplierScenario] = []
     for supplier_entry in template.suppliers:
@@ -74,6 +75,32 @@ def build_scenario_request_from_template(
                 "original_price_with_vat": [pkg.original_price_with_vat for pkg in packages_data],
                 "markup": [pkg.markup for pkg in packages_data],
             }
+        # The status can come from the template (saved with it) or the request
+        # (this run only); the request wins, matching how sb_enabled overrides.
+        # Omitted entirely when neither asks, so PackageSpec's defaults apply and an
+        # untouched template still builds a byte-identical scenario.
+        saved_status = getattr(supplier_entry, "prebooking_status", None)
+        prebooking_status = request_data.prebooking_status or _status_value(saved_status)
+        changed_price = (
+            request_data.prebooking_changed_price
+            if request_data.prebooking_changed_price is not None
+            else getattr(supplier_entry, "prebooking_changed_price", None)
+        )
+        prebooking_kwargs: dict[str, object] = {}
+        if prebooking_status and prebooking_status != "available":
+            prebooking_kwargs["prebooking_status"] = prebooking_status
+            # The price belongs to price_changed alone. A template saved as
+            # price_changed keeps its price in the document, so overriding the run to
+            # sold_out must drop it here — carrying it would trip PackageSpec's
+            # "only applies to prebooking_status='price_changed'" check.
+            if prebooking_status == "price_changed" and changed_price is not None:
+                prebooking_kwargs["prebooking_changed_price"] = changed_price
+            # A sold_out template must not also carry a booking index — PackageSpec
+            # rejects the pair. Drop it here rather than fail a template that was
+            # saved bookable and later switched to sold_out.
+            if prebooking_status == "sold_out":
+                supplier_book_idx = None
+
         package_spec = PackageSpec(
             count=len(packages_data),
             room_basis=[pkg.room_basis for pkg in packages_data],

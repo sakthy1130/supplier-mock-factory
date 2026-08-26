@@ -1,6 +1,9 @@
 """REST API for user-saved scenario package templates."""
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 
 from app.db.database import get_db
 from app.db.repository import MongoStore
@@ -30,6 +33,37 @@ def update_scenario_template(
     db: MongoStore = Depends(get_db),
 ) -> ScenarioTemplate:
     return scenario_template_service.update_template(db, template_id, payload)
+
+
+class SaveScenarioAsTemplate(BaseModel):
+    """What the caller supplies; everything else comes from the scenario itself."""
+
+    label: str = Field(min_length=1, max_length=120)
+    description: str = ""
+    function: Optional[str] = Field(
+        default=None,
+        description=(
+            "Which Templates tab this belongs under: 'templateBeddingMock' or "
+            "'preBookingMock'. Omitted reads as bedding, like every template saved "
+            "before the two kinds existed."
+        ),
+    )
+
+
+@router.post("/from-scenario/{scenario_id}", response_model=ScenarioTemplate, status_code=201)
+def save_scenario_as_template(
+    scenario_id: str,
+    payload: SaveScenarioAsTemplate,
+    db: MongoStore = Depends(get_db),
+) -> ScenarioTemplate:
+    """Turn a READY scenario into a reusable template, settings and all."""
+    return scenario_template_service.template_from_scenario(
+        db,
+        scenario_id,
+        label=payload.label,
+        description=payload.description,
+        function=payload.function,
+    )
 
 
 @router.delete("/{template_id}", status_code=204)

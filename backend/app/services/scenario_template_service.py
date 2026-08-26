@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Optional
 
 from fastapi import HTTPException
 
@@ -52,16 +53,11 @@ def _apply_payload(record: ScenarioTemplateRecord, payload: ScenarioTemplateCrea
     record.supplier = str(first.supplier)
     record.packages_json = [row.model_dump() for row in first.packages]
     record.sb_enabled = payload.sb_enabled
-    record.suppliers_json = [
-        {
-            "supplier": str(entry.supplier),
-            "supplier_currency": entry.supplier_currency,
-            "contract_currency": entry.contract_currency,
-            "packages": [row.model_dump() for row in entry.packages],
-            "assignment_target": entry.assignment_target.value,
-        }
-        for entry in payload.suppliers
-    ]
+    # model_dump(mode="json") rather than listing fields by hand: the hand-written
+    # version silently dropped prebooking_status/prebooking_changed_price when they were
+    # added, and would drop the next field too. "json" keeps the enums as their wire
+    # strings, which is what the document stores and what _record_to_model reads back.
+    record.suppliers_json = [entry.model_dump(mode="json") for entry in payload.suppliers]
 
 
 def create_template(db: MongoStore, payload: ScenarioTemplateCreate) -> ScenarioTemplate:
@@ -85,3 +81,90 @@ def delete_template(db: MongoStore, template_id: str) -> None:
     if record is None:
         raise HTTPException(status_code=404, detail="Template not found")
     db.templates.delete(record)
+
+
+def template_from_scenario(
+    db: MongoStore,
+    scenario_id: str,
+    label: str,
+    description: str = "",
+    function: Optional[str] = None,
+) -> ScenarioTemplate:
+    """Save a provisioned scenario as a reusable template.
+
+    A scenario stores its packages as parallel ARRAYS (prices[i], room_names[i], …)
+    while a template stores a list of ROWS, so this inverts the shape. Done server-side
+    rather than in the browser because both shapes live here and would otherwise drift.
+
+    Per-supplier settings that make the scenario what it is — currencies, contract
+    routing, the EXP explicit-pricing split and the PreBooking status — are carried
+    over; a template that lost them would not reproduce the scenario it came from.
+    """
+    from app.models.scenario_template import (
+        ScenarioTemplateCreate,
+        SupplierTemplatePackages,
+        TemplatePackageRow,
+    )
+
+    record = db.scenarios.get(scenario_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    if record.status != "READY":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Scenario must be READY to save as a template (it is {record.status})",
+        )
+    request = record.request_json or {}
+    suppliers_in = request.get("suppliers") or []
+    if not suppliers_in:
+        raise HTTPException(
+            status_code=409, detail="Scenario has no stored request to build a template from"
+        )
+
+    def _at(values: object, index: int, fallback: object) -> object:
+        return values[index] if isinstance(values, list) and index < len(values) else fallback
+
+    suppliers: list[SupplierTemplatePackages] = []
+    for entry in suppliers_in:
+        packages = entry.get("packages") or {}
+        prices = packages.get("prices") or []
+        count = packages.get("count") or len(prices)
+        # Both or neither, per PackageSpec's validator — an all-or-nothing split.
+        split = packages.get("original_price_with_vat") or []
+        markup = packages.get("markup") or []
+        has_split = len(split) == count and len(markup) == count
+
+        rows = [
+            TemplatePackageRow(
+                room_name=str(_at(packages.get("room_names"), i, "Room")),
+                room_basis=str(_at(packages.get("room_basis"), i, "RO")),
+                price=float(_at(prices, i, 0.0)),
+                refundable=bool(_at(packages.get("refundable"), i, True)),
+                original_price_with_vat=float(split[i]) if has_split else None,
+                markup=float(markup[i]) if has_split else None,
+            )
+            for i in range(count)
+        ]
+        suppliers.append(
+            SupplierTemplatePackages(
+                supplier=entry.get("code"),
+                supplier_currency=packages.get("supplier_currency") or "SAR",
+                contract_currency=entry.get("contract_currency") or "USD",
+                packages=rows,
+                assignment_target=entry.get("assignment_target") or "apikey",
+                prebooking_status=packages.get("prebooking_status") or "available",
+                prebooking_changed_price=packages.get("prebooking_changed_price"),
+            )
+        )
+
+    return create_template(
+        db,
+        ScenarioTemplateCreate(
+            label=label,
+            description=description,
+            function=function,
+            atg_hotel_id=str(request.get("atg_hotel_id") or ""),
+            suppliers=suppliers,
+            sb_enabled=bool(request.get("sb_enabled")),
+        ),
+    )

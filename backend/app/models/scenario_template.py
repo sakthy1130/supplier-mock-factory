@@ -7,7 +7,15 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.models.scenario import AssignmentTarget, SupplierCode
+from app.models.scenario import AssignmentTarget, PreBookingStatus, SupplierCode
+
+
+# What a saved template is FOR. Drives the two tabs on the Templates screen. The field
+# already existed on the model, unused; these are the values it now carries. A template
+# saved before this (function=None) reads as bedding, which is what they all are.
+TEMPLATE_KIND_BEDDING = "templateBeddingMock"
+TEMPLATE_KIND_PREBOOKING = "preBookingMock"
+TEMPLATE_KINDS = (TEMPLATE_KIND_BEDDING, TEMPLATE_KIND_PREBOOKING)
 
 
 class TemplatePackageRow(BaseModel):
@@ -34,6 +42,13 @@ class SupplierTemplatePackages(BaseModel):
     contract_currency: str = Field(default="USD", min_length=3, max_length=3)
     packages: list[TemplatePackageRow] = Field(min_length=1)
     assignment_target: AssignmentTarget = AssignmentTarget.apikey
+    # Per SUPPLIER, mirroring where these live on PackageSpec — one price check per
+    # supplier, not per package row. Defaulted so every template saved before this keeps
+    # loading. Deliberately NOT re-validated here: PackageSpec already rejects
+    # price_changed with no price, a price on any other status, and sold_out with a
+    # booking index, and a template is only ever realised through a PackageSpec.
+    prebooking_status: PreBookingStatus = PreBookingStatus.available
+    prebooking_changed_price: Optional[float] = Field(default=None, gt=0)
 
 
 class ScenarioTemplateCreate(BaseModel):

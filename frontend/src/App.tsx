@@ -28,8 +28,13 @@ import {
   createScenarioTemplate,
   deleteScenarioTemplate,
   listScenarioTemplates,
+  saveScenarioAsTemplate,
+  templateKind,
   updateScenarioTemplate,
+  TEMPLATE_KIND_BEDDING,
+  TEMPLATE_KIND_PREBOOKING,
   type ApiScenarioTemplate,
+  type TemplateKind,
 } from './api/scenarioTemplates'
 import { formatStatus, statusClass, timeAgo } from './utils/scenarioFormat'
 import { parseTemplatePackagesJson } from './utils/templateImport'
@@ -45,7 +50,7 @@ const NAV_ITEMS: { tab: Tab; icon: string; label: string }[] = [
   { tab: 'crawla', icon: '◌', label: 'Crawla Mocks' },
   { tab: 'queue', icon: '⏵', label: 'Queue Runner' },
   { tab: 'test-run', icon: '⬡', label: 'Test Runs' },
-  { tab: 'templates', icon: '🛏', label: 'Template Bedding Mock' },
+  { tab: 'templates', icon: '🛏', label: 'Templates' },
   { tab: 'suppliers', icon: '⚑', label: 'Suppliers' },
 ]
 
@@ -98,10 +103,21 @@ function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [activeTemplate, setActiveTemplate] = useState<ScenarioTemplate | undefined>(undefined)
   const [customTemplates, setCustomTemplates] = useState<ApiScenarioTemplate[]>([])
+  // Declared before the memo below reads it — a const in the TDZ would throw at
+  // render, and tsc does not flag it inside a useMemo callback.
+  const [templateKindTab, setTemplateKindTab] = useState<TemplateKind>(TEMPLATE_KIND_BEDDING)
   const sortedCustomTemplates = useMemo(
-    () => [...customTemplates].sort((a, b) => scLabelSortKey(a.label) - scLabelSortKey(b.label)),
-    [customTemplates],
+    () =>
+      [...customTemplates]
+        .filter((t) => templateKind(t.function) === templateKindTab)
+        .sort((a, b) => scLabelSortKey(a.label) - scLabelSortKey(b.label)),
+    [customTemplates, templateKindTab],
   )
+  const templateKindCounts = useMemo(() => {
+    const counts = { [TEMPLATE_KIND_BEDDING]: 0, [TEMPLATE_KIND_PREBOOKING]: 0 }
+    customTemplates.forEach((t) => { counts[templateKind(t.function)] += 1 })
+    return counts
+  }, [customTemplates])
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [showImportForm, setShowImportForm] = useState(false)
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
@@ -125,6 +141,10 @@ function App() {
 
   const [creating, setCreating] = useState(false)
   const [crawlaRunning, setCrawlaRunning] = useState(false)
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
+  const [saveTemplateLabel, setSaveTemplateLabel] = useState('')
+  const [saveTemplateKind, setSaveTemplateKind] = useState<TemplateKind>(TEMPLATE_KIND_PREBOOKING)
+  const [saveTemplateBusy, setSaveTemplateBusy] = useState(false)
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null)
   const [crawlaRunResult, setCrawlaRunResult] = useState<CrawlaScenarioRunResult | null>(null)
   const [showCrawlaLogs, setShowCrawlaLogs] = useState(false)
@@ -481,6 +501,28 @@ function App() {
       setBackendError(err instanceof Error ? err.message : 'Scenario run failed')
     } finally {
       setCrawlaRunning(false)
+    }
+  }
+
+  const handleSaveAsTemplate = async () => {
+    if (!activeScenarioId || !saveTemplateLabel.trim()) return
+    setSaveTemplateBusy(true)
+    setBackendError(null)
+    try {
+      await saveScenarioAsTemplate(activeScenarioId, {
+        label: saveTemplateLabel.trim(),
+        function: saveTemplateKind,
+      })
+      setSaveTemplateOpen(false)
+      setSaveTemplateLabel('')
+      // Land on the tab it was saved under, so it is visible straight away.
+      setTemplateKindTab(saveTemplateKind)
+      await loadCustomTemplates()
+      setTab('templates')
+    } catch (err) {
+      setBackendError(err instanceof Error ? err.message : 'Could not save the template')
+    } finally {
+      setSaveTemplateBusy(false)
     }
   }
 
@@ -841,6 +883,7 @@ function App() {
                       crawlaRunResult={crawlaRunResult}
                       showLogs={showCrawlaLogs}
                       onRefreshBookingIds={bundle.status === 'READY' ? handleRefreshBookingIds : undefined}
+                      onSaveAsTemplate={bundle.status === 'READY' ? () => setSaveTemplateOpen(true) : undefined}
                       onTeardown={bundle.status === 'READY' ? handleTeardown : undefined}
                       actionBusy={actionBusy}
                       runBusy={crawlaRunning}
@@ -893,6 +936,7 @@ function App() {
                       crawlaRunResult={crawlaRunResult}
                       showLogs={showCrawlaLogs}
                       onRefreshBookingIds={bundle.status === 'READY' ? handleRefreshBookingIds : undefined}
+                      onSaveAsTemplate={bundle.status === 'READY' ? () => setSaveTemplateOpen(true) : undefined}
                       onTeardown={bundle.status === 'READY' ? handleTeardown : undefined}
                       actionBusy={actionBusy}
                       runBusy={crawlaRunning}
@@ -952,13 +996,31 @@ function App() {
           <>
             <header className="page-header">
               <span className="page-eyebrow">Presets</span>
-              <h1>Template Bedding Mock</h1>
+              <h1>Templates</h1>
               <p>
-                Pick a preset to open Create Mock Scenario prefilled with known package data — edit anything
-                before provisioning, same as a normal scenario.
+                Pick a template to open Create Mock Scenario prefilled — edit anything before
+                provisioning, same as a normal scenario.
               </p>
             </header>
 
+            <div className="template-kind-tabs">
+              {([
+                [TEMPLATE_KIND_BEDDING, 'Template Bedding Mock'],
+                [TEMPLATE_KIND_PREBOOKING, 'PreBooking Mock'],
+              ] as [TemplateKind, string][]).map(([kind, label]) => (
+                <button
+                  key={kind}
+                  type="button"
+                  className={`template-kind-tab ${templateKindTab === kind ? 'active' : ''}`}
+                  onClick={() => setTemplateKindTab(kind)}
+                >
+                  {label}
+                  <span className="template-kind-count">{templateKindCounts[kind]}</span>
+                </button>
+              ))}
+            </div>
+
+            {templateKindTab === TEMPLATE_KIND_BEDDING && (
             <div className="banner error" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
               <span>⚠</span>
               <span>
@@ -969,6 +1031,7 @@ function App() {
                 template.
               </span>
             </div>
+            )}
 
             <section className="recent-panel" style={{ marginTop: '1.5rem' }}>
               <div className="recent-header">
@@ -1291,6 +1354,7 @@ function App() {
                       crawlaRunResult={crawlaRunResult}
                       showLogs={showCrawlaLogs}
                       onRefreshBookingIds={bundle.status === 'READY' ? handleRefreshBookingIds : undefined}
+                      onSaveAsTemplate={bundle.status === 'READY' ? () => setSaveTemplateOpen(true) : undefined}
                       onTeardown={bundle.status === 'READY' ? handleTeardown : undefined}
                       actionBusy={actionBusy}
                       runBusy={crawlaRunning}
@@ -1369,6 +1433,59 @@ function App() {
           )}
         </div>
       </aside>
+
+      {saveTemplateOpen && (
+        <div
+          className="modal-backdrop"
+          onClick={() => !saveTemplateBusy && setSaveTemplateOpen(false)}
+        >
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2>Save as template</h2>
+            <p className="hint">
+              Saves this scenario's suppliers, packages, currencies and PreBooking settings.
+              Running the template later reproduces them.
+            </p>
+            <label className="field">
+              Label
+              <input
+                autoFocus
+                value={saveTemplateLabel}
+                onChange={(e) => setSaveTemplateLabel(e.target.value)}
+                placeholder="PreBooking SoldOut"
+                maxLength={120}
+              />
+            </label>
+            <label className="field">
+              Save under
+              <select
+                value={saveTemplateKind}
+                onChange={(e) => setSaveTemplateKind(e.target.value as TemplateKind)}
+              >
+                <option value={TEMPLATE_KIND_PREBOOKING}>PreBooking Mock</option>
+                <option value={TEMPLATE_KIND_BEDDING}>Template Bedding Mock</option>
+              </select>
+            </label>
+            <div className="actions" style={{ marginTop: '1rem' }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={saveTemplateBusy || !saveTemplateLabel.trim()}
+                onClick={handleSaveAsTemplate}
+              >
+                {saveTemplateBusy ? 'Saving…' : 'Save template'}
+              </button>
+              <button
+                type="button"
+                className="btn secondary"
+                disabled={saveTemplateBusy}
+                onClick={() => setSaveTemplateOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

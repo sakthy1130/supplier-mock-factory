@@ -8,6 +8,7 @@ interface Props {
   onRefreshBookingIds?: () => void
   onTeardown?: () => void
   onRunCrawlaScenario?: (mode: RunMode) => Promise<void>
+  onSaveAsTemplate?: () => void
   onToggleLogs?: () => void
   crawlaRunResult?: CrawlaScenarioRunResult | null
   showLogs?: boolean
@@ -70,6 +71,7 @@ export function ScenarioResult({
   onRefreshBookingIds,
   onTeardown,
   onRunCrawlaScenario,
+  onSaveAsTemplate,
   onToggleLogs,
   crawlaRunResult,
   showLogs,
@@ -376,7 +378,8 @@ export function ScenarioResult({
         </>
       )}
 
-      {bundle.status === 'READY' && (onRunCrawlaScenario || onRefreshBookingIds || onTeardown) && (
+      {bundle.status === 'READY' &&
+        (onRunCrawlaScenario || onRefreshBookingIds || onTeardown || onSaveAsTemplate) && (
         <div className="actions">
           {onRunCrawlaScenario && (
             <>
@@ -410,6 +413,17 @@ export function ScenarioResult({
               {showLogs ? 'Hide logs' : 'View logs'}
             </button>
           ) : null}
+          {onSaveAsTemplate && (
+            <button
+              type="button"
+              className="btn secondary"
+              disabled={actionBusy || runBusy}
+              onClick={onSaveAsTemplate}
+              title="Save this scenario's suppliers, packages and PreBooking settings as a reusable template"
+            >
+              💾 Save as template
+            </button>
+          )}
           {onRefreshBookingIds && (
             <button type="button" className="btn secondary" disabled={actionBusy} onClick={onRefreshBookingIds}>
               ↻ Refresh booking IDs
