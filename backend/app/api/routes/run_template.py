@@ -60,8 +60,17 @@ def build_scenario_request_from_template(
         packages_data = supplier_entry.packages
         if not packages_data:
             continue
+        # The run's index wins; otherwise the one the template was saved with, so a
+        # template made from a bookable scenario stays bookable without the caller
+        # having to remember which package it was.
+        effective_idx = (
+            book_idx if book_idx is not None
+            else getattr(supplier_entry, "booking_package_index", None)
+        )
         supplier_book_idx = (
-            book_idx if (book_idx is not None and book_idx < len(packages_data)) else None
+            effective_idx
+            if (effective_idx is not None and effective_idx < len(packages_data))
+            else None
         )
         # EXP explicit pricing is all-or-nothing per supplier: passing a partial list
         # would trip PackageSpec's validator, so only send the pair when every row of this
@@ -109,6 +118,12 @@ def build_scenario_request_from_template(
             refundable=[pkg.refundable for pkg in packages_data],
             supplier_currency=supplier_entry.supplier_currency,
             booking_package_index=supplier_book_idx,
+            # Occupancy the mocked rates advertise. An adapter drops any rate whose
+            # occupancy != the request, so a template saved at a non-default occupancy
+            # has to replay it or its packages vanish from the search.
+            adults=getattr(supplier_entry, "adults", 2),
+            child_ages=list(getattr(supplier_entry, "child_ages", []) or []),
+            room_count=getattr(supplier_entry, "room_count", 1),
             **prebooking_kwargs,
             **explicit_pricing,
         )

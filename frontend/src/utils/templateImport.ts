@@ -96,6 +96,7 @@ export interface ScenarioImportSupplier {
   rows: ApiTemplatePackageRow[]
   prebooking_status: 'available' | 'price_changed' | 'sold_out'
   prebooking_changed_price?: number
+  booking_package_index?: number
 }
 
 export interface ScenarioImport {
@@ -175,6 +176,9 @@ export function parseScenarioJson(raw: string): ScenarioImport {
         (packages.prebooking_status as ScenarioImportSupplier['prebooking_status']) ?? 'available',
       ...(packages.prebooking_changed_price != null
         ? { prebooking_changed_price: Number(packages.prebooking_changed_price) }
+        : {}),
+      ...(packages.booking_package_index != null
+        ? { booking_package_index: Number(packages.booking_package_index) }
         : {}),
     }
   })

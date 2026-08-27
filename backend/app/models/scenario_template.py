@@ -49,6 +49,15 @@ class SupplierTemplatePackages(BaseModel):
     # booking index, and a template is only ever realised through a PackageSpec.
     prebooking_status: PreBookingStatus = PreBookingStatus.available
     prebooking_changed_price: Optional[float] = Field(default=None, gt=0)
+    # Which package the booking flow is built for. Without this a template could not
+    # reproduce the scenario it came from: the scenario booked a package, the template
+    # forgot, and running it gave search+packages only.
+    booking_package_index: Optional[int] = Field(default=None, ge=0)
+    # Occupancy. Defaults match PackageSpec, so a template saved at the default
+    # occupancy is unchanged; a 2-adults-plus-child scenario now survives the round trip.
+    adults: int = Field(default=2, ge=1, le=10)
+    child_ages: list[int] = Field(default_factory=list)
+    room_count: int = Field(default=1, ge=1, le=8)
 
 
 class ScenarioTemplateCreate(BaseModel):

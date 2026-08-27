@@ -19,6 +19,12 @@ export interface ApiSupplierTemplatePackages {
   /** Per supplier, matching PackageSpec — one price check per supplier, not per row. */
   prebooking_status?: 'available' | 'price_changed' | 'sold_out'
   prebooking_changed_price?: number | null
+  /** Which package the booking flow is built for; without it a template made from a
+   *  bookable scenario would run to packages only. */
+  booking_package_index?: number | null
+  adults?: number
+  child_ages?: number[]
+  room_count?: number
 }
 
 export interface ApiScenarioTemplate {

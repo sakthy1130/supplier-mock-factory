@@ -154,6 +154,10 @@ def template_from_scenario(
                 assignment_target=entry.get("assignment_target") or "apikey",
                 prebooking_status=packages.get("prebooking_status") or "available",
                 prebooking_changed_price=packages.get("prebooking_changed_price"),
+                booking_package_index=packages.get("booking_package_index"),
+                adults=packages.get("adults") or 2,
+                child_ages=list(packages.get("child_ages") or []),
+                room_count=packages.get("room_count") or 1,
             )
         )
 

@@ -172,3 +172,81 @@ def test_persisted_suppliers_keep_every_field(monkeypatch):
     supplier = rebuilt.suppliers[0]
     assert supplier.prebooking_status.value == "price_changed"
     assert supplier.prebooking_changed_price == 90.0
+
+
+def test_booking_index_and_occupancy_survive_the_round_trip(monkeypatch):
+    """The gap that made a saved template behave differently from its scenario.
+
+    A scenario booking package 0 became a template with no booking index, so running
+    it gave search+packages only — no Booking/GetOrder mocks. Same for a non-default
+    occupancy, where an adapter drops rates whose occupancy != the request.
+    """
+    from app.services import scenario_template_service as svc
+
+    saved = {}
+
+    class _Record:
+        status = "READY"
+        request_json = {
+            "atg_hotel_id": "1446194",
+            "suppliers": [{
+                "code": "EXP", "contract_currency": "USD",
+                "packages": {
+                    "count": 3, "prices": [100.0, 200.0, 300.0],
+                    "room_names": ["A", "B", "C"], "room_basis": ["RO", "RO", "RO"],
+                    "refundable": [True, True, True], "supplier_currency": "USD",
+                    "booking_package_index": 2,
+                    "adults": 3, "child_ages": [7], "room_count": 2,
+                },
+            }],
+        }
+
+    class _Store:
+        scenarios = type("S", (), {"get": staticmethod(lambda _id: _Record())})()
+
+    monkeypatch.setattr(svc, "create_template", lambda db, payload: saved.setdefault("p", payload))
+    svc.template_from_scenario(_Store(), "sid", label="Bookable")
+
+    supplier = saved["p"].suppliers[0]
+    assert supplier.booking_package_index == 2
+    assert supplier.adults == 3
+    assert supplier.child_ages == [7]
+    assert supplier.room_count == 2
+
+    # ...and running that template reproduces them, with no index in the request
+    built = build_scenario_request_from_template(
+        _template_with(supplier),
+        RunTemplateRequest(environment="stg"),
+        namespace="qa-rt", check_in="2026-09-01", check_out="2026-09-03",
+        hotel_id="1446194", template_id="t1",
+    )
+    spec = built.suppliers[0].packages
+    assert spec.booking_package_index == 2, "template's booking index was ignored at run time"
+    assert spec.adults == 3 and spec.child_ages == [7] and spec.room_count == 2
+
+
+def _template_with(supplier):
+    from datetime import datetime, timezone
+
+    return ScenarioTemplate(
+        id="t1", label="Bookable", description="", function=None,
+        atg_hotel_id="1446194", suppliers=[supplier], sb_enabled=False,
+        created_at=datetime.now(timezone.utc),
+    )
+
+
+def test_request_index_still_overrides_the_template():
+    template = _template_with(
+        SupplierTemplatePackages(
+            supplier="EXP",
+            packages=[TemplatePackageRow(room_name="A", price=100.0),
+                      TemplatePackageRow(room_name="B", price=200.0)],
+            booking_package_index=0,
+        )
+    )
+    built = build_scenario_request_from_template(
+        template, RunTemplateRequest(environment="stg", booking_package_index=1),
+        namespace="qa-rt", check_in="2026-09-01", check_out="2026-09-03",
+        hotel_id="1446194", template_id="t1",
+    )
+    assert built.suppliers[0].packages.booking_package_index == 1
