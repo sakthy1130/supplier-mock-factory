@@ -104,6 +104,16 @@ class RunTemplateRequest(BaseModel):
         ),
         examples=[140.0],
     )
+    can_prebook: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Override the contract's canPrebook permission for this run. Omit to leave "
+            "the reference contract's value. false also omits overridePrebookUrl and "
+            "builds no PreBooking mock — a supplier that cannot price-check never "
+            "calls it."
+        ),
+        examples=[False],
+    )
     static_markup: Optional[str] = Field(
         default=None,
         description=(

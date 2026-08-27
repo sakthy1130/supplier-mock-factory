@@ -132,6 +132,7 @@ def suppliers_from_request(request: dict) -> list:
                 assignment_target=entry.get("assignment_target") or "apikey",
                 prebooking_status=packages.get("prebooking_status") or "available",
                 prebooking_changed_price=packages.get("prebooking_changed_price"),
+                can_prebook=packages.get("can_prebook"),
                 booking_package_index=packages.get("booking_package_index"),
                 adults=packages.get("adults") or 2,
                 child_ages=list(packages.get("child_ages") or []),

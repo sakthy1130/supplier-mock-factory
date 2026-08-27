@@ -40,6 +40,11 @@ export interface PackageSpec {
   /** Only with 'price_changed': the re-quoted price, in supplier currency. */
   prebooking_changed_price?: number | null
   /**
+   * Override the contract's canPrebook permission. Omit to leave the reference
+   * contract's value. false also drops overridePrebookUrl and the PreBooking mock.
+   */
+  can_prebook?: boolean | null
+  /**
    * EXP explicit pricing, per package, both or neither: the split of `prices` into
    * pre-markup + markup, in supplier currency, where price = original_price_with_vat +
    * markup. The price becomes the mock's totals.inclusive and `markup` its

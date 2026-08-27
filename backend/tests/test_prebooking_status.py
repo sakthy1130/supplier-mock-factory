@@ -191,3 +191,63 @@ def test_run_mode_values():
 
     default = inspect.signature(scenarios_module.run_scenario).parameters["mode"].default
     assert default.default is RunMode.e2e
+
+
+# ── can_prebook: contract permission off, no prebook URL, no mock ──────────────
+
+def test_can_prebook_false_drops_the_prebooking_mock():
+    built = _build(PreBookingStatus.available, book_idx=0)
+    assert "PreBooking" in built, "baseline should have one"
+
+    with use_env("stg"):
+        request = _request(PreBookingStatus.available, book_idx=0)
+        request.suppliers[0].packages = PackageSpec(
+            count=1, room_basis="RO", room_names=["A"], prices=[PACKAGE_PRICE],
+            booking_package_index=0, can_prebook=False,
+        )
+        off = {b.log_type for b in ScenarioEngine().build_expectations(request)}
+    assert "PreBooking" not in off
+    # the rest of the chain is untouched — this is about the price check only
+    assert {"Search", "Packages", "Booking", "GetOrder", "CancelOrder"} <= off
+
+
+def test_can_prebook_false_omits_the_override_prebook_url():
+    """The URL is derived from the PreBooking mock path, so dropping the mock must
+    leave overridePrebookUrl absent rather than pointing somewhere wrong."""
+    from app.core.mock_urls import build_mock_opt_urls, extract_paths_from_built
+
+    with use_env("stg"):
+        request = _request(PreBookingStatus.available, book_idx=0)
+        request.suppliers[0].packages = PackageSpec(
+            count=1, room_basis="RO", room_names=["A"], prices=[PACKAGE_PRICE],
+            booking_package_index=0, can_prebook=False,
+        )
+        built = ScenarioEngine().build_expectations(request)
+    paths = extract_paths_from_built(built)
+    opt = build_mock_opt_urls("http://mock", paths.get("EXP", {}), supplier_code="EXP")
+    assert "overridePrebookUrl" not in opt
+
+
+def test_can_prebook_unset_changes_nothing():
+    """Absent means absent: the reference contract keeps its own permission."""
+    from app.core.contract_provisioner import _scenario_permissions
+    from app.models.scenario import SupplierCode, SupplierScenario
+
+    def perms(value):
+        return _scenario_permissions(
+            SupplierScenario(
+                code=SupplierCode("EXP"),
+                packages=PackageSpec(count=1, room_basis="RO", prices=[100.0], can_prebook=value),
+            )
+        )
+
+    assert perms(None) == {}
+    assert perms(False) == {"canPrebook": False}
+    assert perms(True) == {"canPrebook": True}
+
+
+def test_can_prebook_false_with_a_prebooking_status_is_rejected():
+    """A status you can never observe is a mistake worth naming, not honouring."""
+    with pytest.raises(ValueError, match="never price-checks"):
+        PackageSpec(count=1, room_basis="RO", prices=[100.0],
+                    can_prebook=False, prebooking_status=PreBookingStatus.sold_out)

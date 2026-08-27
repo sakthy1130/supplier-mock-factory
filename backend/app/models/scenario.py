@@ -178,6 +178,15 @@ class PackageSpec(BaseModel):
             "link, so the chain genuinely stops there."
         ),
     )
+    can_prebook: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Override the contract's canPrebook permission. Unset (default) leaves "
+            "whatever the reference contract carries — today's behaviour. False also "
+            "omits overridePrebookUrl and builds no PreBooking mock, because a "
+            "supplier that cannot price-check never calls it."
+        ),
+    )
     prebooking_changed_price: Optional[float] = Field(
         default=None,
         gt=0,
@@ -271,6 +280,12 @@ class PackageSpec(BaseModel):
             raise ValueError(
                 f"prebooking_changed_price only applies to prebooking_status="
                 f"'price_changed', not '{self.prebooking_status.value}'"
+            )
+        if self.can_prebook is False and self.prebooking_status is not PreBookingStatus.available:
+            raise ValueError(
+                f"can_prebook=false means the supplier never price-checks, so "
+                f"prebooking_status='{self.prebooking_status.value}' can never be "
+                "observed — pick one or the other"
             )
         if (
             self.prebooking_status is PreBookingStatus.sold_out

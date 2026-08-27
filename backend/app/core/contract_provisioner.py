@@ -47,6 +47,7 @@ class ContractProvisioner:
                     opt_urls,
                     contract_currency,
                     instance_key=instance_key,
+                    permission_overrides=_scenario_permissions(supplier),
                 )
                 contract_id = await self.backoffice.create_contract(body)
                 contract_ids[instance_key] = contract_id
@@ -84,6 +85,7 @@ class ContractProvisioner:
         opt_urls: dict[str, str],
         contract_currency: str,
         instance_key: str = "",
+        permission_overrides: dict[str, bool] | None = None,
     ) -> dict[str, Any]:
         instance_key = instance_key or config.code
         reference_id = self._reference_contract_id(config)
@@ -95,6 +97,7 @@ class ContractProvisioner:
                 namespace,
                 opt_urls,
                 contract_currency,
+                permission_overrides=permission_overrides,
                 instance_key=instance_key,
             )
         # No reference contract on the supplier row and none in the env file — the
@@ -118,6 +121,7 @@ class ContractProvisioner:
             self.settings.mock_server_url,
             contract_currency,
             instance_key=instance_key,
+            permission_overrides=permission_overrides,
         )
 
     def _reference_contract_id(self, config: SupplierConfig) -> str:
@@ -132,12 +136,24 @@ class ContractProvisioner:
         return getattr(self.settings, f"{config.code.lower()}_reference_contract_id", "") or ""
 
 
+def _scenario_permissions(supplier) -> dict[str, bool]:
+    """Contract permissions this scenario pins, or {} when it pins none.
+
+    Only fields the scenario actually set appear — an unset can_prebook leaves the
+    reference contract's own value alone, which is the pre-existing behaviour.
+    """
+    spec = getattr(supplier, "packages", None)
+    can_prebook = getattr(spec, "can_prebook", None) if spec is not None else None
+    return {} if can_prebook is None else {"canPrebook": can_prebook}
+
+
 def _clone_contract(
     reference: dict[str, Any],
     config: SupplierConfig,
     namespace: str,
     opt_urls: dict[str, str],
     contract_currency: str,
+    permission_overrides: dict[str, bool] | None = None,
     instance_key: str = "",
 ) -> dict[str, Any]:
     body = copy.deepcopy(reference)
@@ -162,6 +178,7 @@ def _clone_contract(
         # MockConfig fields on the supplier row.
         apply_contract_opt_defaults(opt, config.mock_config, get_settings().mock_server_url)
     _apply_forced_permission(body, config)
+    _apply_scenario_permission(body, permission_overrides or {})
     # Apply contract currency to all suppliers (not just CHC)
     body["currency"] = contract_currency
     supported = body.get("supportedCurrencies", [])
@@ -180,6 +197,7 @@ def _minimal_contract_body(
     mock_base_url: str,
     contract_currency: str,
     instance_key: str = "",
+    permission_overrides: dict[str, bool] | None = None,
 ) -> dict[str, Any]:
     instance_key = instance_key or config.code
     uid = _contract_uid(namespace, instance_key)
@@ -213,6 +231,7 @@ def _minimal_contract_body(
     }
     _apply_dynamic_market_type(body, config)
     _apply_forced_permission(body, config)
+    _apply_scenario_permission(body, permission_overrides or {})
     return body
 
 
@@ -226,6 +245,28 @@ def _contract_uid(namespace: str, instance_key: str) -> str:
     """`instance_key` is the supplier code for a single entry, or "EXP-2" for a
     repeated one — the uid must differ or backoffice rejects the second contract."""
     return f"smf-{namespace}-{instance_key}".lower().replace(" ", "-")
+
+
+def _apply_scenario_permission(body: dict[str, Any], overrides: dict[str, bool]) -> None:
+    """Per-scenario permission overrides, applied AFTER the supplier's forced ones.
+
+    The scenario is the more specific intent: a supplier may force canBook true for
+    every contract, but this run may still want canPrebook off. Values keep the shape
+    the contract already uses — Backoffice returns these as the strings "true"/"false"
+    on a clone but as real booleans on a minimal body.
+    """
+    if not overrides:
+        return
+    permission = body.get("permission")
+    if not isinstance(permission, dict):
+        permission = {}
+        body["permission"] = permission
+    for key, value in overrides.items():
+        current = permission.get(key)
+        if isinstance(current, str) and isinstance(value, bool):
+            permission[key] = "true" if value else "false"
+        else:
+            permission[key] = value
 
 
 def _apply_forced_permission(body: dict[str, Any], config: SupplierConfig) -> None:

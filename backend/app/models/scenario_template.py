@@ -49,6 +49,8 @@ class SupplierTemplatePackages(BaseModel):
     # booking index, and a template is only ever realised through a PackageSpec.
     prebooking_status: PreBookingStatus = PreBookingStatus.available
     prebooking_changed_price: Optional[float] = Field(default=None, gt=0)
+    # Contract permission. Unset leaves the reference contract's own value.
+    can_prebook: Optional[bool] = None
     # Which package the booking flow is built for. Without this a template could not
     # reproduce the scenario it came from: the scenario booked a package, the template
     # forgot, and running it gave search+packages only.

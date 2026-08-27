@@ -253,6 +253,7 @@ export interface ScenarioWizardTemplate {
   assignmentTargets?: Partial<Record<SupplierCode, AssignmentTarget>>
   prebookingStatuses?: Partial<Record<SupplierCode, PreBookingStatus>>
   prebookingChangedPrices?: Partial<Record<SupplierCode, string>>
+  canPrebook?: Partial<Record<SupplierCode, boolean | undefined>>
   bookingRows?: Partial<Record<SupplierCode, (number | null)[]>>
   /** Template mode only: what the template is called and which tab it lives on. */
   templateLabel?: string
@@ -380,6 +381,10 @@ export function ScenarioWizard({
   )
   const [prebookingChangedPrice, setPrebookingChangedPrice] = useState<Record<string, string>>(
     () => ({ ...(initialTemplate?.prebookingChangedPrices ?? {}) }) as Record<string, string>,
+  )
+  // undefined = leave the reference contract alone (the default).
+  const [canPrebook, setCanPrebook] = useState<Record<string, boolean | undefined>>(
+    () => ({ ...(initialTemplate?.canPrebook ?? {}) }) as Record<string, boolean | undefined>,
   )
   const [templateLabel, setTemplateLabel] = useState(() => initialTemplate?.templateLabel ?? '')
   const [templateDescription, setTemplateDescription] = useState(
@@ -601,6 +606,7 @@ export function ScenarioWizard({
                 booking_package_index: bookingRow[code]?.[instance] ?? null,
                 // Omitted when 'available' so the payload is unchanged for every
                 // scenario that does not ask for a status.
+                ...(canPrebook[code] !== undefined ? { can_prebook: canPrebook[code] } : {}),
                 ...(prebookingStatus[code] && prebookingStatus[code] !== 'available'
                   ? { prebooking_status: prebookingStatus[code] }
                   : {}),
@@ -812,6 +818,36 @@ export function ScenarioWizard({
                     {/* Only for suppliers that actually have a PreBooking step — EXT
                         books straight off the distribution and has none. */}
                     {meta.log_types?.includes('PreBooking') && (
+                      <label className="supplier-tile-field" style={{ maxWidth: '210px' }}>
+                        Contract canPrebook
+                        <select
+                          value={
+                            canPrebook[meta.code] === undefined
+                              ? 'default'
+                              : canPrebook[meta.code]
+                                ? 'true'
+                                : 'false'
+                          }
+                          onChange={(e) => {
+                            const next =
+                              e.target.value === 'default' ? undefined : e.target.value === 'true'
+                            setCanPrebook((prev) => ({ ...prev, [meta.code]: next }))
+                            // With no price check there is no status to observe, so
+                            // reset it rather than let the backend reject the pair.
+                            if (next === false) {
+                              setPrebookingStatus((prev) => ({ ...prev, [meta.code]: 'available' }))
+                              setPrebookingChangedPrice((prev) => ({ ...prev, [meta.code]: '' }))
+                            }
+                          }}
+                        >
+                          <option value="default">Leave as the contract has it</option>
+                          <option value="true">Enabled</option>
+                          <option value="false">Disabled (no prebook URL, no mock)</option>
+                        </select>
+                      </label>
+                    )}
+
+                    {meta.log_types?.includes('PreBooking') && canPrebook[meta.code] !== false && (
                       <label className="supplier-tile-field" style={{ maxWidth: '200px' }}>
                         PreBooking
                         <select
@@ -839,7 +875,8 @@ export function ScenarioWizard({
                       </label>
                     )}
 
-                    {prebookingStatus[meta.code] === 'price_changed' && (
+                    {prebookingStatus[meta.code] === 'price_changed' &&
+                      canPrebook[meta.code] !== false && (
                       <label className="supplier-tile-field" style={{ maxWidth: '160px' }}>
                         Changed price
                         <input

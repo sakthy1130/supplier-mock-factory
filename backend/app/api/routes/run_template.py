@@ -118,6 +118,15 @@ def build_scenario_request_from_template(
             refundable=[pkg.refundable for pkg in packages_data],
             supplier_currency=supplier_entry.supplier_currency,
             booking_package_index=supplier_book_idx,
+            **(
+                {"can_prebook": request_data.can_prebook}
+                if request_data.can_prebook is not None
+                else (
+                    {"can_prebook": supplier_entry.can_prebook}
+                    if getattr(supplier_entry, "can_prebook", None) is not None
+                    else {}
+                )
+            ),
             # Occupancy the mocked rates advertise. An adapter drops any rate whose
             # occupancy != the request, so a template saved at a non-default occupancy
             # has to replay it or its packages vanish from the search.

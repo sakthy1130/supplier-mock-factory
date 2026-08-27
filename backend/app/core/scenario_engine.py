@@ -149,6 +149,11 @@ class ScenarioEngine:
             sold_out = spec.prebooking_status is PreBookingStatus.sold_out
             if spec.booking_package_index is None or sold_out:
                 log_types = [lt for lt in log_types if lt not in BOOKING_FLOW_LOG_TYPES]
+            # A contract with canPrebook off never calls the price check, so the mock
+            # would sit unused AND its path would still produce overridePrebookUrl —
+            # which is exactly what the caller asked not to have.
+            if spec.can_prebook is False:
+                log_types = [lt for lt in log_types if lt != "PreBooking"]
             templates = self._load_supplier_templates(
                 supplier_code, log_types, spec.prebooking_status
             )
