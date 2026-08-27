@@ -50,6 +50,31 @@ class SaveScenarioAsTemplate(BaseModel):
     )
 
 
+class SaveRequestAsTemplate(SaveScenarioAsTemplate):
+    """The wizard's template mode: a full ScenarioRequest plus the template's label."""
+
+    request: dict
+
+
+@router.post("/from-request", response_model=ScenarioTemplate, status_code=201)
+def save_request_as_template(
+    payload: SaveRequestAsTemplate,
+    db: MongoStore = Depends(get_db),
+) -> ScenarioTemplate:
+    """Save a scenario the wizard just composed, without provisioning it.
+
+    Shares suppliers_from_request with from-scenario, so a template authored in the
+    wizard and one saved off a live scenario are identical for the same input.
+    """
+    return scenario_template_service.template_from_request(
+        db,
+        payload.request,
+        label=payload.label,
+        description=payload.description,
+        function=payload.function,
+    )
+
+
 @router.post("/from-scenario/{scenario_id}", response_model=ScenarioTemplate, status_code=201)
 def save_scenario_as_template(
     scenario_id: str,

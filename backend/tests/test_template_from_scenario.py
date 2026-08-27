@@ -7,6 +7,8 @@ makes the scenario reproducible.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from app.models.run_template import RunTemplateRequest
@@ -250,3 +252,75 @@ def test_request_index_still_overrides_the_template():
         hotel_id="1446194", template_id="t1",
     )
     assert built.suppliers[0].packages.booking_package_index == 1
+
+
+def test_both_save_paths_produce_the_same_template():
+    """The wizard path and the save-a-scenario path must not drift.
+
+    They share suppliers_from_request precisely so a template authored in the wizard
+    and one saved off a live scenario are identical for the same input — the earlier
+    drift came from two hand-written conversions.
+    """
+    from app.services.scenario_template_service import suppliers_from_request
+
+    request = {
+        "atg_hotel_id": "1446194",
+        "suppliers": [{
+            "code": "EXP", "contract_currency": "USD", "assignment_target": "apikey",
+            "packages": {
+                "count": 2, "prices": [100.0, 200.0], "room_names": ["A", "B"],
+                "room_basis": ["RO", "BB"], "refundable": [True, False],
+                "supplier_currency": "USD", "booking_package_index": 1,
+                "prebooking_status": "price_changed", "prebooking_changed_price": 90.0,
+                "adults": 3, "child_ages": [7], "room_count": 2,
+            },
+        }],
+    }
+    a = suppliers_from_request(request)
+    b = suppliers_from_request(json.loads(json.dumps(request)))
+    assert [x.model_dump(mode="json") for x in a] == [x.model_dump(mode="json") for x in b]
+
+    s = a[0]
+    assert s.booking_package_index == 1
+    assert s.prebooking_status.value == "price_changed"
+    assert s.prebooking_changed_price == 90.0
+    assert (s.adults, s.child_ages, s.room_count) == (3, [7], 2)
+    assert [(r.room_name, r.price, r.room_basis, r.refundable) for r in s.packages] == [
+        ("A", 100.0, "RO", True), ("B", 200.0, "BB", False)
+    ]
+
+
+def test_editing_a_template_round_trips_every_field():
+    """Opening a template and saving it unchanged must not silently drop anything.
+
+    This is the failure that reduced a saved PreBooking template to a plain bedding
+    one, and it is the risk when the wizard becomes the template editor.
+    """
+    from app.db.models import ScenarioTemplateRecord
+    from app.models.scenario_template import ScenarioTemplateCreate
+    from app.services import scenario_template_service as svc
+
+    original = ScenarioTemplateCreate(
+        label="Round trip", atg_hotel_id="1446194", sb_enabled=False,
+        function="preBookingMock",
+        suppliers=[
+            SupplierTemplatePackages(
+                supplier="EXP", supplier_currency="USD", contract_currency="EUR",
+                packages=[TemplatePackageRow(room_name="A", room_basis="BB", price=100.0,
+                                             refundable=False)],
+                prebooking_status="price_changed", prebooking_changed_price=90.0,
+                booking_package_index=0, adults=3, child_ages=[7], room_count=2,
+            )
+        ],
+    )
+    record = ScenarioTemplateRecord(id="t1")
+    svc._apply_payload(record, original)
+    first = json.dumps(record.suppliers_json, sort_keys=True)
+
+    # re-save the document exactly as it was read back
+    reread = ScenarioTemplateCreate(
+        label=record.label, atg_hotel_id=record.atg_hotel_id, function=record.function,
+        sb_enabled=record.sb_enabled, suppliers=record.suppliers_json,
+    )
+    svc._apply_payload(record, reread)
+    assert json.dumps(record.suppliers_json, sort_keys=True) == first

@@ -83,48 +83,26 @@ def delete_template(db: MongoStore, template_id: str) -> None:
     db.templates.delete(record)
 
 
-def template_from_scenario(
-    db: MongoStore,
-    scenario_id: str,
-    label: str,
-    description: str = "",
-    function: Optional[str] = None,
-) -> ScenarioTemplate:
-    """Save a provisioned scenario as a reusable template.
+def suppliers_from_request(request: dict) -> list:
+    """Invert a ScenarioRequest's packages into template supplier entries.
 
-    A scenario stores its packages as parallel ARRAYS (prices[i], room_names[i], …)
-    while a template stores a list of ROWS, so this inverts the shape. Done server-side
-    rather than in the browser because both shapes live here and would otherwise drift.
-
-    Per-supplier settings that make the scenario what it is — currencies, contract
-    routing, the EXP explicit-pricing split and the PreBooking status — are carried
-    over; a template that lost them would not reproduce the scenario it came from.
+    A scenario stores packages as parallel ARRAYS (prices[i], room_names[i], …); a
+    template stores a list of ROWS. Both the save-a-scenario path and the
+    save-from-the-wizard path go through here, so the two can never produce different
+    templates for the same scenario — which is exactly how the earlier drift happened.
     """
-    from app.models.scenario_template import (
-        ScenarioTemplateCreate,
-        SupplierTemplatePackages,
-        TemplatePackageRow,
-    )
+    from app.models.scenario_template import SupplierTemplatePackages, TemplatePackageRow
 
-    record = db.scenarios.get(scenario_id)
-    if record is None:
-        raise HTTPException(status_code=404, detail="Scenario not found")
-    if record.status != "READY":
-        raise HTTPException(
-            status_code=409,
-            detail=f"Scenario must be READY to save as a template (it is {record.status})",
-        )
-    request = record.request_json or {}
     suppliers_in = request.get("suppliers") or []
     if not suppliers_in:
         raise HTTPException(
-            status_code=409, detail="Scenario has no stored request to build a template from"
+            status_code=409, detail="No suppliers in the request to build a template from"
         )
 
-    def _at(values: object, index: int, fallback: object) -> object:
+    def at(values: object, index: int, fallback: object) -> object:
         return values[index] if isinstance(values, list) and index < len(values) else fallback
 
-    suppliers: list[SupplierTemplatePackages] = []
+    suppliers = []
     for entry in suppliers_in:
         packages = entry.get("packages") or {}
         prices = packages.get("prices") or []
@@ -136,10 +114,10 @@ def template_from_scenario(
 
         rows = [
             TemplatePackageRow(
-                room_name=str(_at(packages.get("room_names"), i, "Room")),
-                room_basis=str(_at(packages.get("room_basis"), i, "RO")),
-                price=float(_at(prices, i, 0.0)),
-                refundable=bool(_at(packages.get("refundable"), i, True)),
+                room_name=str(at(packages.get("room_names"), i, "Room")),
+                room_basis=str(at(packages.get("room_basis"), i, "RO")),
+                price=float(at(prices, i, 0.0)),
+                refundable=bool(at(packages.get("refundable"), i, True)),
                 original_price_with_vat=float(split[i]) if has_split else None,
                 markup=float(markup[i]) if has_split else None,
             )
@@ -160,6 +138,18 @@ def template_from_scenario(
                 room_count=packages.get("room_count") or 1,
             )
         )
+    return suppliers
+
+
+def template_from_request(
+    db: MongoStore,
+    request: dict,
+    label: str,
+    description: str = "",
+    function: Optional[str] = None,
+) -> ScenarioTemplate:
+    """Save a ScenarioRequest as a template — what the wizard's template mode posts."""
+    from app.models.scenario_template import ScenarioTemplateCreate
 
     return create_template(
         db,
@@ -168,7 +158,35 @@ def template_from_scenario(
             description=description,
             function=function,
             atg_hotel_id=str(request.get("atg_hotel_id") or ""),
-            suppliers=suppliers,
+            suppliers=suppliers_from_request(request),
             sb_enabled=bool(request.get("sb_enabled")),
         ),
     )
+
+
+def template_from_scenario(
+    db: MongoStore,
+    scenario_id: str,
+    label: str,
+    description: str = "",
+    function: Optional[str] = None,
+) -> ScenarioTemplate:
+    """Save an already-provisioned scenario as a template.
+
+    Thin wrapper over template_from_request: the stored request IS a ScenarioRequest,
+    so both entry points share one inversion.
+    """
+    record = db.scenarios.get(scenario_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    if record.status != "READY":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Scenario must be READY to save as a template (it is {record.status})",
+        )
+    request = record.request_json or {}
+    if not (request.get("suppliers") or []):
+        raise HTTPException(
+            status_code=409, detail="Scenario has no stored request to build a template from"
+        )
+    return template_from_request(db, request, label, description, function)
