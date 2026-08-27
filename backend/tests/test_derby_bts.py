@@ -788,3 +788,36 @@ def test_odis_hil_forces_bts_adapter_without_losing_other_mock_config():
     # Staging keeps isBTS from its own reference contract and must not be touched.
     assert _spec_for_env(hil, "stg")["mock_config"] == base
     assert hil["mock_config"] == base, "the shared spec dict must not be mutated"
+
+
+def test_hil_defaults_the_separate_availability_timeout():
+    """The adapter reads a SEPARATE timeout for availability; blank means 0, not "unset".
+
+    HIL had no opt_defaults at all, so a reference contract carrying
+    availabilityTimeoutSeconds "" left the adapter with 0 and it abandoned the packages
+    call before the request left the process — nothing reached MockServer, the adapter
+    logged a null response, and /packages returned an empty list with a
+    COMPLETED_SUCCESSFULLY status and no error. Search was unaffected because it uses the
+    contract's own timeoutSeconds, so the scenario looked half-working. CHC, which shares
+    the adapter, has always defaulted this.
+    """
+    from app.core.contract_opt import apply_contract_opt_defaults
+    from app.db.seed_suppliers import SEED_SUPPLIERS, _spec_for_env
+    from app.models.supplier import MockConfig
+
+    hil = [s for s in SEED_SUPPLIERS if s["code"] == "HIL"][0]
+    assert hil["mock_config"]["opt_defaults"]["availabilityTimeoutSeconds"] == "30"
+
+    for env in ("stg", "odis"):
+        config = MockConfig(**_spec_for_env(hil, env)["mock_config"])
+        # "" and "0" are the two shapes a reference contract actually carries.
+        for blank in ("", "0", None):
+            opt = apply_contract_opt_defaults(
+                {"availabilityTimeoutSeconds": blank}, config, "http://mock"
+            )
+            assert opt["availabilityTimeoutSeconds"] == "30", (env, blank)
+        # A real configured timeout is left alone.
+        opt = apply_contract_opt_defaults(
+            {"availabilityTimeoutSeconds": "12"}, config, "http://mock"
+        )
+        assert opt["availabilityTimeoutSeconds"] == "12"

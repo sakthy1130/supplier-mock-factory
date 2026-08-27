@@ -199,6 +199,19 @@ HIL_MOCK_PATH_SUFFIX: dict[str, str] = {
     "CancelOrder": "bts/api/reservation/cancel",
 }
 
+# HIL shares hotels-derby-bts-adapter with CHC, and the adapter reads a SEPARATE timeout
+# for availability: the contract's own timeoutSeconds does not cover it. A reference
+# contract that leaves availabilityTimeoutSeconds "" makes the adapter read 0 and abandon
+# the packages call before it leaves the process — the request never reaches MockServer,
+# the adapter logs a null response, and /packages returns an empty list with no error and
+# a COMPLETED_SUCCESSFULLY status. Search is unaffected (it uses timeoutSeconds), so the
+# scenario looks half-working. CHC already defaults this to "30"; HIL had no default at
+# all. opt_defaults_fill "blank" treats "" and "0" as unset, so this fills exactly the
+# broken cases and leaves a real configured timeout alone.
+HIL_CONTRACT_OPT_DEFAULTS: dict[str, Any] = {
+    "availabilityTimeoutSeconds": "30",
+}
+
 
 SEED_SUPPLIERS: list[dict[str, Any]] = [
     {
@@ -441,6 +454,8 @@ SEED_SUPPLIERS: list[dict[str, Any]] = [
             "opt_source": "ingested",
             "path_namespaced": True,
             "mock_path_suffix": HIL_MOCK_PATH_SUFFIX,
+            "opt_defaults": HIL_CONTRACT_OPT_DEFAULTS,
+            "opt_defaults_fill": "blank",
             "set_mock_server_url": True,
             "dynamic_market_type": "DynamicMarkupTarget",
             # Hilton ids come back prefixed from mapping ("GI-RUHSK", "HL-DXBJB") and
