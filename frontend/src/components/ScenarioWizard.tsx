@@ -251,6 +251,13 @@ export interface ScenarioWizardTemplate {
   contractCurrencies?: Partial<Record<SupplierCode, string>>
   sbEnabled?: boolean
   assignmentTargets?: Partial<Record<SupplierCode, AssignmentTarget>>
+  prebookingStatuses?: Partial<Record<SupplierCode, PreBookingStatus>>
+  prebookingChangedPrices?: Partial<Record<SupplierCode, string>>
+  bookingRows?: Partial<Record<SupplierCode, (number | null)[]>>
+  /** Template mode only: what the template is called and which tab it lives on. */
+  templateLabel?: string
+  templateDescription?: string
+  templateKind?: 'templateBeddingMock' | 'preBookingMock'
 }
 
 /** Accept a flat row set or a list of them, always yielding one entry per instance. */
@@ -263,14 +270,35 @@ function templateInstances(
 }
 
 interface Props {
-  onSubmit: (request: ScenarioRequest) => Promise<void>
+  onSubmit: (request: ScenarioRequest, meta?: TemplateMeta) => Promise<void>
   busy: boolean
   initialTemplate?: ScenarioWizardTemplate
   /** Configured suppliers for the active env — from GET /api/suppliers. */
   availableSuppliers: SupplierListItem[]
+  /**
+   * 'scenario' (default) provisions. 'template' saves the same composition as a
+   * template instead — same fields, same rows, so the two can never describe
+   * different things. Namespace and dates are hidden: they belong to a run.
+   */
+  mode?: 'scenario' | 'template'
+  onCancel?: () => void
 }
 
-export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppliers }: Props) {
+export interface TemplateMeta {
+  label: string
+  description: string
+  kind: 'templateBeddingMock' | 'preBookingMock'
+}
+
+export function ScenarioWizard({
+  onSubmit,
+  busy,
+  initialTemplate,
+  availableSuppliers,
+  mode = 'scenario',
+  onCancel,
+}: Props) {
+  const isTemplate = mode === 'template'
   // App remounts the wizard on env change (it unmounts whenever tab !== 'create'), so
   // reading this once per render is enough — no subscription needed.
   const activeEnv = getActiveEnv()
@@ -331,7 +359,8 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
     Object.fromEntries(
       availableSuppliers.map((s) => [
         s.code,
-        templateInstances(initialTemplate?.packages?.[s.code], () => []).map(() => null),
+        initialTemplate?.bookingRows?.[s.code] ??
+          templateInstances(initialTemplate?.packages?.[s.code], () => []).map(() => null),
       ]),
     ),
   )
@@ -346,8 +375,19 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
   // contract to the apiKey, the SB group, or both (default apikey).
   // Per supplier, like assignmentTargets: one supplier can be sold out while another
   // stays available, which is how a multi-supplier partial case is composed today.
-  const [prebookingStatus, setPrebookingStatus] = useState<Record<string, PreBookingStatus>>({})
-  const [prebookingChangedPrice, setPrebookingChangedPrice] = useState<Record<string, string>>({})
+  const [prebookingStatus, setPrebookingStatus] = useState<Record<string, PreBookingStatus>>(
+    () => ({ ...(initialTemplate?.prebookingStatuses ?? {}) }) as Record<string, PreBookingStatus>,
+  )
+  const [prebookingChangedPrice, setPrebookingChangedPrice] = useState<Record<string, string>>(
+    () => ({ ...(initialTemplate?.prebookingChangedPrices ?? {}) }) as Record<string, string>,
+  )
+  const [templateLabel, setTemplateLabel] = useState(() => initialTemplate?.templateLabel ?? '')
+  const [templateDescription, setTemplateDescription] = useState(
+    () => initialTemplate?.templateDescription ?? '',
+  )
+  const [templateKind, setTemplateKind] = useState<'templateBeddingMock' | 'preBookingMock'>(
+    () => initialTemplate?.templateKind ?? 'templateBeddingMock',
+  )
   const [sbEnabled, setSbEnabled] = useState(() => initialTemplate?.sbEnabled ?? false)
   // A template saved on stg can carry sbEnabled=true into an env with no SmartBooking,
   // where the checkbox is hidden. Everything behavioural reads this, not the raw state,
@@ -530,6 +570,9 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
       return
     }
     try {
+      if (isTemplate && !templateLabel.trim()) {
+        throw new Error('Give the template a label')
+      }
       const request: ScenarioRequest = {
         namespace: namespace.trim(),
         check_in: checkIn,
@@ -588,7 +631,16 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
         ...(brWillProvision && staticMarkup.trim() ? { static_markup: staticMarkup.trim() } : {}),
         ...(brWillProvision && dynamicMarkup.trim() ? { dynamic_markup: dynamicMarkup.trim() } : {}),
       }
-      await onSubmit(request)
+      await onSubmit(
+        request,
+        isTemplate
+          ? {
+              label: templateLabel.trim(),
+              description: templateDescription.trim(),
+              kind: templateKind,
+            }
+          : undefined,
+      )
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Invalid form')
     }
@@ -597,42 +649,88 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
   return (
     <form className="wizard" onSubmit={handleSubmit}>
       <div className="wizard-section">
-        <div className="wizard-section-title">Identity</div>
-        <div className="field-row">
-          <div className="field">
-            <label>
-              Namespace
-              <input
-                value={namespace}
-                onChange={(e) => setNamespace(e.target.value)}
-                required
-                minLength={3}
-                maxLength={64}
-                placeholder="qa-20260901-a1b2"
-              />
-            </label>
+        <div className="wizard-section-title">{isTemplate ? 'Template' : 'Identity'}</div>
+        {isTemplate ? (
+          <div className="field-grid">
+            <div className="field">
+              <label>
+                Label
+                <input
+                  value={templateLabel}
+                  onChange={(e) => setTemplateLabel(e.target.value)}
+                  required
+                  maxLength={120}
+                  placeholder="PreBooking SoldOut"
+                />
+              </label>
+            </div>
+            <div className="field">
+              <label>
+                Save under
+                <select
+                  value={templateKind}
+                  onChange={(e) =>
+                    setTemplateKind(e.target.value as 'templateBeddingMock' | 'preBookingMock')
+                  }
+                >
+                  <option value="templateBeddingMock">Template Bedding Mock</option>
+                  <option value="preBookingMock">PreBooking Mock</option>
+                </select>
+              </label>
+            </div>
+            <div className="field">
+              <label>
+                Description (optional)
+                <input
+                  value={templateDescription}
+                  onChange={(e) => setTemplateDescription(e.target.value)}
+                  maxLength={200}
+                />
+              </label>
+            </div>
           </div>
-          <button type="button" className="btn ghost" onClick={() => setNamespace(defaultNamespace())}>
-            ↻ New
-          </button>
-        </div>
+        ) : (
+          <div className="field-row">
+            <div className="field">
+              <label>
+                Namespace
+                <input
+                  value={namespace}
+                  onChange={(e) => setNamespace(e.target.value)}
+                  required
+                  minLength={3}
+                  maxLength={64}
+                  placeholder="qa-20260901-a1b2"
+                />
+              </label>
+            </div>
+            <button type="button" className="btn ghost" onClick={() => setNamespace(defaultNamespace())}>
+              ↻ New
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="wizard-section">
         <div className="wizard-section-title">Stay & hotel</div>
         <div className="field-grid">
-          <div className="field">
-            <label>
-              Check-in
-              <input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} required />
-            </label>
-          </div>
-          <div className="field">
-            <label>
-              Check-out
-              <input type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} required />
-            </label>
-          </div>
+          {/* Dates belong to a RUN, not a template — run-template supplies them. */}
+          {!isTemplate && (
+            <>
+              <div className="field">
+                <label>
+                  Check-in
+                  <input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} required />
+                </label>
+              </div>
+              <div className="field">
+                <label>
+                  Check-out
+                  <input type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} required />
+                </label>
+              </div>
+            </>
+          )}
           <div className="field">
             <label>
               ATG hotel ID
@@ -1022,7 +1120,16 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
 
       <div className="form-footer">
         <p className="hint">
-          {suppliers.length > 0 ? (
+          {isTemplate ? (
+            suppliers.length > 0 ? (
+              <>
+                Saves {supplierEntryLabels.join(' + ')} as a template. Dates and namespace
+                are supplied when it runs; everything else here is stored.
+              </>
+            ) : (
+              'Select at least one supplier'
+            )
+          ) : suppliers.length > 0 ? (
             <>
               Will create mocks for {supplierEntryLabels.join(' + ')}.{' '}
               {depth === 'full'
@@ -1052,9 +1159,22 @@ export function ScenarioWizard({ onSubmit, busy, initialTemplate, availableSuppl
             'Select at least one supplier'
           )}
         </p>
-        <button type="submit" className="btn primary" disabled={busy || suppliers.length === 0}>
-          {busy ? 'Provisioning…' : 'Create scenario →'}
-        </button>
+        <span style={{ display: 'flex', gap: '0.5rem' }}>
+          {onCancel && (
+            <button type="button" className="btn secondary" disabled={busy} onClick={onCancel}>
+              Cancel
+            </button>
+          )}
+          <button type="submit" className="btn primary" disabled={busy || suppliers.length === 0}>
+            {busy
+              ? isTemplate
+                ? 'Saving…'
+                : 'Provisioning…'
+              : isTemplate
+                ? 'Save template →'
+                : 'Create scenario →'}
+          </button>
+        </span>
       </div>
 
       {formError && <p className="error-text">{formError}</p>}

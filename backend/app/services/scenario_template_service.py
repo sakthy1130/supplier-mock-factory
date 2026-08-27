@@ -164,6 +164,36 @@ def template_from_request(
     )
 
 
+def update_template_from_request(
+    db: MongoStore,
+    template_id: str,
+    request: dict,
+    label: str,
+    description: str = "",
+    function: Optional[str] = None,
+) -> ScenarioTemplate:
+    """Rewrite an existing template from a ScenarioRequest, KEEPING ITS ID.
+
+    The id is the contract with automation — scenario_id_labels.json maps labels to
+    ids and the Java suite drives POST /run-template/{id}. Delete-then-create would
+    silently break every mapped scenario, so editing updates in place.
+    """
+    from app.models.scenario_template import ScenarioTemplateCreate
+
+    return update_template(
+        db,
+        template_id,
+        ScenarioTemplateCreate(
+            label=label,
+            description=description,
+            function=function,
+            atg_hotel_id=str(request.get("atg_hotel_id") or ""),
+            suppliers=suppliers_from_request(request),
+            sb_enabled=bool(request.get("sb_enabled")),
+        ),
+    )
+
+
 def template_from_scenario(
     db: MongoStore,
     scenario_id: str,

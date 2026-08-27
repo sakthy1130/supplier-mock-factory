@@ -28,9 +28,11 @@ import {
   createScenarioTemplate,
   deleteScenarioTemplate,
   listScenarioTemplates,
+  saveRequestAsTemplate,
   saveScenarioAsTemplate,
   templateKind,
   updateScenarioTemplate,
+  updateScenarioTemplateFromRequest,
   TEMPLATE_KIND_BEDDING,
   TEMPLATE_KIND_PREBOOKING,
   type ApiScenarioTemplate,
@@ -125,6 +127,10 @@ function App() {
   }, [customTemplates])
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [showImportForm, setShowImportForm] = useState(false)
+  // The template editor IS the create-scenario wizard, in template mode.
+  const [templateFormOpen, setTemplateFormOpen] = useState(false)
+  const [templateDraft, setTemplateDraft] = useState<ScenarioWizardTemplate | undefined>(undefined)
+  const [templateSaving, setTemplateSaving] = useState(false)
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
   const [importLabel, setImportLabel] = useState('')
   const [importDescription, setImportDescription] = useState('')
@@ -401,29 +407,6 @@ function App() {
 
   const editFormRef = useRef<HTMLFormElement>(null)
 
-  const handleEditTemplate = (item: ApiScenarioTemplate) => {
-    setEditingTemplateId(item.id)
-    setImportLabel(item.label)
-    setImportDescription(item.description)
-    setImportHotelId(item.atg_hotel_id)
-    setImportSuppliers(
-      item.suppliers.map((entry) => ({
-        supplier: entry.supplier as SupplierCode,
-        supplier_currency: entry.supplier_currency,
-        contract_currency: entry.contract_currency,
-        json: JSON.stringify(entry.packages, null, 2),
-        assignment_target: entry.assignment_target ?? 'apikey',
-        // Read back too: without this, opening a PreBooking template to edit it and
-        // saving would quietly turn it into a plain bedding template.
-        prebooking_status: entry.prebooking_status ?? 'available',
-        prebooking_changed_price:
-          entry.prebooking_changed_price != null ? String(entry.prebooking_changed_price) : '',
-      })),
-    )
-    setImportSbEnabled(item.sb_enabled ?? false)
-    setImportError(null)
-    setShowImportForm(true)
-  }
 
   // The edit form renders above the template list, so opening it while scrolled
   // down (e.g. clicking Edit on a row near the bottom) would leave it off-screen
@@ -444,6 +427,62 @@ function App() {
     } catch (err) {
       setBackendError(err instanceof Error ? err.message : 'Delete failed')
     }
+  }
+
+  /** Open a saved template in the wizard, in template mode, with every field. */
+  const editTemplateInWizard = (item: ApiScenarioTemplate) => {
+    const packages: Partial<Record<SupplierCode, PackageRow[][]>> = {}
+    const enabledSuppliers: Partial<Record<SupplierCode, boolean>> = Object.fromEntries(
+      supplierList.map((s) => [s.code, false]),
+    )
+    const supplierCurrencies: Partial<Record<SupplierCode, string>> = {}
+    const contractCurrencies: Partial<Record<SupplierCode, string>> = {}
+    const assignmentTargets: Partial<Record<SupplierCode, 'apikey' | 'sbgroup' | 'both'>> = {}
+    const prebookingStatuses: Partial<Record<SupplierCode, PreBookingStatus>> = {}
+    const prebookingChangedPrices: Partial<Record<SupplierCode, string>> = {}
+    const bookingRows: Partial<Record<SupplierCode, (number | null)[]>> = {}
+
+    for (const entry of item.suppliers) {
+      const code = entry.supplier as SupplierCode
+      const rows = entry.packages.map((pkg) => ({
+        roomName: pkg.room_name,
+        roomBasis: pkg.room_basis,
+        price: String(pkg.price),
+        refundable: pkg.refundable,
+        originalPriceWithVat:
+          pkg.original_price_with_vat == null ? '' : String(pkg.original_price_with_vat),
+        markup: pkg.markup == null ? '' : String(pkg.markup),
+      }))
+      enabledSuppliers[code] = true
+      packages[code] = [...(packages[code] ?? []), rows]
+      supplierCurrencies[code] = entry.supplier_currency
+      contractCurrencies[code] = entry.contract_currency
+      assignmentTargets[code] = entry.assignment_target ?? 'apikey'
+      prebookingStatuses[code] = (entry.prebooking_status ?? 'available') as PreBookingStatus
+      prebookingChangedPrices[code] =
+        entry.prebooking_changed_price == null ? '' : String(entry.prebooking_changed_price)
+      // Per instance, mirroring how packages are collected above.
+      bookingRows[code] = [...(bookingRows[code] ?? []), entry.booking_package_index ?? null]
+    }
+
+    setTemplateDraft({
+      atgHotelId: item.atg_hotel_id,
+      enabledSuppliers,
+      packages,
+      supplierCurrencies,
+      contractCurrencies,
+      assignmentTargets,
+      prebookingStatuses,
+      prebookingChangedPrices,
+      bookingRows,
+      sbEnabled: item.sb_enabled ?? false,
+      templateLabel: item.label,
+      templateDescription: item.description,
+      templateKind: templateKind(item.function),
+    })
+    setEditingTemplateId(item.id)
+    setTemplateFormOpen(true)
+    setShowImportForm(false)
   }
 
   const openCustomTemplate = (item: ApiScenarioTemplate) => {
@@ -554,6 +593,39 @@ function App() {
       setBackendError(err instanceof Error ? err.message : 'Scenario run failed')
     } finally {
       setCrawlaRunning(false)
+    }
+  }
+
+  const handleTemplateWizardSubmit = async (
+    request: ScenarioRequest,
+    meta?: { label: string; description: string; kind: TemplateKind },
+  ) => {
+    if (!meta) return
+    setTemplateSaving(true)
+    setBackendError(null)
+    try {
+      const payload = {
+        label: meta.label,
+        description: meta.description,
+        function: meta.kind,
+        request: request as unknown as Record<string, unknown>,
+      }
+      if (editingTemplateId) {
+        // Editing rewrites the document, so it goes through the same inversion —
+        // delete-then-create would change the id and break automation's id map.
+        await updateScenarioTemplateFromRequest(editingTemplateId, payload)
+      } else {
+        await saveRequestAsTemplate(payload)
+      }
+      setTemplateFormOpen(false)
+      setTemplateDraft(undefined)
+      setEditingTemplateId(null)
+      setTemplateKindTab(meta.kind)
+      await loadCustomTemplates()
+    } catch (err) {
+      setBackendError(err instanceof Error ? err.message : 'Could not save the template')
+    } finally {
+      setTemplateSaving(false)
     }
   }
 
@@ -1089,14 +1161,55 @@ function App() {
             <section className="recent-panel" style={{ marginTop: '1.5rem' }}>
               <div className="recent-header">
                 <h2>Custom templates</h2>
-                <button
-                  type="button"
-                  className="btn secondary"
-                  onClick={() => (showImportForm ? resetImportForm() : setShowImportForm(true))}
-                >
-                  {showImportForm ? 'Cancel' : '+ Import template'}
-                </button>
+                <span style={{ display: 'flex', gap: '0.4rem' }}>
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    onClick={() => {
+                      setEditingTemplateId(null)
+                      setTemplateDraft({ templateKind: templateKindTab })
+                      setTemplateFormOpen((open) => !open)
+                      setShowImportForm(false)
+                    }}
+                  >
+                    {templateFormOpen ? 'Cancel' : '+ New template'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => (showImportForm ? resetImportForm() : setShowImportForm(true))}
+                    title="Paste package rows or a scenario request as JSON"
+                  >
+                    {showImportForm ? 'Cancel import' : 'Import JSON'}
+                  </button>
+                </span>
               </div>
+
+              {templateFormOpen && (
+                <div className="wizard-section" style={{ marginBottom: '1rem' }}>
+                  <div className="wizard-section-title">
+                    {editingTemplateId ? 'Edit template' : 'New template'}
+                  </div>
+                  <p className="hint" style={{ marginTop: '-0.3rem' }}>
+                    The same form as Create Mock Scenario — so a template and the scenario it
+                    produces can never describe different things. Dates and namespace belong
+                    to a run, so they are not asked for here.
+                  </p>
+                  <ScenarioWizard
+                    key={editingTemplateId ?? 'new-template'}
+                    mode="template"
+                    busy={templateSaving}
+                    initialTemplate={templateDraft}
+                    availableSuppliers={supplierList}
+                    onSubmit={handleTemplateWizardSubmit}
+                    onCancel={() => {
+                      setTemplateFormOpen(false)
+                      setEditingTemplateId(null)
+                      setTemplateDraft(undefined)
+                    }}
+                  />
+                </div>
+              )}
 
               {showImportForm && (
                 <form
@@ -1382,7 +1495,7 @@ function App() {
                         ))}
                       </span>
                       <span style={{ display: 'flex', gap: '0.4rem' }}>
-                        <button type="button" className="btn ghost tiny" onClick={() => handleEditTemplate(item)}>
+                        <button type="button" className="btn ghost tiny" onClick={() => editTemplateInWizard(item)}>
                           Edit
                         </button>
                         <button type="button" className="btn danger tiny" onClick={() => handleDeleteTemplate(item)}>

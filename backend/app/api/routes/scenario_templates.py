@@ -75,6 +75,23 @@ def save_request_as_template(
     )
 
 
+@router.put("/{template_id}/from-request", response_model=ScenarioTemplate)
+def update_template_from_request(
+    template_id: str,
+    payload: SaveRequestAsTemplate,
+    db: MongoStore = Depends(get_db),
+) -> ScenarioTemplate:
+    """Edit a template from the wizard, keeping its id so automation keeps working."""
+    return scenario_template_service.update_template_from_request(
+        db,
+        template_id,
+        payload.request,
+        label=payload.label,
+        description=payload.description,
+        function=payload.function,
+    )
+
+
 @router.post("/from-scenario/{scenario_id}", response_model=ScenarioTemplate, status_code=201)
 def save_scenario_as_template(
     scenario_id: str,

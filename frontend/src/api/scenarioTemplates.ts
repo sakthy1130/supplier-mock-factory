@@ -83,6 +83,33 @@ export function saveScenarioAsTemplate(
   })
 }
 
+export function saveRequestAsTemplate(payload: {
+  label: string
+  description?: string
+  function?: TemplateKind
+  request: Record<string, unknown>
+}): Promise<ApiScenarioTemplate> {
+  return request<ApiScenarioTemplate>('/api/scenario-templates/from-request', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateScenarioTemplateFromRequest(
+  id: string,
+  payload: {
+    label: string
+    description?: string
+    function?: TemplateKind
+    request: Record<string, unknown>
+  },
+): Promise<ApiScenarioTemplate> {
+  return request<ApiScenarioTemplate>(`/api/scenario-templates/${id}/from-request`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
 export function listScenarioTemplates(): Promise<ApiScenarioTemplate[]> {
   return request('/api/scenario-templates')
 }
