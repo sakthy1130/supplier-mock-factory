@@ -46,6 +46,8 @@ export interface PackageSpec {
   can_prebook?: boolean | null
   /** false omits overridePrebookUrl from the contract. Independent of can_prebook. */
   prebook_url?: boolean | null
+  /** Env-wide: endpointsSupported.prebooking on the shared supplier record. */
+  supplier_prebooking?: boolean | null
   /**
    * EXP explicit pricing, per package, both or neither: the split of `prices` into
    * pre-markup + markup, in supplier currency, where price = original_price_with_vat +

@@ -450,6 +450,7 @@ function App() {
     const bookingRows: Partial<Record<SupplierCode, (number | null)[]>> = {}
     const canPrebook: Partial<Record<SupplierCode, boolean | undefined>> = {}
     const prebookUrl: Partial<Record<SupplierCode, boolean | undefined>> = {}
+    const supplierPrebooking: Partial<Record<SupplierCode, boolean | undefined>> = {}
 
     for (const entry of item.suppliers) {
       const code = entry.supplier as SupplierCode
@@ -477,6 +478,7 @@ function App() {
       bookingRows[code] = [...(bookingRows[code] ?? []), entry.booking_package_index ?? null]
       canPrebook[code] = entry.can_prebook ?? undefined
       prebookUrl[code] = entry.prebook_url ?? undefined
+      supplierPrebooking[code] = entry.supplier_prebooking ?? undefined
     }
 
     return {
@@ -491,6 +493,7 @@ function App() {
       bookingRows,
       canPrebook,
       prebookUrl,
+      supplierPrebooking,
       sbEnabled: item.sb_enabled ?? false,
       templateLabel: item.label,
       templateDescription: item.description,

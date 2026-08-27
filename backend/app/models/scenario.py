@@ -186,6 +186,15 @@ class PackageSpec(BaseModel):
             "use prebook_url to control the URL."
         ),
     )
+    supplier_prebooking: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Override endpointsSupported.prebooking on the SUPPLIER record. Unset "
+            "leaves it alone. WARNING: that record is shared by every contract and "
+            "every concurrent scenario in the env — while this is off, prebooking is "
+            "off for all of them. SMF restores the previous value on teardown."
+        ),
+    )
     prebook_url: Optional[bool] = Field(
         default=None,
         description=(
@@ -667,6 +676,10 @@ class ScenarioBundle(BaseModel):
     supplier_hotel_ids: dict[str, str] = Field(default_factory=dict)
     crawla_export: Optional[dict[str, Any]] = None
     br_setup: Optional[dict[str, Any]] = None
+    # {supplier code: previous endpointsSupported.prebooking} for scenarios that
+    # changed the shared supplier record. None means the key was absent and must be
+    # restored as absence. Teardown reads this; losing it leaves the env altered.
+    supplier_prebooking_restore: Optional[dict[str, Any]] = None
     mock_server_base_url: Optional[str] = None
     expectation_count: int = 0
     error_message: Optional[str] = None

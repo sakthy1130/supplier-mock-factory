@@ -134,6 +134,7 @@ def suppliers_from_request(request: dict) -> list:
                 prebooking_changed_price=packages.get("prebooking_changed_price"),
                 can_prebook=packages.get("can_prebook"),
                 prebook_url=packages.get("prebook_url"),
+                supplier_prebooking=packages.get("supplier_prebooking"),
                 booking_package_index=packages.get("booking_package_index"),
                 adults=packages.get("adults") or 2,
                 child_ages=list(packages.get("child_ages") or []),

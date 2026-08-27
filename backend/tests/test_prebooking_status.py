@@ -274,33 +274,53 @@ def test_a_status_that_cannot_be_reached_is_rejected():
 
 # ── Scenario 4: "prebooking not enabled" has TWO halves ────────────────────────
 
-def test_supplier_endpoint_state_is_read_only_and_separate_from_the_contract():
-    """The contract half is per scenario; the supplier half is env-wide.
+def test_supplier_prebooking_is_restored_on_teardown():
+    """The supplier record is shared, so a scenario that changes it MUST put it back.
 
-    SMF must never write the supplier record — one document per supplier per env,
-    shared by every contract and every concurrent scenario. Surfacing it read-only is
-    the whole design, so this pins that no write path exists.
+    Without the restore breadcrumb a torn-down scenario would leave prebooking off for
+    every other scenario in the env. None means the key was absent and must be restored
+    as absence, not as false.
     """
     import inspect
 
-    from app.integrations import backoffice
+    from app.core import orchestrator
 
-    src = inspect.getsource(backoffice)
-    # the only supplier-record access is the read
-    assert "get_supplier_endpoints_supported" in src
-    supplier_writes = [
-        line for line in src.splitlines()
-        if "/api/suppliers" in line and any(v in line for v in (".put(", ".post(", ".patch("))
-    ]
-    assert not supplier_writes, f"SMF must not write supplier records: {supplier_writes}"
+    src = inspect.getsource(orchestrator)
+    assert "_apply_supplier_prebooking" in src
+    assert "_restore_supplier_prebooking" in src
+    # The restore runs FIRST in the body, before any step that could raise and skip
+    # it — leaving the shared record altered is worse than a partial teardown.
+    body = src[src.index("async def teardown_scenario"):]
+    body = body[body.index(") -> ScenarioBundle:"):]
+    assert body.index("_restore_supplier_prebooking") < body.index(
+        "br_provisioner.cleanup"
+    ), "restore must run before the rest of teardown"
+
+
+def test_restore_puts_an_absent_key_back_as_absent():
+    """stg's EXP has no prebooking key at all. Restoring it as false would silently
+    change the supplier from 'not advertised' to 'explicitly disabled'."""
+    import inspect
+
+    from app.integrations.backoffice import BackofficeClient
+
+    src = inspect.getsource(BackofficeClient.restore_supplier_prebooking)
+    assert 'endpoints.pop("prebooking", None)' in src
 
 
 def test_missing_prebooking_key_is_not_the_same_as_false():
-    """stg's EXP supplier has no prebooking key at all; ODIS has "true". A missing key
-    means "not advertised", which the UI shows differently from an explicit false."""
     from app.api.routes.suppliers import _as_bool
 
     assert _as_bool(None) is None          # key absent -> not advertised
     assert _as_bool("true") is True
     assert _as_bool("false") is False
     assert _as_bool(True) is True
+
+
+def test_the_three_prebooking_levers_are_independent():
+    """contract permission, contract URL, supplier endpoint — none implies another."""
+    spec = PackageSpec(
+        count=1, room_basis="RO", prices=[100.0],
+        can_prebook=True, prebook_url=False, supplier_prebooking=False,
+    )
+    assert (spec.can_prebook, spec.prebook_url, spec.supplier_prebooking) == (True, False, False)

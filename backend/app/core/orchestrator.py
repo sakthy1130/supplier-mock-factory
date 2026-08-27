@@ -95,6 +95,14 @@ class SupplierMockScenarioOrchestrator:
         mock_paths = extract_paths_from_built(built)
         mock_base = self.settings.mock_server_url
 
+        # Shared-state change, applied before the contracts so the whole scenario runs
+        # under it. The previous value is recorded on the bundle for teardown — the
+        # supplier record is one row per env, so failing to restore it would leave
+        # every other scenario altered.
+        restore = await self._apply_supplier_prebooking(request, plog)
+        if restore:
+            bundle.supplier_prebooking_restore = restore
+
         bundle.status = ScenarioStatus.CREATING_CONTRACTS
         bundle.contracts = await self.contract_provisioner.create_contracts(
             request,
@@ -291,6 +299,54 @@ class SupplierMockScenarioOrchestrator:
             created_at=datetime.now(timezone.utc),
         )
 
+    async def _apply_supplier_prebooking(
+        self,
+        request: ScenarioRequest,
+        plog: list[str],
+    ) -> dict[str, object]:
+        """Flip endpointsSupported.prebooking for any supplier the scenario pins.
+
+        Returns {code: previous value} so teardown can put it back. Only suppliers
+        that actually asked are touched.
+        """
+        from app.services.supplier_service import get_supplier_config
+
+        wanted = {
+            str(supplier.code): supplier.packages.supplier_prebooking
+            for supplier in request.suppliers
+            if getattr(supplier.packages, "supplier_prebooking", None) is not None
+        }
+        if not wanted:
+            return {}
+        restore: dict[str, object] = {}
+        async with BackofficeClient() as backoffice:
+            for code, enabled in wanted.items():
+                supplier_id = get_supplier_config(code).supplier_id
+                previous = await backoffice.set_supplier_prebooking(supplier_id, bool(enabled))
+                restore[code] = previous
+                plog.append(
+                    f"[supplier] {code} endpointsSupported.prebooking -> {str(bool(enabled)).lower()} "
+                    f"(was {previous!r}) — ENV-WIDE, restored on teardown"
+                )
+        return restore
+
+    async def _restore_supplier_prebooking(self, restore: dict | None) -> None:
+        """Put every supplier record this scenario changed back as it was."""
+        if not restore:
+            return
+        from app.services.supplier_service import get_supplier_config
+
+        async with BackofficeClient() as backoffice:
+            for code, previous in restore.items():
+                try:
+                    supplier_id = get_supplier_config(str(code)).supplier_id
+                    await backoffice.restore_supplier_prebooking(supplier_id, previous)
+                except Exception:  # noqa: BLE001 - teardown is best-effort per supplier
+                    logger.exception(
+                        "Could not restore endpointsSupported.prebooking for %s — the env "
+                        "is left altered, fix it in Backoffice", code
+                    )
+
     async def teardown_scenario(
         self,
         namespace: str,
@@ -303,7 +359,9 @@ class SupplierMockScenarioOrchestrator:
         sb_group_id: str | None = None,
         sb_config_id: str | None = None,
         api_key_is_external: bool = False,
+        supplier_prebooking_restore: dict | None = None,
     ) -> ScenarioBundle:
+        await self._restore_supplier_prebooking(supplier_prebooking_restore)
         if br_setup:
             # cleanup() handles both shapes: apiKey rule-configs/conditions, and the
             # contract conditions created by the contract_br depth.

@@ -52,6 +52,7 @@ class SupplierTemplatePackages(BaseModel):
     # Contract permission. Unset leaves the reference contract's own value.
     can_prebook: Optional[bool] = None
     prebook_url: Optional[bool] = None
+    supplier_prebooking: Optional[bool] = None
     # Which package the booking flow is built for. Without this a template could not
     # reproduce the scenario it came from: the scenario booked a package, the template
     # forgot, and running it gave search+packages only.

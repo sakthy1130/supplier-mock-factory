@@ -256,6 +256,7 @@ export interface ScenarioWizardTemplate {
   prebookingChangedPrices?: Partial<Record<SupplierCode, string>>
   canPrebook?: Partial<Record<SupplierCode, boolean | undefined>>
   prebookUrl?: Partial<Record<SupplierCode, boolean | undefined>>
+  supplierPrebooking?: Partial<Record<SupplierCode, boolean | undefined>>
   bookingRows?: Partial<Record<SupplierCode, (number | null)[]>>
   /** Template mode only: what the template is called and which tab it lives on. */
   templateLabel?: string
@@ -405,6 +406,9 @@ export function ScenarioWizard({
       cancelled = true
     }
   }, [])
+  const [supplierPrebookingChoice, setSupplierPrebookingChoice] = useState<
+    Record<string, boolean | undefined>
+  >(() => ({ ...(initialTemplate?.supplierPrebooking ?? {}) }) as Record<string, boolean | undefined>)
   const [prebookUrl, setPrebookUrl] = useState<Record<string, boolean | undefined>>(
     () => ({ ...(initialTemplate?.prebookUrl ?? {}) }) as Record<string, boolean | undefined>,
   )
@@ -630,6 +634,9 @@ export function ScenarioWizard({
                 // scenario that does not ask for a status.
                 ...(canPrebook[code] !== undefined ? { can_prebook: canPrebook[code] } : {}),
                 ...(prebookUrl[code] !== undefined ? { prebook_url: prebookUrl[code] } : {}),
+                ...(supplierPrebookingChoice[code] !== undefined
+                  ? { supplier_prebooking: supplierPrebookingChoice[code] }
+                  : {}),
                 ...(prebookingStatus[code] && prebookingStatus[code] !== 'available'
                   ? { prebooking_status: prebookingStatus[code] }
                   : {}),
@@ -872,25 +879,48 @@ export function ScenarioWizard({
                     )}
 
                     {meta.log_types?.includes('PreBooking') && (
-                      <div className="supplier-tile-field" style={{ maxWidth: '230px' }}>
-                        <span>Supplier endpoint</span>
-                        <span
-                          className="supplier-endpoint-state"
-                          title={
-                            'From the Backoffice supplier record, shared by every contract in ' +
-                            'this env. SMF never changes it — flip it in Backoffice for the ' +
-                            'env-wide case.'
+                      <label className="supplier-tile-field" style={{ maxWidth: '250px' }}>
+                        Supplier prebooking endpoint
+                        <select
+                          value={
+                            supplierPrebookingChoice[meta.code] === undefined
+                              ? 'default'
+                              : supplierPrebookingChoice[meta.code]
+                                ? 'true'
+                                : 'false'
+                          }
+                          onChange={(e) =>
+                            setSupplierPrebookingChoice((prev) => ({
+                              ...prev,
+                              [meta.code]:
+                                e.target.value === 'default'
+                                  ? undefined
+                                  : e.target.value === 'true',
+                            }))
                           }
                         >
-                          {supplierPrebooking[meta.code] === true
-                            ? 'prebooking: supported'
-                            : supplierPrebooking[meta.code] === false
-                              ? 'prebooking: disabled'
-                              : meta.code in supplierPrebooking
-                                ? 'prebooking: not advertised'
-                                : '…'}
-                        </span>
-                      </div>
+                          <option value="default">
+                            Leave as is
+                            {meta.code in supplierPrebooking
+                              ? ` (${
+                                  supplierPrebooking[meta.code] === true
+                                    ? 'supported'
+                                    : supplierPrebooking[meta.code] === false
+                                      ? 'disabled'
+                                      : 'not advertised'
+                                })`
+                              : ''}
+                          </option>
+                          <option value="true">Force supported</option>
+                          <option value="false">Force disabled</option>
+                        </select>
+                        {supplierPrebookingChoice[meta.code] !== undefined && (
+                          <span className="supplier-endpoint-warn">
+                            ⚠ Env-wide — affects every scenario using {meta.code} while set.
+                            Restored on teardown.
+                          </span>
+                        )}
+                      </label>
                     )}
 
                     {meta.log_types?.includes('PreBooking') && (

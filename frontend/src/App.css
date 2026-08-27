@@ -2469,3 +2469,14 @@ pre.raw-response {
   letter-spacing: 0;
   cursor: help;
 }
+
+.supplier-endpoint-warn {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--warning);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
