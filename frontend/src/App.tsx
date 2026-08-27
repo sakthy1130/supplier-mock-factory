@@ -429,11 +429,18 @@ function App() {
     }
   }
 
-  /** Open a saved template in the wizard, in template mode, with every field. */
-  const editTemplateInWizard = (item: ApiScenarioTemplate) => {
+  /**
+   * A saved template as wizard prefill. ONE builder for both callers — opening a
+   * template in Create Scenario and editing it in template mode previously had
+   * separate copies, and the edit one grew PreBooking/Book support while the other
+   * silently kept dropping them.
+   */
+  const templateToWizardDraft = (item: ApiScenarioTemplate): ScenarioWizardTemplate => {
+    // A code may appear more than once, so collect a LIST of row sets per code —
+    // assigning would drop every entry but the last.
     const packages: Partial<Record<SupplierCode, PackageRow[][]>> = {}
     const enabledSuppliers: Partial<Record<SupplierCode, boolean>> = Object.fromEntries(
-      supplierList.map((s) => [s.code, false]),
+      supplierList.map((sup) => [sup.code, false]),
     )
     const supplierCurrencies: Partial<Record<SupplierCode, string>> = {}
     const contractCurrencies: Partial<Record<SupplierCode, string>> = {}
@@ -449,24 +456,27 @@ function App() {
         roomBasis: pkg.room_basis,
         price: String(pkg.price),
         refundable: pkg.refundable,
+        // Blank, not "undefined"/"0", when the template predates explicit pricing or
+        // simply does not use it — the wizard treats blank as "not asked for".
         originalPriceWithVat:
           pkg.original_price_with_vat == null ? '' : String(pkg.original_price_with_vat),
         markup: pkg.markup == null ? '' : String(pkg.markup),
       }))
       enabledSuppliers[code] = true
       packages[code] = [...(packages[code] ?? []), rows]
+      // Currencies and assignment target are per supplier CODE in the wizard, not
+      // per instance, so the last entry for a code wins.
       supplierCurrencies[code] = entry.supplier_currency
       contractCurrencies[code] = entry.contract_currency
       assignmentTargets[code] = entry.assignment_target ?? 'apikey'
       prebookingStatuses[code] = (entry.prebooking_status ?? 'available') as PreBookingStatus
       prebookingChangedPrices[code] =
         entry.prebooking_changed_price == null ? '' : String(entry.prebooking_changed_price)
-      // Per instance, mirroring how packages are collected above.
       bookingRows[code] = [...(bookingRows[code] ?? []), entry.booking_package_index ?? null]
     }
 
-    setTemplateDraft({
-      atgHotelId: item.atg_hotel_id,
+    return {
+      atgHotelId: item.atg_hotel_id || undefined,
       enabledSuppliers,
       packages,
       supplierCurrencies,
@@ -479,60 +489,26 @@ function App() {
       templateLabel: item.label,
       templateDescription: item.description,
       templateKind: templateKind(item.function),
-    })
+    }
+  }
+
+  const editTemplateInWizard = (item: ApiScenarioTemplate) => {
+    setTemplateDraft(templateToWizardDraft(item))
     setEditingTemplateId(item.id)
     setTemplateFormOpen(true)
     setShowImportForm(false)
   }
 
   const openCustomTemplate = (item: ApiScenarioTemplate) => {
-    // A code may appear more than once in the template, so collect a LIST of row
-    // sets per code — assigning would drop every entry but the last.
-    const packages: Partial<Record<SupplierCode, PackageRow[][]>> = {}
-    // Start with every configured supplier off, then switch on the ones the template names.
-    const enabledSuppliers: Partial<Record<SupplierCode, boolean>> = Object.fromEntries(
-      supplierList.map((s) => [s.code, false]),
-    )
-    const supplierCurrencies: Partial<Record<SupplierCode, string>> = {}
-    const contractCurrencies: Partial<Record<SupplierCode, string>> = {}
-    const assignmentTargets: Partial<Record<SupplierCode, 'apikey' | 'sbgroup' | 'both'>> = {}
-    for (const entry of item.suppliers) {
-      const code = entry.supplier as SupplierCode
-      const rows = entry.packages.map((p) => ({
-        roomName: p.room_name,
-        roomBasis: p.room_basis,
-        price: String(p.price),
-        refundable: p.refundable,
-        // Blank, not "undefined"/"0", when the template predates explicit pricing or
-        // simply does not use it — the wizard treats blank as "not asked for".
-        originalPriceWithVat:
-          p.original_price_with_vat === undefined || p.original_price_with_vat === null
-            ? ''
-            : String(p.original_price_with_vat),
-        markup: p.markup === undefined || p.markup === null ? '' : String(p.markup),
-      }))
-      packages[code] = [...(packages[code] ?? []), rows]
-      enabledSuppliers[code] = true
-      // Currencies and assignment target are per supplier CODE in the wizard, not
-      // per instance — with repeated entries the last one wins.
-      supplierCurrencies[code] = entry.supplier_currency
-      contractCurrencies[code] = entry.contract_currency
-      assignmentTargets[code] = entry.assignment_target ?? 'apikey'
-    }
+    // Same draft the template editor uses, so what you see when you open a template
+    // is what the template actually holds — PreBooking status and Book selection
+    // included. These were two separate builders and drifted.
     openCreate({
       id: `custom-${item.id}`,
       label: item.label,
       description: item.description,
       templateId: item.id,
-      template: {
-        atgHotelId: item.atg_hotel_id || undefined,
-        enabledSuppliers,
-        packages,
-        supplierCurrencies,
-        contractCurrencies,
-        sbEnabled: item.sb_enabled ?? false,
-        assignmentTargets,
-      },
+      template: templateToWizardDraft(item),
     })
   }
 
