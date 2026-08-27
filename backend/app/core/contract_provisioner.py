@@ -40,7 +40,16 @@ class ContractProvisioner:
                 config = get_supplier_config(supplier_code)
                 contract_currency = supplier.contract_currency
                 paths = mock_paths.get(instance_key, {})
-                opt_urls = build_mock_opt_urls(mock_base_url, paths, supplier_code=supplier_code)
+                # prebook_url=False leaves the contract with no overridePrebookUrl.
+                # Independent of the canPrebook permission below: a scenario may want
+                # the permission on with no override, or off with one still wired.
+                spec = supplier.packages
+                opt_urls = build_mock_opt_urls(
+                    mock_base_url,
+                    paths,
+                    supplier_code=supplier_code,
+                    include_prebook_url=getattr(spec, "prebook_url", None) is not False,
+                )
                 body = await self._build_contract_body(
                     config,
                     request.namespace,

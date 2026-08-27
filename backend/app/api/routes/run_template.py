@@ -127,6 +127,15 @@ def build_scenario_request_from_template(
                     else {}
                 )
             ),
+            **(
+                {"prebook_url": request_data.prebook_url}
+                if request_data.prebook_url is not None
+                else (
+                    {"prebook_url": supplier_entry.prebook_url}
+                    if getattr(supplier_entry, "prebook_url", None) is not None
+                    else {}
+                )
+            ),
             # Occupancy the mocked rates advertise. An adapter drops any rate whose
             # occupancy != the request, so a template saved at a non-default occupancy
             # has to replay it or its packages vanish from the search.

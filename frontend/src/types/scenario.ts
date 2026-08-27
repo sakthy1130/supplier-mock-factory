@@ -44,6 +44,8 @@ export interface PackageSpec {
    * contract's value. false also drops overridePrebookUrl and the PreBooking mock.
    */
   can_prebook?: boolean | null
+  /** false omits overridePrebookUrl from the contract. Independent of can_prebook. */
+  prebook_url?: boolean | null
   /**
    * EXP explicit pricing, per package, both or neither: the split of `prices` into
    * pre-markup + markup, in supplier currency, where price = original_price_with_vat +

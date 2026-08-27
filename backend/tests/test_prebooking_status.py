@@ -193,61 +193,80 @@ def test_run_mode_values():
     assert default.default is RunMode.e2e
 
 
-# ── can_prebook: contract permission off, no prebook URL, no mock ──────────────
+# ── canPrebook and the prebook URL are INDEPENDENT ────────────────────────────
 
-def test_can_prebook_false_drops_the_prebooking_mock():
-    built = _build(PreBookingStatus.available, book_idx=0)
-    assert "PreBooking" in built, "baseline should have one"
-
-    with use_env("stg"):
-        request = _request(PreBookingStatus.available, book_idx=0)
-        request.suppliers[0].packages = PackageSpec(
-            count=1, room_basis="RO", room_names=["A"], prices=[PACKAGE_PRICE],
-            booking_package_index=0, can_prebook=False,
-        )
-        off = {b.log_type for b in ScenarioEngine().build_expectations(request)}
-    assert "PreBooking" not in off
-    # the rest of the chain is untouched — this is about the price check only
-    assert {"Search", "Packages", "Booking", "GetOrder", "CancelOrder"} <= off
-
-
-def test_can_prebook_false_omits_the_override_prebook_url():
-    """The URL is derived from the PreBooking mock path, so dropping the mock must
-    leave overridePrebookUrl absent rather than pointing somewhere wrong."""
+def _opt_for(**kw):
+    """Build a scenario and return the contract opt urls it would produce."""
     from app.core.mock_urls import build_mock_opt_urls, extract_paths_from_built
 
+    request = _request(PreBookingStatus.available, book_idx=0)
+    request.suppliers[0].packages = PackageSpec(
+        count=1, room_basis="RO", room_names=["A"], prices=[PACKAGE_PRICE],
+        booking_package_index=0, **kw,
+    )
     with use_env("stg"):
-        request = _request(PreBookingStatus.available, book_idx=0)
-        request.suppliers[0].packages = PackageSpec(
-            count=1, room_basis="RO", room_names=["A"], prices=[PACKAGE_PRICE],
-            booking_package_index=0, can_prebook=False,
-        )
         built = ScenarioEngine().build_expectations(request)
-    paths = extract_paths_from_built(built)
-    opt = build_mock_opt_urls("http://mock", paths.get("EXP", {}), supplier_code="EXP")
+    spec = request.suppliers[0].packages
+    opt = build_mock_opt_urls(
+        "http://mock", extract_paths_from_built(built).get("EXP", {}),
+        supplier_code="EXP", include_prebook_url=spec.prebook_url is not False,
+    )
+    return request.suppliers[0], opt, {b.log_type for b in built}
+
+
+def _perm(supplier):
+    from app.core.contract_provisioner import _scenario_permissions
+
+    return _scenario_permissions(supplier)
+
+
+def test_case_1_permission_off_url_kept():
+    supplier, opt, _ = _opt_for(can_prebook=False)
+    assert _perm(supplier) == {"canPrebook": False}
+    assert "overridePrebookUrl" in opt
+
+
+def test_case_2_permission_on_url_omitted():
+    supplier, opt, _ = _opt_for(can_prebook=True, prebook_url=False)
+    assert _perm(supplier) == {"canPrebook": True}
     assert "overridePrebookUrl" not in opt
 
 
-def test_can_prebook_unset_changes_nothing():
-    """Absent means absent: the reference contract keeps its own permission."""
-    from app.core.contract_provisioner import _scenario_permissions
-    from app.models.scenario import SupplierCode, SupplierScenario
-
-    def perms(value):
-        return _scenario_permissions(
-            SupplierScenario(
-                code=SupplierCode("EXP"),
-                packages=PackageSpec(count=1, room_basis="RO", prices=[100.0], can_prebook=value),
-            )
-        )
-
-    assert perms(None) == {}
-    assert perms(False) == {"canPrebook": False}
-    assert perms(True) == {"canPrebook": True}
+def test_case_3_permission_off_and_url_omitted():
+    supplier, opt, _ = _opt_for(can_prebook=False, prebook_url=False)
+    assert _perm(supplier) == {"canPrebook": False}
+    assert "overridePrebookUrl" not in opt
 
 
-def test_can_prebook_false_with_a_prebooking_status_is_rejected():
-    """A status you can never observe is a mistake worth naming, not honouring."""
+def test_neither_set_is_unchanged():
+    supplier, opt, types = _opt_for()
+    assert _perm(supplier) == {}
+    assert "overridePrebookUrl" in opt
+    assert "PreBooking" in types
+
+
+def test_omitting_the_url_keeps_a_mock_url_on_the_standard_field():
+    """core's E2002 "Booking url is blocked" reads prebookingUrl, not the override.
+    Leaving it pointed at api.ean.com would block the whole flow, so the fallback
+    must still fill it with a mock host."""
+    _, opt, _ = _opt_for(prebook_url=False)
+    assert "overridePrebookUrl" not in opt
+    assert opt["prebookingUrl"].startswith("http://mock")
+
+
+def test_the_mock_is_still_built_either_way():
+    """Both flags are contract-level. Dropping the mock too would make the axes
+    non-independent, which is the thing this design exists to avoid."""
+    for kw in ({"can_prebook": False}, {"prebook_url": False},
+               {"can_prebook": False, "prebook_url": False}):
+        _, _, types = _opt_for(**kw)
+        assert "PreBooking" in types, kw
+
+
+def test_a_status_that_cannot_be_reached_is_rejected():
     with pytest.raises(ValueError, match="never price-checks"):
         PackageSpec(count=1, room_basis="RO", prices=[100.0],
                     can_prebook=False, prebooking_status=PreBookingStatus.sold_out)
+    with pytest.raises(ValueError, match="not reachable"):
+        PackageSpec(count=1, room_basis="RO", prices=[100.0],
+                    prebook_url=False, prebooking_status=PreBookingStatus.sold_out)

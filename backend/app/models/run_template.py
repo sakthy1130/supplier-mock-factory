@@ -114,6 +114,14 @@ class RunTemplateRequest(BaseModel):
         ),
         examples=[False],
     )
+    prebook_url: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Whether the contract gets overridePrebookUrl. Omit to write it as before; "
+            "false omits it. Independent of can_prebook."
+        ),
+        examples=[False],
+    )
     static_markup: Optional[str] = Field(
         default=None,
         description=(

@@ -20,6 +20,7 @@ export interface ApiSupplierTemplatePackages {
   prebooking_status?: 'available' | 'price_changed' | 'sold_out'
   prebooking_changed_price?: number | null
   can_prebook?: boolean | null
+  prebook_url?: boolean | null
   /** Which package the booking flow is built for; without it a template made from a
    *  bookable scenario would run to packages only. */
   booking_package_index?: number | null

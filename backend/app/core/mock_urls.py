@@ -57,9 +57,12 @@ def build_mock_opt_urls(
     mock_base_url: str,
     paths_by_log_type: dict[str, str],
     supplier_code: str | None = None,
+    include_prebook_url: bool = True,
 ) -> dict[str, str]:
     if supplier_code == "EXP":
-        return build_exp_override_opt_urls(mock_base_url, paths_by_log_type)
+        return build_exp_override_opt_urls(
+            mock_base_url, paths_by_log_type, include_prebook_url=include_prebook_url
+        )
 
     base = mock_base_url.rstrip("/")
     field_map = _opt_field_map(supplier_code)
@@ -92,6 +95,7 @@ def _hbs_get_order_base_path(path: str) -> str:
 def build_exp_override_opt_urls(
     mock_base_url: str,
     paths_by_log_type: dict[str, str],
+    include_prebook_url: bool = True,
 ) -> dict[str, str]:
     """EXP routes via override*Url fields in contract opt. But the EXP contract is
     cloned from a real Expedia reference whose standard bookingUrl/orderUrl/etc.
@@ -102,6 +106,12 @@ def build_exp_override_opt_urls(
     opt: dict[str, str] = {}
     for log_type, path in paths_by_log_type.items():
         if not path.startswith("/"):
+            continue
+        # Leave BOTH prebook URL fields unset when the scenario asked for no prebook
+        # override. The standard prebookingUrl still gets a generic mock URL from the
+        # fallbacks below, so core's E2002 "Booking url is blocked" check still passes
+        # — what is missing is a URL pointing at the price check specifically.
+        if log_type == "PreBooking" and not include_prebook_url:
             continue
         override_field = EXP_LOG_TYPE_TO_OVERRIDE_FIELD.get(log_type)
         if override_field:
@@ -131,7 +141,7 @@ def build_exp_override_opt_urls(
         if cancel:
             opt["overrideCancelBookingUrl"] = f"{base}{cancel}"
     prebook = paths_by_log_type.get("PreBooking")
-    if prebook:
+    if prebook and include_prebook_url:
         opt.setdefault("overridePrebookUrl", f"{base}{prebook}")
         # A working EXP contract points cancellationPolicyUrl at the same
         # price-check path as the prebook URL.
