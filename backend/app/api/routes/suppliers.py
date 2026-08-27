@@ -28,6 +28,45 @@ from app.services import supplier_service
 router = APIRouter(prefix="/suppliers", tags=["suppliers"])
 
 
+@router.get("/prebooking-support")
+async def prebooking_support() -> dict[str, object]:
+    """Whether each supplier ADVERTISES the prebooking endpoint, per Backoffice.
+
+    Read-only. This is the supplier half of "prebooking not enabled" — the other half
+    is the contract's canPrebook permission, which a scenario can set per run. The
+    supplier record is shared across every contract in the env, so SMF shows it and
+    does not touch it.
+
+    Best-effort: Backoffice being slow or down returns available=false rather than
+    failing the screen that asks.
+    """
+    from app.integrations.backoffice import BackofficeClient, BackofficeError
+
+    try:
+        async with BackofficeClient() as backoffice:
+            supported = await backoffice.get_supplier_endpoints_supported()
+    except (BackofficeError, Exception) as exc:  # noqa: BLE001 - display-only
+        return {"available": False, "reason": str(exc)[:200], "suppliers": {}}
+
+    return {
+        "available": True,
+        "suppliers": {
+            code: _as_bool(endpoints.get("prebooking"))
+            for code, endpoints in supported.items()
+        },
+    }
+
+
+def _as_bool(value: object) -> object:
+    """Backoffice stores these as the strings "true"/"false"; a MISSING key means the
+    endpoint is not advertised at all, which is distinct from an explicit false."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() == "true"
+
+
 @router.get("", response_model=list[SupplierListItem])
 def list_suppliers(db: MongoStore = Depends(get_db)) -> list[SupplierListItem]:
     return supplier_service.list_items(db)

@@ -305,3 +305,15 @@ export function toPayload(config: ApiSupplierConfig): SupplierConfigPayload {
     field_map: config.field_map,
   }
 }
+
+/** Whether each supplier ADVERTISES the prebooking endpoint, per Backoffice.
+ *  Read-only: that record is shared across every contract in the env. */
+export interface PrebookingSupport {
+  available: boolean
+  reason?: string
+  suppliers: Record<string, boolean | null>
+}
+
+export function getPrebookingSupport(): Promise<PrebookingSupport> {
+  return request<PrebookingSupport>('/api/suppliers/prebooking-support')
+}

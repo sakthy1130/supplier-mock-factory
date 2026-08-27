@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { resolveHotelMapping } from '../api/hotels'
+import { getPrebookingSupport } from '../api/suppliers'
 import { getActiveEnv, type SmfEnv } from '../api/base'
 import { PROVISIONING_DEPTHS, PREBOOKING_STATUSES } from '../types/scenario'
 import type {
@@ -387,6 +388,23 @@ export function ScenarioWizard({
   const [canPrebook, setCanPrebook] = useState<Record<string, boolean | undefined>>(
     () => ({ ...(initialTemplate?.canPrebook ?? {}) }) as Record<string, boolean | undefined>,
   )
+  // Supplier-level prebooking support, shown read-only beside the contract control:
+  // "prebooking not enabled" has two halves and only one of them is per scenario.
+  // Lazy and best-effort — Backoffice being slow must not hold up the form.
+  const [supplierPrebooking, setSupplierPrebooking] = useState<Record<string, boolean | null>>({})
+  useEffect(() => {
+    let cancelled = false
+    getPrebookingSupport()
+      .then((res) => {
+        if (!cancelled && res.available) setSupplierPrebooking(res.suppliers)
+      })
+      .catch(() => {
+        /* display-only; the form works without it */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const [prebookUrl, setPrebookUrl] = useState<Record<string, boolean | undefined>>(
     () => ({ ...(initialTemplate?.prebookUrl ?? {}) }) as Record<string, boolean | undefined>,
   )
@@ -851,6 +869,28 @@ export function ScenarioWizard({
                           <option value="false">Force off</option>
                         </select>
                       </label>
+                    )}
+
+                    {meta.log_types?.includes('PreBooking') && (
+                      <div className="supplier-tile-field" style={{ maxWidth: '230px' }}>
+                        <span>Supplier endpoint</span>
+                        <span
+                          className="supplier-endpoint-state"
+                          title={
+                            'From the Backoffice supplier record, shared by every contract in ' +
+                            'this env. SMF never changes it — flip it in Backoffice for the ' +
+                            'env-wide case.'
+                          }
+                        >
+                          {supplierPrebooking[meta.code] === true
+                            ? 'prebooking: supported'
+                            : supplierPrebooking[meta.code] === false
+                              ? 'prebooking: disabled'
+                              : meta.code in supplierPrebooking
+                                ? 'prebooking: not advertised'
+                                : '…'}
+                        </span>
+                      </div>
                     )}
 
                     {meta.log_types?.includes('PreBooking') && (

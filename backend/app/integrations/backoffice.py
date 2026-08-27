@@ -77,6 +77,38 @@ class BackofficeClient:
         self._token = token
         return token
 
+    async def get_supplier_endpoints_supported(self) -> dict[str, dict[str, Any]]:
+        """{supplier code: endpointsSupported} from Backoffice's supplier records.
+
+        Read-only, and deliberately so: the supplier document is ONE row per supplier
+        per env, shared by every contract and every scenario. SMF only ever mutates
+        per-scenario objects, so this is surfaced for display rather than editing.
+
+        Codes can repeat (stg carries test EXP rows); the first non-test entry wins.
+        """
+        client = self._get_client()
+        response = await client.get(
+            f"{self.base_url}/api/suppliers",
+            headers=await self.auth_headers(),
+        )
+        if response.status_code != 200:
+            raise BackofficeError(
+                f"List suppliers failed status={response.status_code} body={response.text[:200]}"
+            )
+        payload = response.json()
+        rows = payload.get("data", payload) if isinstance(payload, dict) else payload
+        out: dict[str, dict[str, Any]] = {}
+        for row in rows or []:
+            code = str(row.get("code") or "").upper()
+            if not code or code in out:
+                continue
+            if "test" in str(row.get("name") or "").lower():
+                continue
+            supported = row.get("endpointsSupported")
+            if isinstance(supported, dict):
+                out[code] = supported
+        return out
+
     async def get_contract(self, contract_id: str) -> dict[str, Any]:
         client = self._get_client()
         response = await client.get(

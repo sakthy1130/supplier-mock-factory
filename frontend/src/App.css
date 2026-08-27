@@ -2454,3 +2454,18 @@ pre.raw-response {
 
 .scenario-paste .field { width: 100%; }
 .scenario-paste textarea { width: 100%; font-family: var(--font-mono, monospace); font-size: 0.75rem; }
+
+/* Read-only supplier-record state on a wizard tile — informational, not a control. */
+.supplier-endpoint-state {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: help;
+}

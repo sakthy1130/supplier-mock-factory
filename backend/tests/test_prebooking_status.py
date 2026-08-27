@@ -270,3 +270,37 @@ def test_a_status_that_cannot_be_reached_is_rejected():
     with pytest.raises(ValueError, match="not reachable"):
         PackageSpec(count=1, room_basis="RO", prices=[100.0],
                     prebook_url=False, prebooking_status=PreBookingStatus.sold_out)
+
+
+# ── Scenario 4: "prebooking not enabled" has TWO halves ────────────────────────
+
+def test_supplier_endpoint_state_is_read_only_and_separate_from_the_contract():
+    """The contract half is per scenario; the supplier half is env-wide.
+
+    SMF must never write the supplier record — one document per supplier per env,
+    shared by every contract and every concurrent scenario. Surfacing it read-only is
+    the whole design, so this pins that no write path exists.
+    """
+    import inspect
+
+    from app.integrations import backoffice
+
+    src = inspect.getsource(backoffice)
+    # the only supplier-record access is the read
+    assert "get_supplier_endpoints_supported" in src
+    supplier_writes = [
+        line for line in src.splitlines()
+        if "/api/suppliers" in line and any(v in line for v in (".put(", ".post(", ".patch("))
+    ]
+    assert not supplier_writes, f"SMF must not write supplier records: {supplier_writes}"
+
+
+def test_missing_prebooking_key_is_not_the_same_as_false():
+    """stg's EXP supplier has no prebooking key at all; ODIS has "true". A missing key
+    means "not advertised", which the UI shows differently from an explicit false."""
+    from app.api.routes.suppliers import _as_bool
+
+    assert _as_bool(None) is None          # key absent -> not advertised
+    assert _as_bool("true") is True
+    assert _as_bool("false") is False
+    assert _as_bool(True) is True
