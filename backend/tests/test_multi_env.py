@@ -271,10 +271,16 @@ def test_odis_runs_exp_as_net_not_gross():
     # the pinned ODIS reference contract is the NET one
     assert _BACKOFFICE_IDS["odis"]["EXP"][2] == "695e4ddb121a5d00683e7ae8"
 
-    # no other supplier is altered on odis
+    # EXP's override must not leak. HIL is the only other supplier ODIS overrides (it
+    # forces isBTS back on — see test_derby_bts.py); everything else is passed through
+    # untouched, identity included, so no caller can mutate a per-env copy by accident.
     for spec in SEED_SUPPLIERS:
-        if spec["code"] != "EXP":
+        if spec["code"] not in ("EXP", "HIL"):
             assert _spec_for_env(spec, "odis") is spec
+
+    hil = next(s for s in SEED_SUPPLIERS if s["code"] == "HIL")
+    assert _spec_for_env(hil, "odis")["supplier_type"] == hil["supplier_type"]
+    assert _spec_for_env(hil, "odis")["mock_config"]["forced_opt"]["isBTS"] is True
 
 
 def test_explicit_pricing_is_rejected_where_exp_is_net():

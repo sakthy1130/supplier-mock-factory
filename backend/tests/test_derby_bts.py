@@ -757,3 +757,34 @@ def test_hil_booking_flow_mocks_all_describe_the_same_reservation(api_client):
     # rejects it however well the ids line up.
     assert reservation["status"] == "Confirmed"
     assert reservation["stayRange"] == {"checkin": "2026-09-10", "checkout": "2026-09-12"}
+
+
+def test_odis_hil_forces_bts_adapter_without_losing_other_mock_config():
+    """ODIS's reference contract picks the wrong Derby adapter; SMF has to force it back.
+
+    "mock-hil" carries isBTS false, which routes HIL to hotels-derby-adapter (protocol
+    v3.1, sends the mapping id unstripped) instead of hotels-derby-bts-adapter (v1.2,
+    strips to the bare code) that SMF's templates were captured against. The mismatch is
+    silent — search reports COMPLETED_SUCCESSFULLY with totalResults 0 — so only the
+    later /packages 404 is visible, which blames the hotel rather than the adapter.
+    """
+    import copy
+
+    from app.db.seed_suppliers import SEED_SUPPLIERS, _spec_for_env
+
+    hil = [s for s in SEED_SUPPLIERS if s["code"] == "HIL"][0]
+    base = copy.deepcopy(hil["mock_config"])
+
+    odis = _spec_for_env(hil, "odis")["mock_config"]
+    assert odis["forced_opt"] == {"isBTS": True, "enableAdapterTransformedLog": True}
+
+    # The override merges INTO mock_config. A shallow {**spec, **override} would drop
+    # every key it does not restate, silently un-stripping hotel ids and re-inheriting
+    # the reference contract's canBook false.
+    assert odis["strip_hotel_id_prefix"] is True
+    assert odis["forced_permission"] == {"canBook": True}
+    assert odis["mock_path_suffix"] == base["mock_path_suffix"]
+
+    # Staging keeps isBTS from its own reference contract and must not be touched.
+    assert _spec_for_env(hil, "stg")["mock_config"] == base
+    assert hil["mock_config"] == base, "the shared spec dict must not be mutated"

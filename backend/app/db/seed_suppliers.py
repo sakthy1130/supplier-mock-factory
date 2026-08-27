@@ -94,16 +94,45 @@ _BACKOFFICE_IDS: dict[str, dict[str, tuple[str, int]]] = {
 # because these change BEHAVIOUR, not identity: supplier_type drives the contract's
 # supplierType field (contract_provisioner) and therefore how the adapter prices.
 _ENV_SUPPLIER_OVERRIDES: dict[str, dict[str, dict[str, Any]]] = {
-    # EXP is gross everywhere else, but ODIS runs it NET only — a gross contract there
-    # prices against a markup node the tenant does not populate.
-    "odis": {"EXP": {"supplier_type": "net"}},
+    "odis": {
+        # EXP is gross everywhere else, but ODIS runs it NET only — a gross contract there
+        # prices against a markup node the tenant does not populate.
+        "EXP": {"supplier_type": "net"},
+        # ODIS's reference contract ("mock-hil") carries isBTS false, where staging's
+        # ("hil-contract-dont-book-bts-v4") carries true. That single flag picks the
+        # adapter: false routes HIL to hotels-derby-adapter, which speaks protocol v3.1
+        # (PascalCase envelope, and it sends the mapping id "HX-DXBAL" unstripped); true
+        # routes it to hotels-derby-bts-adapter, which speaks v1.2 and strips to "DXBAL"
+        # — the shape SMF's templates were captured in. A clone inheriting false gets a
+        # v1.2 body it cannot parse and drops the hotel with no error at all: search
+        # returns COMPLETED_SUCCESSFULLY, totalResults 0, supplierMeta [], and only the
+        # later /packages 404 ("hotelId not found in the search results") is visible.
+        # enableAdapterTransformedLog is false there too, which is why the adapter's S3
+        # logs never show up for ODIS runs; staging sets it true.
+        "HIL": {
+            "mock_config": {
+                "forced_opt": {"isBTS": True, "enableAdapterTransformedLog": True}
+            }
+        },
+    },
 }
 
 
 def _spec_for_env(spec: dict[str, Any], env: str) -> dict[str, Any]:
-    """The supplier spec as it applies in `env`, with any per-env overrides applied."""
+    """The supplier spec as it applies in `env`, with any per-env overrides applied.
+
+    mock_config merges a level deeper than the rest: it is a dict of many unrelated
+    settings, so a shallow {**spec, **override} would silently drop every key the
+    override did not restate (HIL alone would lose mock_path_suffix, forced_permission
+    and strip_hotel_id_prefix).
+    """
     override = _ENV_SUPPLIER_OVERRIDES.get(env, {}).get(str(spec["code"]))
-    return {**spec, **override} if override else spec
+    if not override:
+        return spec
+    merged = {**spec, **override}
+    if "mock_config" in override:
+        merged["mock_config"] = {**spec.get("mock_config", {}), **override["mock_config"]}
+    return merged
 
 _FULL_BOOKING_FLOW = ["Search", "Packages", "PreBooking", "Booking", "GetOrder", "CancelOrder"]
 
