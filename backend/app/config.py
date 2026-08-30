@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     quickwit_logs_api_url: str = ""
     mapping_service_url: str = ""
     mapping_api_key: str = ""
+    # hotels-connectivity-adapter-misc: the room catalogue hotels-derby-bts-adapter uses
+    # to name rooms. It drops any rate whose roomId is not in that hotel's catalogue, so
+    # a mock inventing room ids yields zero packages. Blank disables the lookup and the
+    # templates' captured room ids are kept as-is.
+    adapter_misc_url: str = ""
     crawla_api_url: str = ""
     crawla_api_key: str = ""
     core_app_url: str = ""

@@ -239,6 +239,14 @@ class PackageSpec(BaseModel):
         description="Age per child; length is the child count. Empty means adults only.",
     )
     room_count: int = Field(default=1, ge=1, le=8, description="Rooms the rates are for")
+    supplier_room_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Derby room ids valid for this hotel, resolved from the adapter's room "
+            "catalogue before the mock is built. Not user input: the orchestrator fills "
+            "it for Derby suppliers (HIL, CHC), and it is empty for everyone else."
+        ),
+    )
 
     @property
     def room_criteria(self) -> dict[str, Any]:

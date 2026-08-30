@@ -821,3 +821,75 @@ def test_hil_defaults_the_separate_availability_timeout():
             {"availabilityTimeoutSeconds": "12"}, config, "http://mock"
         )
         assert opt["availabilityTimeoutSeconds"] == "12"
+
+
+def test_catalogue_room_ids_are_used_and_cycled_across_packages():
+    """The adapter names rooms from its own catalogue and drops rates it cannot name.
+
+    A template's captured room ids belong to whatever hotel it was captured from, so on
+    any other hotel every rate is unnameable and /packages comes back empty — with no
+    error, and with search still passing, because search only needs a hotel-level price.
+    """
+    plugin = HilMockPlugin()
+    spec = PackageSpec(
+        count=3,
+        room_basis=["RO", "BB", "HB"],
+        prices=[100.0, 150.0, 200.0],
+        refundable=[True, False, True],
+        supplier_room_ids=["NUVQKJ", "NKXR", "NURR"],
+    )
+    result = plugin.mutate_packages(
+        _derby_expectation(), spec, "RUHSK", "2026-09-01", "2026-09-03", "Packages"
+    )
+    rates = result["httpResponse"]["body"]["roomRates"]
+    assert [rate["roomId"] for rate in rates] == ["NUVQKJ", "NKXR", "NURR"]
+
+    # Fewer catalogue ids than packages: cycle rather than emit an unnameable id.
+    spec.supplier_room_ids = ["NKRR", "NVRR"]
+    rates = plugin.mutate_packages(
+        _derby_expectation(), spec, "RUHSK", "2026-09-01", "2026-09-03", "Packages"
+    )["httpResponse"]["body"]["roomRates"]
+    assert [rate["roomId"] for rate in rates] == ["NKRR", "NVRR", "NKRR"]
+
+    # No catalogue (service down, or a non-Derby supplier): keep the template's ids.
+    spec.supplier_room_ids = []
+    rates = plugin.mutate_packages(
+        _derby_expectation(), spec, "RUHSK", "2026-09-01", "2026-09-03", "Packages"
+    )["httpResponse"]["body"]["roomRates"]
+    assert all(rate["roomId"] for rate in rates)
+
+
+def test_linkage_pairs_packages_with_search_rate_by_index():
+    """Packages rate i must match SEARCH rate i, not the primary.
+
+    Copying the primary onto every rate gave a multi-package scenario N rates sharing one
+    roomId/rateId, which the adapter collapses back to a single package — so a 3-package
+    request silently returned 1.
+    """
+    plugin = HilMockPlugin()
+    spec = PackageSpec(
+        count=3,
+        room_basis=["RO", "BB", "HB"],
+        prices=[100.0, 150.0, 200.0],
+        refundable=[True, True, True],
+        supplier_room_ids=["NUVQKJ", "NKXR", "NURR"],
+    )
+    by_type = {
+        "Search": plugin.mutate_packages(
+            _search_expectation(), spec, "RUHSK", "2026-09-01", "2026-09-03", "Search"
+        ),
+        "Packages": plugin.mutate_packages(
+            _derby_expectation(), spec, "RUHSK", "2026-09-01", "2026-09-03", "Packages"
+        ),
+    }
+    plugin.propagate_package_linkage(by_type, spec)
+
+    search_rooms = [
+        rate["roomId"]
+        for rate in by_type["Search"]["httpResponse"]["body"]["availHotels"][0]["availRoomRates"]
+    ]
+    package_rooms = [
+        rate["roomId"] for rate in by_type["Packages"]["httpResponse"]["body"]["roomRates"]
+    ]
+    assert package_rooms == search_rooms
+    assert len(set(package_rooms)) == 3, "each package needs its own room id"

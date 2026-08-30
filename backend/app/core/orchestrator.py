@@ -71,6 +71,50 @@ class SupplierMockScenarioOrchestrator:
         self.sb_group_provisioner = sb_group_provisioner or SBGroupProvisioner()
         self.settings = get_settings()
 
+    async def _resolve_derby_room_ids(
+        self, request: ScenarioRequest, plog: list[str]
+    ) -> None:
+        """Stamp each Derby supplier's spec with room ids its adapter will accept.
+
+        hotels-derby-bts-adapter names rooms from a per-hotel catalogue and drops any
+        rate whose roomId is missing from it — with no error and an empty package list,
+        which reads as "no availability". A template's captured room ids belong to the
+        hotel it was captured from, so they are wrong for every other hotel: search still
+        passes (it needs only a hotel-level price) and packages come back empty.
+
+        Best-effort by design. An unreachable catalogue logs and leaves the template's
+        ids alone rather than failing scenario creation.
+        """
+        from app.integrations.derby_rooms import DerbyRoomsClient
+        from app.plugins import PLUGINS
+
+        targets = []
+        for supplier in request.suppliers:
+            code = str(supplier.code)
+            plugin = PLUGINS.get(code)
+            supplier_id = getattr(plugin, "payload_supplier_id", "") if plugin else ""
+            if not supplier_id:
+                continue  # not a Derby supplier
+            hotel_code = plugin.supplier_hotel_id(request.hotel_id_for_supplier(code))
+            targets.append((supplier, code, hotel_code, supplier_id))
+
+        if not targets:
+            return
+
+        async with DerbyRoomsClient() as rooms:
+            for supplier, code, hotel_code, supplier_id in targets:
+                room_ids = await rooms.room_ids(hotel_code, supplier_id)
+                if not room_ids:
+                    plog.append(
+                        f"[mocks] {code}: no Derby room catalogue for {hotel_code}; "
+                        "keeping the template's room ids (packages may come back empty)"
+                    )
+                    continue
+                supplier.packages.supplier_room_ids = room_ids
+                plog.append(
+                    f"[mocks] {code}: {len(room_ids)} catalogue room ids for {hotel_code}"
+                )
+
     async def create_scenario(self, request: ScenarioRequest) -> ScenarioBundle:
         bundle = ScenarioBundle(
             namespace=request.namespace,
@@ -83,6 +127,8 @@ class SupplierMockScenarioOrchestrator:
         )
 
         plog = bundle.provisioning_log  # shorthand — same list object
+
+        await self._resolve_derby_room_ids(request, plog)
 
         built = self.engine.build_expectations(request)
         bundle.expectation_count = len(built)

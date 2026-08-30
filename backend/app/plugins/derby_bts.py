@@ -171,11 +171,10 @@ class DerbyBtsMockPlugin(SupplierMockPlugin):
         identity onto the downstream responses. Without this, the adapter drops every
         rate and returns zero packages.
         """
-        primary = _search_primary_rate(expectations_by_type.get("Search"))
-        if primary is None:
+        search_rates = _search_rates(expectations_by_type.get("Search"))
+        if not search_rates:
             return
-        room_id = primary.get("roomId")
-        rate_id = primary.get("rateId")
+        primary = search_rates[0]
         occupancy = primary.get("roomCriteria")
 
         for log_type in ("Packages", "PreBooking"):
@@ -191,22 +190,31 @@ class DerbyBtsMockPlugin(SupplierMockPlugin):
 
             rates = body.get("roomRates")
             if isinstance(rates, list):
-                for rate in rates:
+                for index, rate in enumerate(rates):
                     if not isinstance(rate, dict):
                         continue
-                    if room_id is not None:
-                        rate["roomId"] = room_id
-                    if rate_id is not None:
-                        rate["rateId"] = rate_id
+                    # Pair package i with SEARCH rate i, not with the primary. Copying
+                    # the primary onto every rate gave a multi-package scenario N rates
+                    # sharing one roomId/rateId, which the adapter collapses back to a
+                    # single package. Beyond the search rates (never happens once both
+                    # come from the same spec.count) fall back to the primary, which is
+                    # still a rate the adapter knows.
+                    source = search_rates[index] if index < len(search_rates) else primary
+                    if source.get("roomId") is not None:
+                        rate["roomId"] = source["roomId"]
+                    if source.get("rateId") is not None:
+                        rate["rateId"] = source["rateId"]
                     if isinstance(occupancy, dict):
                         rate["roomCriteria"] = deep_copy(occupancy)
 
+            # PreBooking's productCandidate is the ONE rate being pre-booked, so it stays
+            # on the primary rather than following the per-index pairing above.
             candidate = body.get("productCandidate")
             if isinstance(candidate, dict):
-                if room_id is not None:
-                    candidate["roomId"] = room_id
-                if rate_id is not None:
-                    candidate["rateId"] = rate_id
+                if primary.get("roomId") is not None:
+                    candidate["roomId"] = primary["roomId"]
+                if primary.get("rateId") is not None:
+                    candidate["rateId"] = primary["rateId"]
 
     def _apply_rates(
         self,
@@ -220,6 +228,7 @@ class DerbyBtsMockPlugin(SupplierMockPlugin):
         if not isinstance(rates, list) or not rates or not isinstance(rates[0], dict):
             return
         template_rate = deep_copy(rates[0])
+        room_ids = list(spec.supplier_room_ids)
         new_rates: list[dict] = []
         for index in range(spec.count):
             rate = deep_copy(template_rate)
@@ -228,6 +237,13 @@ class DerbyBtsMockPlugin(SupplierMockPlugin):
             rate["amountAfterTax"] = [price]
             rate["mealPlan"] = meals[index]
             rate["currency"] = spec.supplier_currency
+            # The adapter names rooms from its own per-hotel catalogue and DROPS any rate
+            # whose roomId is not in it — no error, just an empty package list. The
+            # captured template's room ids belong to whichever hotel it was captured
+            # from, so they are wrong for every other hotel. Cycling also stops a
+            # count > 1 scenario emitting N rates that all share rates[0]'s room id.
+            if room_ids:
+                rate["roomId"] = room_ids[index % len(room_ids)]
             # Occupancy gate: the adapter buckets rates by roomCriteria and drops any
             # availability that has no rate matching the searched occupancy — silently,
             # with zero results and no error. Stamp it so the mock answers the search
@@ -324,20 +340,26 @@ def _force_confirmed_get_order(body: dict) -> None:
             reservation["result"] = "Successful"
 
 
-def _search_primary_rate(search: object) -> dict | None:
-    """First availRoomRate of the first availHotel in a Search expectation."""
+def _search_rates(search: object) -> list[dict]:
+    """availRoomRates of the first availHotel in a Search expectation."""
     if not isinstance(search, dict):
-        return None
+        return []
     body = search.get("httpResponse", {}).get("body")
     if not isinstance(body, dict):
-        return None
+        return []
     hotels = body.get("availHotels")
     if not isinstance(hotels, list) or not hotels or not isinstance(hotels[0], dict):
-        return None
+        return []
     rates = hotels[0].get("availRoomRates")
-    if isinstance(rates, list) and rates and isinstance(rates[0], dict):
-        return rates[0]
-    return None
+    if not isinstance(rates, list):
+        return []
+    return [rate for rate in rates if isinstance(rate, dict)]
+
+
+def _search_primary_rate(search: object) -> dict | None:
+    """First availRoomRate of the first availHotel in a Search expectation."""
+    rates = _search_rates(search)
+    return rates[0] if rates else None
 
 
 def _meal_for_basis(room_basis: str) -> str:
