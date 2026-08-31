@@ -250,42 +250,47 @@ class LinkageValidator:
         spec: PackageSpec,
         offered: list[dict],
     ) -> None:
-        """The price check must describe the rates Packages offered.
+        """The price check must quote exactly the rate that was offered for booking.
 
-        Extranet re-reads distribution details to price-check, so the two bodies are the
-        same shape and the accommodation id is the only thing tying a quote back to the
-        rate that was offered. A mismatch means the core price-checks a rate it never
-        saw — which is silent: it just fails to find the package it was booking.
+        Extranet re-reads distribution details to price-check, and the accommodation id is
+        the only thing tying a quote back to an offered rate. Quoting a different rate — or
+        several — is silent at run time: the core simply fails to find the package it was
+        booking, with nothing to say why.
         """
         prebook = expectations_by_type.get("PreBooking")
         if not isinstance(prebook, dict):
             return
         quoted = _ext_package_rates(prebook)
-        offered_ids = [a.get("id") for a in offered]
         idx = spec.booking_package_index if spec.booking_package_index is not None else 0
+        if idx >= len(offered):
+            return
 
         if spec.prebooking_status is PreBookingStatus.sold_out:
-            expected_ids = [i for n, i in enumerate(offered_ids) if n != idx]
-            if [a.get("id") for a in quoted] != expected_ids:
+            if quoted:
                 raise LinkageError(
-                    "EXT sold_out price check must drop exactly the package under test"
+                    "EXT sold_out price check must offer no rate at all — the one asked "
+                    "about is the one that is gone"
                 )
             return
 
-        if [a.get("id") for a in quoted] != offered_ids:
-            raise LinkageError("EXT PreBooking accommodations do not match Packages")
-
-        for position, (quote, offer) in enumerate(zip(quoted, offered)):
-            repriced = (
-                spec.prebooking_status is PreBookingStatus.price_changed and position == idx
+        if len(quoted) != 1:
+            raise LinkageError(
+                f"EXT PreBooking must quote exactly the rate being booked, got {len(quoted)}"
             )
-            expected = spec.prebooking_changed_price if repriced else offer.get("totalPrice")
-            if quote.get("totalPrice") != expected:
-                raise LinkageError(
-                    "EXT PreBooking repriced a package the scenario did not ask to change"
-                    if not repriced
-                    else "EXT PreBooking did not apply the changed price"
-                )
+        if quoted[0].get("id") != offered[idx].get("id"):
+            raise LinkageError("EXT PreBooking quotes a rate Packages never offered")
+
+        expected = (
+            spec.prebooking_changed_price
+            if spec.prebooking_status is PreBookingStatus.price_changed
+            else offered[idx].get("totalPrice")
+        )
+        if quoted[0].get("totalPrice") != expected:
+            raise LinkageError(
+                "EXT PreBooking price does not match the package being booked"
+                if spec.prebooking_status is not PreBookingStatus.price_changed
+                else "EXT PreBooking did not apply the changed price"
+            )
 
 
 def _derby_bts_package_rates(packages: dict) -> list[dict]:

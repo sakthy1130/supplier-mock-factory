@@ -138,14 +138,19 @@ class ExtMockPlugin(SupplierMockPlugin):
         """Build the price-check body from the finished Packages body.
 
         Extranet has no separate price-check API — the price check re-reads distribution
-        details — so `available` must answer exactly what Packages answered. Copying the
-        built body is the only way to guarantee that: rebuilding it through
-        mutate_packages would mint fresh accommodation ids (uuid4 per call), so the two
-        responses would describe the same rates under different ids.
+        details — so the prebook body is the Packages body narrowed to the ONE rate being
+        booked. A price check asks "is this rate still available at this price", not "what
+        else have you got", and answering with the whole availability list would let the
+        core settle on a package that was never the one under test.
 
-        The status is then one edit on the copy:
-          price_changed -> reprice the package under test
-          sold_out      -> remove it, leaving its siblings on offer
+        It is copied from the built Packages body rather than rebuilt: _mutate_accommodations
+        mints a fresh uuid4 per accommodation per call, and the id is the only thing tying
+        the quote back to the offered rate.
+
+        Each status is then structural, because the Extranet body has no status field:
+          available     -> the selected rate, at the price Packages offered
+          price_changed -> the selected rate, repriced
+          sold_out      -> no rate at all; the one asked about is gone
         """
         prebook = expectations_by_type.get("PreBooking")
         packages = expectations_by_type.get("Packages")
@@ -157,10 +162,6 @@ class ExtMockPlugin(SupplierMockPlugin):
 
         body = deep_copy(packages_body)
         prebook.setdefault("httpResponse", {})["body"] = body
-
-        status = spec.prebooking_status
-        if status is PreBookingStatus.available:
-            return
 
         hotel = body.get("body")
         hotel = hotel[0] if isinstance(hotel, list) and hotel else None
@@ -176,21 +177,25 @@ class ExtMockPlugin(SupplierMockPlugin):
         if idx >= len(accommodations):
             return
 
+        status = spec.prebooking_status
         if status is PreBookingStatus.sold_out:
-            del accommodations[idx]
+            hotel["accommodations"] = []
             return
 
-        changed = prebooking_effective_price(spec, _normalized_prices(spec))
-        if changed is None:
+        selected = accommodations[idx]
+        hotel["accommodations"] = [selected]
+
+        if status is not PreBookingStatus.price_changed:
             return
-        accommodation = accommodations[idx]
-        if isinstance(accommodation, dict):
-            _apply_stay_price(
-                accommodation,
-                changed,
-                str(accommodation.get("checkInDate") or ""),
-                int(accommodation.get("nights") or 0),
-            )
+        changed = prebooking_effective_price(spec, _normalized_prices(spec))
+        if changed is None or not isinstance(selected, dict):
+            return
+        _apply_stay_price(
+            selected,
+            changed,
+            str(selected.get("checkInDate") or ""),
+            int(selected.get("nights") or 0),
+        )
 
     def _update_currency(self, hotel: dict, currency: str) -> None:
         """Update currency in all accommodations and distributions."""

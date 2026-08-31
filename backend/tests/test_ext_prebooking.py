@@ -1,15 +1,19 @@
 """EXT PreBooking: a price check that re-reads the distribution-details contract.
 
-Extranet has no separate price-check API and no status field in its body, so the three
-statuses are expressed structurally: `available` answers exactly what Packages answered,
-`price_changed` reprices the package under test, and `sold_out` removes it. That makes
-"the two bodies agree" the property most of these tests are really guarding.
+Extranet has no separate price-check API and no status field in its body. The prebook
+body is therefore the Packages body narrowed to the ONE rate being booked, and each
+status is structural: `available` quotes that rate at the offered price,
+`price_changed` reprices it, `sold_out` quotes nothing.
+
+The property most of these tests really guard is that the quoted rate is the offered
+one — same accommodation id — because that id is all the core has to tie them together.
 """
 
 from __future__ import annotations
 
 import json
 from collections import defaultdict
+from copy import deepcopy
 
 import pytest
 
@@ -118,30 +122,32 @@ def test_prebooking_is_not_on_the_packages_path():
 # ── the three statuses ──────────────────────────────────────────────────────────
 
 
-def test_available_answers_exactly_what_packages_answered():
-    """Including accommodation ids.
+def test_available_quotes_only_the_rate_being_booked():
+    """A price check asks about ONE rate — the one under test — not the whole list.
 
-    _mutate_accommodations mints a fresh uuid4 per call, so building the prebook body a
-    second time instead of copying the finished one would describe the same rates under
-    different ids — the bug this test exists to catch.
+    The id must be the offered rate's own: _mutate_accommodations mints a fresh uuid4 per
+    call, so building the prebook body instead of narrowing a copy of the built Packages
+    body would quote a rate Packages never offered.
     """
-    built = _build(PreBookingStatus.available)
-    packages = built["Packages"]["httpResponse"]["body"]
-    prebook = built["PreBooking"]["httpResponse"]["body"]
-    assert json.dumps(prebook, sort_keys=True) == json.dumps(packages, sort_keys=True)
-    assert [a["id"] for a in _accommodations(built["PreBooking"])] == [
-        a["id"] for a in _accommodations(built["Packages"])
-    ]
+    built = _build(PreBookingStatus.available, book_idx=1)
+    offered = _accommodations(built["Packages"])
+    quoted = _accommodations(built["PreBooking"])
+
+    assert len(offered) == 3, "all three are still on offer at search"
+    assert len(quoted) == 1, "the price check quotes just the booked rate"
+    assert quoted[0]["id"] == offered[1]["id"]
+    assert quoted[0]["totalPrice"] == PRICES[1], "at the price Packages offered"
 
 
 def test_price_changed_reprices_only_the_package_under_test():
     built = _build(PreBookingStatus.price_changed, changed=CHANGED_PRICE, book_idx=1)
 
     assert _totals(built["Packages"]) == PRICES, "Packages keeps the original price"
-    assert _totals(built["PreBooking"]) == [PRICES[0], CHANGED_PRICE, PRICES[2]]
+    assert _totals(built["PreBooking"]) == [CHANGED_PRICE], "only the booked rate, repriced"
+    assert _accommodations(built["PreBooking"])[0]["id"] == _accommodations(built["Packages"])[1]["id"]
 
     # Extranet carries the same money three ways; a partial rewrite is the classic bug.
-    changed = _accommodations(built["PreBooking"])[1]
+    changed = _accommodations(built["PreBooking"])[0]
     distribution = changed["distributions"][0]
     assert distribution["priceDetails"]["totalPrice"] == CHANGED_PRICE
     assert distribution["netPricePerNight"] == {
@@ -151,15 +157,12 @@ def test_price_changed_reprices_only_the_package_under_test():
     assert distribution["totalPricePerNight"] == distribution["netPricePerNight"]
 
 
-def test_sold_out_removes_only_that_package_from_the_price_check():
+def test_sold_out_quotes_no_rate_at_all():
+    """The price check only ever carries the rate under test, so sold_out empties it."""
     built = _build(PreBookingStatus.sold_out, book_idx=1)
 
-    assert _totals(built["Packages"]) == PRICES, "the rate is still on offer at search"
-    assert _totals(built["PreBooking"]) == [PRICES[0], PRICES[2]], "only index 1 went away"
-
-    surviving = [a["id"] for a in _accommodations(built["PreBooking"])]
-    offered = [a["id"] for a in _accommodations(built["Packages"])]
-    assert surviving == [offered[0], offered[2]]
+    assert _totals(built["Packages"]) == PRICES, "the rates are still on offer at search"
+    assert _accommodations(built["PreBooking"]) == [], "the rate asked about is gone"
 
 
 def test_sold_out_builds_no_booking_flow():
@@ -273,11 +276,11 @@ def test_linkage_rejects_a_price_check_that_quotes_a_rate_packages_never_offered
     from app.core.linkage_validator import LinkageError, LinkageValidator
 
     built = _build(PreBookingStatus.available)
-    _accommodations(built["PreBooking"])[1]["id"] = "not-the-offered-rate"
+    _accommodations(built["PreBooking"])[0]["id"] = "not-the-offered-rate"
 
     with use_env("stg"):
         supplier_service.invalidate_cache()
-        with pytest.raises(LinkageError, match="do not match Packages"):
+        with pytest.raises(LinkageError, match="never offered"):
             LinkageValidator().validate(built, "EXT", _spec())
 
 
@@ -285,12 +288,14 @@ def test_linkage_rejects_a_sold_out_check_that_drops_the_wrong_package():
     from app.core.linkage_validator import LinkageError, LinkageValidator
 
     built = _build(PreBookingStatus.sold_out, book_idx=1)
-    # Drop a second one: only the package under test may disappear.
-    del _accommodations(built["PreBooking"])[0]
+    # Put a rate back: a sold-out check must offer nothing.
+    _accommodations(built["PreBooking"]).append(
+        deepcopy(_accommodations(built["Packages"])[0])
+    )
 
     with use_env("stg"):
         supplier_service.invalidate_cache()
-        with pytest.raises(LinkageError, match="drop exactly the package under test"):
+        with pytest.raises(LinkageError, match="must offer no rate at all"):
             LinkageValidator().validate(
                 built, "EXT", _spec(status=PreBookingStatus.sold_out, book_idx=1)
             )
