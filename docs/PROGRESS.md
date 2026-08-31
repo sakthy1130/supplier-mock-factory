@@ -74,12 +74,12 @@ Branch: crawla-e2e-package-level
 
 ```bash
 cd backend && source ../.venv/bin/activate
-PYTHONPATH=. python -m uvicorn app.main:app --reload --port 8000
+PYTHONPATH=. python -m uvicorn app.main:app --reload --port 8001
 
 cd frontend && npm run dev
 ```
 
-Open http://localhost:5173
+Open http://localhost:5144
 
 ---
 

@@ -77,7 +77,7 @@
 DEVELOPMENT (SQLite)          PRODUCTION (PostgreSQL)
 ┌──────────────────┐          ┌────────────────────────┐
 │  FastAPI App     │          │    FastAPI App         │
-│  (localhost:8000)│          │  (prod.example.com)    │
+│  (localhost:8001)│          │  (prod.example.com)    │
 └────────┬─────────┘          └────────┬───────────────┘
          │                              │
          ▼                              ▼

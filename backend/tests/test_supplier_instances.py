@@ -17,12 +17,34 @@ from app.core.contract_provisioner import ContractProvisioner
 from app.core.mock_urls import extract_paths_from_built
 from app.core.scenario_engine import REPO_ROOT, ScenarioEngine
 from app.models.scenario import (
+
     PackageSpec,
     ScenarioRequest,
     SupplierCode,
     SupplierScenario,
     instance_key_for,
 )
+
+from contextlib import contextmanager as _contextmanager
+from unittest.mock import patch as _patch
+
+from app.services.supplier_service import get_supplier_config as _real_supplier_config
+
+
+@_contextmanager
+def no_reference_contract():
+    """Force the minimal-contract path.
+
+    The supplier row owns reference_contract_id now, with the env setting only a
+    fallback, so clearing ``settings.<code>_reference_contract_id`` alone no longer
+    selects the synthesized body — the seeded row's id would be cloned instead.
+    """
+
+    def _stub(code, env=None):
+        return _real_supplier_config(code, env).model_copy(update={"reference_contract_id": ""})
+
+    with _patch("app.core.contract_provisioner.get_supplier_config", _stub):
+        yield
 
 TEMPLATES_DIR = REPO_ROOT / "templates"
 
@@ -145,14 +167,18 @@ async def test_two_contracts_are_created_with_distinct_uids():
     provisioner = ContractProvisioner(backoffice=backoffice)
     provisioner.settings.exp_reference_contract_id = ""
 
-    contract_ids = await provisioner.create_contracts(
-        _two_exp_request(),
-        {
-            "EXP": {"Search": "/qa-dup-001/search", "Packages": "/qa-dup-001/package"},
-            "EXP-2": {"Search": "/qa-dup-001/exp-2/search", "Packages": "/qa-dup-001/exp-2/package"},
-        },
-        "http://mock-server",
-    )
+    with no_reference_contract():
+        contract_ids = await provisioner.create_contracts(
+            _two_exp_request(),
+            {
+                "EXP": {"Search": "/qa-dup-001/search", "Packages": "/qa-dup-001/package"},
+                "EXP-2": {
+                    "Search": "/qa-dup-001/exp-2/search",
+                    "Packages": "/qa-dup-001/exp-2/package",
+                },
+            },
+            "http://mock-server",
+        )
 
     assert contract_ids == {"EXP": "mongo-1", "EXP-2": "mongo-2"}
 

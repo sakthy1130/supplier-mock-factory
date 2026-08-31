@@ -10,8 +10,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.db.database import get_db
 from app.db.repository import MongoStore
-from app.db.models import ScenarioRecord
 from app.env_context import get_current_env, use_env
+from app.integrations.business_rules import STATIC_MARKUP_RULE_ID, dynamic_markup_enabled
 from app.models.run_template import RunTemplateRequest, RunTemplateResponse
 from app.services import scenario_service
 from app.services import scenario_template_service
@@ -19,6 +19,14 @@ from app.models.scenario import ScenarioRequest, SupplierCode, SupplierScenario,
 from app.utils.request_tracker import RequestTracker
 
 router = APIRouter(prefix="/api/v1")
+
+
+def _status_value(status: object) -> Optional[str]:
+    """The wire value of a PreBookingStatus, or None. The request sends a plain string
+    and the template a enum, so both paths meet here."""
+    if status is None:
+        return None
+    return str(getattr(status, "value", status))
 
 
 def build_scenario_request_from_template(
@@ -52,9 +60,56 @@ def build_scenario_request_from_template(
         packages_data = supplier_entry.packages
         if not packages_data:
             continue
-        supplier_book_idx = (
-            book_idx if (book_idx is not None and book_idx < len(packages_data)) else None
+        # The run's index wins; otherwise the one the template was saved with, so a
+        # template made from a bookable scenario stays bookable without the caller
+        # having to remember which package it was.
+        effective_idx = (
+            book_idx if book_idx is not None
+            else getattr(supplier_entry, "booking_package_index", None)
         )
+        supplier_book_idx = (
+            effective_idx
+            if (effective_idx is not None and effective_idx < len(packages_data))
+            else None
+        )
+        # EXP explicit pricing is all-or-nothing per supplier: passing a partial list
+        # would trip PackageSpec's validator, so only send the pair when every row of this
+        # supplier carries it.
+        explicit_pricing: dict[str, list[float]] = {}
+        if all(
+            pkg.original_price_with_vat is not None and pkg.markup is not None
+            for pkg in packages_data
+        ):
+            explicit_pricing = {
+                "original_price_with_vat": [pkg.original_price_with_vat for pkg in packages_data],
+                "markup": [pkg.markup for pkg in packages_data],
+            }
+        # The status can come from the template (saved with it) or the request
+        # (this run only); the request wins, matching how sb_enabled overrides.
+        # Omitted entirely when neither asks, so PackageSpec's defaults apply and an
+        # untouched template still builds a byte-identical scenario.
+        saved_status = getattr(supplier_entry, "prebooking_status", None)
+        prebooking_status = request_data.prebooking_status or _status_value(saved_status)
+        changed_price = (
+            request_data.prebooking_changed_price
+            if request_data.prebooking_changed_price is not None
+            else getattr(supplier_entry, "prebooking_changed_price", None)
+        )
+        prebooking_kwargs: dict[str, object] = {}
+        if prebooking_status and prebooking_status != "available":
+            prebooking_kwargs["prebooking_status"] = prebooking_status
+            # The price belongs to price_changed alone. A template saved as
+            # price_changed keeps its price in the document, so overriding the run to
+            # sold_out must drop it here — carrying it would trip PackageSpec's
+            # "only applies to prebooking_status='price_changed'" check.
+            if prebooking_status == "price_changed" and changed_price is not None:
+                prebooking_kwargs["prebooking_changed_price"] = changed_price
+            # A sold_out template must not also carry a booking index — PackageSpec
+            # rejects the pair. Drop it here rather than fail a template that was
+            # saved bookable and later switched to sold_out.
+            if prebooking_status == "sold_out":
+                supplier_book_idx = None
+
         package_spec = PackageSpec(
             count=len(packages_data),
             room_basis=[pkg.room_basis for pkg in packages_data],
@@ -63,6 +118,37 @@ def build_scenario_request_from_template(
             refundable=[pkg.refundable for pkg in packages_data],
             supplier_currency=supplier_entry.supplier_currency,
             booking_package_index=supplier_book_idx,
+            **(
+                {"can_prebook": request_data.can_prebook}
+                if request_data.can_prebook is not None
+                else (
+                    {"can_prebook": supplier_entry.can_prebook}
+                    if getattr(supplier_entry, "can_prebook", None) is not None
+                    else {}
+                )
+            ),
+            **(
+                {"prebook_url": request_data.prebook_url}
+                if request_data.prebook_url is not None
+                else (
+                    {"prebook_url": supplier_entry.prebook_url}
+                    if getattr(supplier_entry, "prebook_url", None) is not None
+                    else {}
+                )
+            ),
+            **(
+                {"supplier_prebooking": supplier_entry.supplier_prebooking}
+                if getattr(supplier_entry, "supplier_prebooking", None) is not None
+                else {}
+            ),
+            # Occupancy the mocked rates advertise. An adapter drops any rate whose
+            # occupancy != the request, so a template saved at a non-default occupancy
+            # has to replay it or its packages vanish from the search.
+            adults=getattr(supplier_entry, "adults", 2),
+            child_ages=list(getattr(supplier_entry, "child_ages", []) or []),
+            room_count=getattr(supplier_entry, "room_count", 1),
+            **prebooking_kwargs,
+            **explicit_pricing,
         )
         suppliers.append(
             SupplierScenario(
@@ -84,6 +170,8 @@ def build_scenario_request_from_template(
         template_id=template_id,
         provisioning_depth=request_data.provisioning_depth,
         existing_api_key=request_data.existing_api_key,
+        static_markup=request_data.static_markup,
+        dynamic_markup=request_data.dynamic_markup,
     )
 
 
@@ -204,6 +292,11 @@ async def run_template_endpoint(
     )
 
     try:
+        # Resolve the target env FIRST — everything below is env-scoped: which BR rules
+        # exist, which mapping service resolves the hotel id, which Backoffice the
+        # contract is created in.
+        env = request_data.environment or get_current_env()
+
         # Load template
         tracker.start_step("scenario_creation")
         templates = scenario_template_service.list_templates(db)
@@ -223,6 +316,22 @@ async def run_template_endpoint(
             return response
 
         tracker.log(f"Loaded template: {template.label}")
+
+        # Static-only envs (ODIS) do not configure DynamicMarkup, so a dynamic_markup
+        # here can never be provisioned. Reject it rather than accept the request and
+        # silently drop the value — the caller would otherwise believe it was applied.
+        if request_data.dynamic_markup and not dynamic_markup_enabled(env):
+            tracker.end_step("scenario_creation", success=False, error="dynamic markup unsupported")
+            response.status = "FAILED"
+            response.error = {
+                "code": "DYNAMIC_MARKUP_NOT_SUPPORTED",
+                "message": (
+                    f"environment '{env}' runs Static Markup (rule "
+                    f"{STATIC_MARKUP_RULE_ID}) only and has no DynamicMarkup rule; "
+                    "drop dynamic_markup from the request."
+                ),
+            }
+            return response
 
         # Determine dates
         check_in = request_data.check_in or datetime.now().strftime("%Y-%m-%d")
@@ -261,13 +370,10 @@ async def run_template_endpoint(
             template_id=template_id,
         )
 
-        # Resolve the target env FIRST — the mapping service is per-env (dev vs
-        # staging hosts return different supplier hotel ids), so the resolution
-        # below MUST run under the requested env or it silently bakes the wrong
-        # env's hotel id into the mock (e.g. dev's 12323 for a stg scenario, which
-        # the stg HMS can't map -> 0 search results).
-        env = request_data.environment or get_current_env()
-
+        # The mapping service is per-env (dev vs staging hosts return different
+        # supplier hotel ids), so the resolution below MUST run under the requested env
+        # or it silently bakes the wrong env's hotel id into the mock (e.g. dev's 12323
+        # for a stg scenario, which the stg HMS can't map -> 0 search results).
         # Resolve ATG hotel ID to supplier-specific hotel IDs via mapping API,
         # pinned to the requested env's mapping service.
         tracker.log(f"Resolving hotel mapping for ATG hotel: {hotel_id} (env={env})")
@@ -293,11 +399,10 @@ async def run_template_endpoint(
         except Exception as e:
             tracker.log(f"Scenario run error: {e}")
 
-        # Refresh database session to see updates from the standalone session
-        db.expire_all()
-
-        # Re-fetch the full record object with fresh data
-        record = db.query(ScenarioRecord).filter(ScenarioRecord.id == scenario_id).first()
+        # Re-fetch the record: run_create_scenario writes through its own store, so
+        # the copy we created above is stale. Every read hits Mongo, so there is no
+        # session cache to invalidate first.
+        record = db.scenarios.get(scenario_id)
 
         if not record:
             tracker.log(f"Scenario record not found after creation")

@@ -15,8 +15,8 @@ class RunTemplateRequest(BaseModel):
 
     environment: str = Field(
         default="dev",
-        description="Target environment: 'dev' or 'stg'",
-        examples=["dev", "stg"]
+        description="Target environment: 'dev', 'stg' or 'odis' (ODIS Staging)",
+        examples=["dev", "stg", "odis"]
     )
     check_in: Optional[str] = Field(
         default=None,
@@ -83,6 +83,60 @@ class RunTemplateRequest(BaseModel):
             "depths. SMF never deletes an apiKey it did not create — cleanup only "
             "detaches the contracts."
         ),
+    )
+    prebooking_status: Optional[str] = Field(
+        default=None,
+        description=(
+            "Which PreBooking (price-check) response the supplier mocks return: "
+            "'available' (default), 'price_changed' or 'sold_out'. 'sold_out' also "
+            "skips the Booking/GetOrder/CancelOrder mocks, so do not combine it with "
+            "booking_package_index."
+        ),
+        examples=["sold_out", "price_changed"],
+    )
+    prebooking_changed_price: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Required with prebooking_status='price_changed': the price the check "
+            "re-quotes at, in supplier currency. Search/Packages keep the package "
+            "price; PreBooking, Booking and GetOrder use this."
+        ),
+        examples=[140.0],
+    )
+    can_prebook: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Override the contract's canPrebook permission for this run. Omit to leave "
+            "the reference contract's value. false also omits overridePrebookUrl and "
+            "builds no PreBooking mock — a supplier that cannot price-check never "
+            "calls it."
+        ),
+        examples=[False],
+    )
+    prebook_url: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Whether the contract gets overridePrebookUrl. Omit to write it as before; "
+            "false omits it. Independent of can_prebook."
+        ),
+        examples=[False],
+    )
+    static_markup: Optional[str] = Field(
+        default=None,
+        description=(
+            "Static Markup (BR rule 3) output value for this run, e.g. '10' or '10%'. "
+            "Omit for the default 10%."
+        ),
+        examples=["20", "20%"],
+    )
+    dynamic_markup: Optional[str] = Field(
+        default=None,
+        description=(
+            "Dynamic Markup (BR rule 4) output value for this run, e.g. '10%-15%' or "
+            "'10-15'. Omit for the default 15%-25%."
+        ),
+        examples=["30%-40%", "30-40"],
     )
     force_cleanup: bool = Field(
         default=True,

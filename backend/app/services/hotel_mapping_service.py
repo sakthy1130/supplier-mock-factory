@@ -10,7 +10,7 @@ from app.models.scenario import ScenarioRequest
 
 async def resolve_scenario_hotel_ids(request: ScenarioRequest) -> ScenarioRequest:
     """Fill supplier_hotel_ids from mapping service; validate all selected suppliers."""
-    supplier_codes = [s.code.value for s in request.suppliers]
+    supplier_codes = [str(s.code) for s in request.suppliers]
     async with HotelMappingClient() as client:
         try:
             mapping = await client.resolve_supplier_hotel_ids(request.atg_hotel_id, supplier_codes)

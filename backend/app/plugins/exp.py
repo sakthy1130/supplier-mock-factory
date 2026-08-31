@@ -13,6 +13,7 @@ from app.core.cancel_policy import (
 from app.core.exp_paths import build_exp_price_check_href, extract_price_check_token
 from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
+from app.plugins.prebooking import prebooking_effective_price
 from app.plugins.room_names import (
     apply_exp_board_basis_to_rate,
     apply_exp_room_names,
@@ -55,6 +56,14 @@ class ExpMockPlugin(SupplierMockPlugin):
             {
                 "checkInDate": lambda _value: check_in,
                 "checkOutDate": lambda _value: check_out,
+                # EXP's GetOrder body spells the stay lowercase on rooms[] —
+                # "checkin"/"checkout", not camelCase and not a URL query param, so
+                # neither branch below reached it. The retrieved order therefore kept the
+                # captured template's stay (2026-08-13 → 18) whatever the scenario booked,
+                # and the adapter answered E3027.3 "unexpected or unhandled get order
+                # response". GetOrder is the only EXP template carrying these as body keys.
+                "checkin": lambda _value: check_in,
+                "checkout": lambda _value: check_out,
             },
         )
 
@@ -79,7 +88,10 @@ class ExpMockPlugin(SupplierMockPlugin):
     ) -> dict:
         result = deep_copy(expectation)
         refundable = _normalized_refundable(spec)
+        # The package price IS the gross total the mock advertises. With explicit pricing
+        # the markup inside it is pinned too; without, it rides the template's ratio.
         prices = _normalized_prices(spec)
+        markups = _normalized_markups(spec)
 
         for node in walk_nodes(result):
             if isinstance(node, dict) and isinstance(node.get("url"), str):
@@ -110,7 +122,7 @@ class ExpMockPlugin(SupplierMockPlugin):
                 _apply_exp_cancel_penalty(rate, refundable[index], check_in, check_out)
                 apply_exp_board_basis_to_rate(rate, room_basis_list[index])
                 _ensure_distribution(rate)
-                _apply_exp_prices(rate, check_in, check_out, price)
+                _apply_exp_prices(rate, check_in, check_out, price, markups[index])
                 _rename_occupancy_key(rate, "2")
                 _strip_non_standard_exp_occ_fields(rate)
                 _trim_bed_groups(rate)
@@ -143,7 +155,7 @@ class ExpMockPlugin(SupplierMockPlugin):
                 _rewrite_property_hrefs(room, hotel_id, room_id, rate_id)
                 _rewrite_property_hrefs(property_entry, hotel_id, room_id, rate_id)
 
-            _apply_exp_prices(property_entry, check_in, check_out, prices[0])
+            _apply_exp_prices(property_entry, check_in, check_out, prices[0], markups[0])
 
         if log_type == "Search":
             properties = _exp_property_entries(result)
@@ -172,9 +184,18 @@ class ExpMockPlugin(SupplierMockPlugin):
         if not packages or not prebook:
             return
 
-        property_id, room_id, rate_id = _extract_exp_package_ids(packages)
+        # Bind to the package that actually gets booked, not always the first, so the
+        # price-check the core follows is the one for the selected rate — matching HBS
+        # (hbs.py "Link PreBooking to the SELECTED package"). Falls back to the first
+        # package when no booking package was chosen.
+        selected = None
+        if spec.booking_package_index is not None:
+            selected = _exp_selected_package(packages, spec.booking_package_index)
+        property_id, room_id, rate_id = selected or _extract_exp_package_ids(packages)
         if not all((property_id, room_id, rate_id)):
             return
+
+        self._apply_prebooking_price(prebook, spec)
 
         token = _extract_primary_price_check_token(packages)
         prebook_path = build_exp_price_check_href(property_id, room_id, rate_id, token)
@@ -187,6 +208,25 @@ class ExpMockPlugin(SupplierMockPlugin):
                 _set_price_check_hrefs(expectation, price_check_href)
                 if log_type == "Search":
                     _align_search_room_rate_ids(expectation, room_id, rate_id)
+
+    def _apply_prebooking_price(self, prebook: dict, spec: PackageSpec) -> None:
+        """Price the PreBooking body from the booked package, or the re-quote.
+
+        Without this the mock replays whatever total the capture happened to carry —
+        526.75 — so a price check never agreed with the package being booked.
+        For price_changed the re-quote is deliberately DIFFERENT from the package
+        price: Search and Packages keep the package price, and the disagreement is
+        the thing under test.
+        """
+        changed = _prebooking_effective_price(spec)
+        if changed is None:
+            return
+        body = prebook.get("httpResponse", {}).get("body")
+        if not isinstance(body, dict):
+            return
+        occupancy_pricing = body.get("occupancy_pricing")
+        if isinstance(occupancy_pricing, dict):
+            _apply_exp_occupancy_pricing(occupancy_pricing, changed)
 
     def _link_booking_flow(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
         """Sync the selected package's property/room/rate ids and total price into
@@ -226,13 +266,32 @@ class ExpMockPlugin(SupplierMockPlugin):
         refundable = _normalized_refundable(spec)
         if idx < len(refundable):
             rate["refundable"] = refundable[idx]
+        # The package price is the gross total, so a retrieved order matches what was
+        # booked — unless the price check re-quoted, in which case the booking went
+        # through at the CHANGED price and GetOrder has to agree with that, not with the
+        # package the search advertised.
         prices = _normalized_prices(spec)
-        if idx < len(prices):
-            _scale_exp_get_order_pricing(rate.get("pricing"), prices[idx])
+        booked_total = _prebooking_effective_price(spec)
+        if booked_total is None and idx < len(prices):
+            booked_total = prices[idx]
+        if booked_total is not None:
+            _scale_exp_get_order_pricing(rate.get("pricing"), booked_total)
 
     @property
     def log_types(self) -> list[str]:
         return LOG_TYPES
+
+
+def _prebooking_effective_price(spec: PackageSpec) -> float | None:
+    """What the price check comes back at.
+
+    The re-quoted price when the scenario asked for one, otherwise the BOOKED
+    package's price. Previously PreBooking was not priced at all: its body is a bare
+    rate, so `_exp_property_entries` walks nothing and the mock replayed the template's
+    captured total (526.75) whatever the scenario asked for. Returns None only when
+    there is no package to price from.
+    """
+    return prebooking_effective_price(spec, _normalized_prices(spec))
 
 
 def _exp_selected_package(packages: dict, idx: int) -> tuple[str | None, str | None, str | None] | None:
@@ -327,7 +386,19 @@ def _apply_exp_cancel_penalty(rate: dict, is_refundable: bool, check_in: str, ch
     ]
 
 
-def _apply_exp_prices(node: dict, check_in: str, check_out: str, total_price: float) -> None:
+def _apply_exp_prices(
+    node: dict,
+    check_in: str,
+    check_out: str,
+    total_price: float,
+    markup: float | None = None,
+) -> None:
+    """Write this package's prices into an EXP rate (or property) node.
+
+    ``markup`` opts into explicit pricing: the totals block is written from the scenario's
+    numbers instead of being scaled off whatever the captured template held. Left None,
+    every value moves proportionally exactly as before.
+    """
     update_fields_recursive(
         node,
         {
@@ -342,7 +413,7 @@ def _apply_exp_prices(node: dict, check_in: str, check_out: str, total_price: fl
     occupancy_pricing = node.get("occupancy_pricing")
     if isinstance(occupancy_pricing, dict):
         _resize_occupancy_nightly(occupancy_pricing, check_in, check_out)
-        _apply_exp_occupancy_pricing(occupancy_pricing, total_price)
+        _apply_exp_occupancy_pricing(occupancy_pricing, total_price, markup)
 
 
 def _resize_occupancy_nightly(occupancy_pricing: dict, check_in: str, check_out: str) -> None:
@@ -357,7 +428,11 @@ def _resize_occupancy_nightly(occupancy_pricing: dict, check_in: str, check_out:
         occ_data["nightly"] = [deep_copy(template_night) for _ in range(nights)]
 
 
-def _apply_exp_occupancy_pricing(occupancy_pricing: dict, total_price: float) -> None:
+def _apply_exp_occupancy_pricing(
+    occupancy_pricing: dict,
+    total_price: float,
+    markup: float | None = None,
+) -> None:
     for occ_data in occupancy_pricing.values():
         if not isinstance(occ_data, dict):
             continue
@@ -369,6 +444,62 @@ def _apply_exp_occupancy_pricing(occupancy_pricing: dict, total_price: float) ->
             continue
         ratio = total_price / old_inclusive
         _scale_exp_money_fields(occ_data, ratio)
+        if markup is not None:
+            # Scaling above already put every value at the right magnitude and kept the
+            # block internally consistent (gross_profit, property_inclusive, the nightly
+            # rates). Only the two nodes the adapter actually reads are then pinned to the
+            # scenario's numbers: totals.inclusive is its basePrice/total, and
+            # totals.marketing_fee is the markup it reports as markup.dynamic.
+            _set_exp_total_and_markup(totals, total_price, markup)
+
+
+def _set_exp_total_and_markup(totals: dict, total_price: float, markup: float) -> None:
+    """Pin totals.inclusive to the package total and totals.marketing_fee to the markup.
+
+    ``exclusive`` follows so the tax the adapter derives (inclusive − exclusive) keeps the
+    template's proportion — writing inclusive alone would silently change the tax.
+    """
+    tax = 0.0
+    inclusive_before = _read_money_total(totals, "inclusive")
+    exclusive_before = _read_money_total(totals, "exclusive")
+    if inclusive_before is not None and exclusive_before is not None:
+        tax = max(inclusive_before - exclusive_before, 0.0)
+        if inclusive_before > 0:
+            tax = total_price * (tax / inclusive_before)
+
+    _write_money_total(totals, "inclusive", total_price)
+    _write_money_total(totals, "exclusive", round(total_price - tax, 2))
+    _write_money_total(totals, "marketing_fee", markup)
+
+
+def _read_money_total(totals: dict, key: str) -> float | None:
+    """Read one totals node's amount, preferring request_currency (what the adapter reads)."""
+    node = totals.get(key)
+    if not isinstance(node, dict):
+        return None
+    for currency_key in ("request_currency", "billable_currency"):
+        currency_node = node.get(currency_key)
+        if isinstance(currency_node, dict):
+            amount = _parse_money(currency_node.get("value"))
+            if amount is not None:
+                return amount
+    return None
+
+
+def _write_money_total(totals: dict, key: str, amount: float) -> None:
+    """Set both currency views of one totals node, leaving their currency codes alone.
+
+    Only touches nodes the template already has: EXP payloads vary in which totals they
+    carry, and inventing a node the real API never sends is what
+    ``_strip_non_standard_exp_occ_fields`` exists to undo.
+    """
+    node = totals.get(key)
+    if not isinstance(node, dict):
+        return
+    for currency_key in ("request_currency", "billable_currency"):
+        currency_node = node.get(currency_key)
+        if isinstance(currency_node, dict) and "value" in currency_node:
+            currency_node["value"] = _format_money(amount)
 
 
 def _set_price_check_hrefs(expectation: dict, href: str) -> None:
@@ -605,6 +736,20 @@ def _normalized_prices(spec: PackageSpec) -> list[float]:
     while len(prices) < spec.count:
         prices.append(prices[-1] if prices else 0.0)
     return prices[: spec.count]
+
+
+def _normalized_markups(spec: PackageSpec) -> list[float | None]:
+    """Markup amount per package, or None where the scenario did not ask for one.
+
+    None is what keeps the untouched path untouched: ``_apply_exp_prices`` only pins the
+    totals block when it gets a number.
+    """
+    if not spec.has_explicit_pricing:
+        return [None] * spec.count
+    markups: list[float | None] = list(spec.markup)
+    while len(markups) < spec.count:
+        markups.append(markups[-1] if markups else 0.0)
+    return markups[: spec.count]
 
 
 def _replace_primary_property_id(url: str, hotel_id: str) -> str:

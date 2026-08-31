@@ -35,7 +35,7 @@ def check_core_services() -> dict:
     what matters is that the query round-trips.
     """
     try:
-        scenarios_name, _ = collection_names(get_settings().mongo_collection_prefix)
+        scenarios_name, _, _ = collection_names(get_settings().mongo_collection_prefix)
         get_database()[scenarios_name].estimated_document_count()
         return {
             "status": "ok",

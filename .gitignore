@@ -22,10 +22,11 @@ frontend/.env.local
 
 # Secrets & local inputs
 reference-sids.json
+# Every real env file is ignored; the .example templates are the tracked ones.
+# Listing them one by one meant a new env (.env.odis) was committable by accident.
 backend/.env
-backend/.env.shared
-backend/.env.dev
-backend/.env.stg
+backend/.env.*
+!backend/.env.*.example
 
 # SQLite
 *.db

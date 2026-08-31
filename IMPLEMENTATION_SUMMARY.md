@@ -125,7 +125,7 @@ POST /api/v1/run-template/{template_id}
 
 ### Quick Start (Curl)
 ```bash
-curl -X POST http://localhost:8000/api/v1/run-template/abc123 \
+curl -X POST http://localhost:8001/api/v1/run-template/abc123 \
   -H "Content-Type: application/json" \
   -d '{
     "environment": "dev"
@@ -141,7 +141,7 @@ RunTemplateRequest request = new RunTemplateRequest(
 );
 
 ResponseEntity<RunTemplateResponse> response = restTemplate.postForEntity(
-    "http://localhost:8000/api/v1/run-template/abc123",
+    "http://localhost:8001/api/v1/run-template/abc123",
     request,
     RunTemplateResponse.class
 );
@@ -200,13 +200,13 @@ AGENTS.md                                       +60 lines (API documentation)
 ### Manual Testing
 ```bash
 # 1. Start backend
-cd backend && PYTHONPATH=. uvicorn app.main:app --reload --port 8000
+cd backend && PYTHONPATH=. uvicorn app.main:app --reload --port 8001
 
 # 2. Get template ID from UI
-# Visit: http://localhost:5173 → Templates tab → copy template ID
+# Visit: http://localhost:5144 → Templates tab → copy template ID
 
 # 3. Call API
-curl -X POST http://localhost:8000/api/v1/run-template/{template_id} \
+curl -X POST http://localhost:8001/api/v1/run-template/{template_id} \
   -H "Content-Type: application/json" \
   -d '{"environment":"dev"}'
 
@@ -322,7 +322,7 @@ SearchResponse search = coreApp.search(apiKey, hotelId, checkIn, checkOut);
 - Best practices
 
 ✅ **Ready for immediate use:**
-- Endpoint live on port 8000
+- Endpoint live on port 8001
 - Works with dev/stg environments
 - Integrates with qaBackend_Enigma
 - Fully tested and committed

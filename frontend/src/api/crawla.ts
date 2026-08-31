@@ -1,4 +1,4 @@
-import { API_BASE, envHeaders } from './base'
+import { API_BASE, envHeaders, formatApiError } from './base'
 import type {
   CrawlaAnchorPackagesResponse,
   CrawlaAnchorRequest,
@@ -20,15 +20,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers,
   })
   if (!response.ok) {
-    const body = await response.text()
-    let detail = body
-    try {
-      const json = JSON.parse(body) as { detail?: string }
-      detail = json.detail ?? body
-    } catch {
-      /* use raw body */
-    }
-    throw new Error(detail || `HTTP ${response.status}`)
+    throw new Error(formatApiError(await response.text(), response.status))
   }
   return response.json() as Promise<T>
 }

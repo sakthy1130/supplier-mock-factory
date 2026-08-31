@@ -35,10 +35,16 @@ def api_client(monkeypatch):
 
     Requires a reachable mongod; MONGO_URL comes from backend/.env* as usual.
     """
+    from app.services.supplier_service import invalidate_cache
+
     prefix = f"test_{uuid.uuid4().hex[:12]}_"
     monkeypatch.setenv("MONGO_COLLECTION_PREFIX", prefix)
     clear_settings_cache()
     reset_client()
+    # Supplier configs are cached per (code, env) and outlive the client, so a config
+    # read against an earlier test's collections — or a miss recorded before seeding —
+    # would be served to this one. Drop it at both ends so each test sees only its own.
+    invalidate_cache()
 
     settings = get_settings()
     if not settings.mongo_url:
@@ -66,3 +72,4 @@ def api_client(monkeypatch):
             database.drop_collection(name)
         reset_client()
         clear_settings_cache()
+        invalidate_cache()

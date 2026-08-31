@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { createCrawlaScenario, runCrawlaScenario } from './api/crawla'
-import { getActiveEnv, setActiveEnv, type SmfEnv } from './api/base'
+import { getActiveEnv, setActiveEnv, SMF_ENVS, SMF_ENV_LABELS, type SmfEnv } from './api/base'
+import type { RunMode } from './api/scenarios'
 import {
   clearAllScenarios,
   createScenario,
@@ -11,6 +12,7 @@ import {
   refreshBookingIds,
   runScenario,
   teardownScenario,
+  type SupplierListItem,
 } from './api/client'
 import { ScenarioList } from './components/ScenarioList'
 import { ScenarioProgress } from './components/ScenarioProgress'
@@ -18,6 +20,7 @@ import { ScenarioResult } from './components/ScenarioResult'
 import { ScenarioWizard, type PackageRow, type ScenarioWizardTemplate } from './components/ScenarioWizard'
 import { useScenarioPoll } from './hooks/useScenarioPoll'
 import { CrawlaMocksWizard } from './components/CrawlaMocksWizard'
+import { SupplierRegistry } from './components/SupplierRegistry'
 import { CrawlaQueueRunner } from './components/CrawlaQueueRunner'
 import { TestRunDashboard, runSuites } from './components/TestRunDashboard'
 import { listTestRuns } from './api/testRun'
@@ -25,16 +28,24 @@ import {
   createScenarioTemplate,
   deleteScenarioTemplate,
   listScenarioTemplates,
+  saveRequestAsTemplate,
+  saveScenarioAsTemplate,
+  templateKind,
   updateScenarioTemplate,
+  updateScenarioTemplateFromRequest,
+  TEMPLATE_KIND_BEDDING,
+  TEMPLATE_KIND_PREBOOKING,
   type ApiScenarioTemplate,
+  type TemplateKind,
 } from './api/scenarioTemplates'
 import { formatStatus, statusClass, timeAgo } from './utils/scenarioFormat'
-import { parseTemplatePackagesJson } from './utils/templateImport'
+import { looksLikeScenarioJson, parseScenarioJson, parseTemplatePackagesJson } from './utils/templateImport'
 import type { CrawlaScenarioRequest, CrawlaScenarioRunResult } from './types/crawla'
-import type { ScenarioListItem, ScenarioRequest, ScenarioStatus, SupplierCode } from './types/scenario'
+import { PREBOOKING_STATUSES } from './types/scenario'
+import type { PreBookingStatus, ScenarioListItem, ScenarioRequest, ScenarioStatus, SupplierCode } from './types/scenario'
 import type { TestRunState } from './types/testRun'
 
-type Tab = 'home' | 'create' | 'browse' | 'crawla' | 'queue' | 'test-run' | 'templates'
+type Tab = 'home' | 'create' | 'browse' | 'crawla' | 'queue' | 'test-run' | 'templates' | 'suppliers'
 
 const NAV_ITEMS: { tab: Tab; icon: string; label: string }[] = [
   { tab: 'create', icon: '✦', label: 'Create Mock Scenario' },
@@ -42,7 +53,8 @@ const NAV_ITEMS: { tab: Tab; icon: string; label: string }[] = [
   { tab: 'crawla', icon: '◌', label: 'Crawla Mocks' },
   { tab: 'queue', icon: '⏵', label: 'Queue Runner' },
   { tab: 'test-run', icon: '⬡', label: 'Test Runs' },
-  { tab: 'templates', icon: '🛏', label: 'Template Bedding Mock' },
+  { tab: 'templates', icon: '🛏', label: 'Templates' },
+  { tab: 'suppliers', icon: '⚑', label: 'Suppliers' },
 ]
 
 interface ImportSupplierBlock {
@@ -51,11 +63,14 @@ interface ImportSupplierBlock {
   contract_currency: string
   json: string
   assignment_target: 'apikey' | 'sbgroup' | 'both'
+  // Without these a hand-built template could never be a working PreBooking mock —
+  // the form had no way to express the status the scenario was provisioned with.
+  prebooking_status: PreBookingStatus
+  prebooking_changed_price: string
 }
 
-function nextUnusedSupplier(used: SupplierCode[]): SupplierCode {
-  const all: SupplierCode[] = ['HBS', 'EXP', 'RHK', 'CHC', 'EXT']
-  return all.find((code) => !used.includes(code)) ?? 'HBS'
+function nextUnusedSupplier(used: SupplierCode[], available: SupplierCode[]): SupplierCode {
+  return available.find((code) => !used.includes(code)) ?? available[0] ?? ''
 }
 
 interface ScenarioTemplate {
@@ -95,33 +110,53 @@ function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [activeTemplate, setActiveTemplate] = useState<ScenarioTemplate | undefined>(undefined)
   const [customTemplates, setCustomTemplates] = useState<ApiScenarioTemplate[]>([])
+  // Declared before the memo below reads it — a const in the TDZ would throw at
+  // render, and tsc does not flag it inside a useMemo callback.
+  const [templateKindTab, setTemplateKindTab] = useState<TemplateKind>(TEMPLATE_KIND_BEDDING)
   const sortedCustomTemplates = useMemo(
-    () => [...customTemplates].sort((a, b) => scLabelSortKey(a.label) - scLabelSortKey(b.label)),
-    [customTemplates],
+    () =>
+      [...customTemplates]
+        .filter((t) => templateKind(t.function) === templateKindTab)
+        .sort((a, b) => scLabelSortKey(a.label) - scLabelSortKey(b.label)),
+    [customTemplates, templateKindTab],
   )
+  const templateKindCounts = useMemo(() => {
+    const counts = { [TEMPLATE_KIND_BEDDING]: 0, [TEMPLATE_KIND_PREBOOKING]: 0 }
+    customTemplates.forEach((t) => { counts[templateKind(t.function)] += 1 })
+    return counts
+  }, [customTemplates])
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [showImportForm, setShowImportForm] = useState(false)
+  // The template editor IS the create-scenario wizard, in template mode.
+  const [templateFormOpen, setTemplateFormOpen] = useState(false)
+  const [templateDraft, setTemplateDraft] = useState<ScenarioWizardTemplate | undefined>(undefined)
+  const [templateSaving, setTemplateSaving] = useState(false)
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
   const [importLabel, setImportLabel] = useState('')
   const [importDescription, setImportDescription] = useState('')
   const [importHotelId, setImportHotelId] = useState('')
   const [importSuppliers, setImportSuppliers] = useState<ImportSupplierBlock[]>([
-    { supplier: 'HBS', supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey' },
+    { supplier: '', supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey', prebooking_status: 'available', prebooking_changed_price: '' },
   ])
   const [importSbEnabled, setImportSbEnabled] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importBusy, setImportBusy] = useState(false)
+  const [scenarioPaste, setScenarioPaste] = useState('')
   const [env, setEnv] = useState<SmfEnv>(getActiveEnv())
   const [healthOk, setHealthOk] = useState(true)
   const [healthDetails, setHealthDetails] = useState<{ status: string; message?: string; checks?: Record<string, { status: string; message: string }> } | null>(null)
   const [backendError, setBackendError] = useState<string | null>(null)
   const [supplierCount, setSupplierCount] = useState(0)
-  const [supplierCodes, setSupplierCodes] = useState<string[]>([])
+  const [supplierList, setSupplierList] = useState<SupplierListItem[]>([])
   const [scenarioCount, setScenarioCount] = useState(0)
   const [lastRun, setLastRun] = useState<TestRunState | null>(null)
 
   const [creating, setCreating] = useState(false)
   const [crawlaRunning, setCrawlaRunning] = useState(false)
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
+  const [saveTemplateLabel, setSaveTemplateLabel] = useState('')
+  const [saveTemplateKind, setSaveTemplateKind] = useState<TemplateKind>(TEMPLATE_KIND_PREBOOKING)
+  const [saveTemplateBusy, setSaveTemplateBusy] = useState(false)
   const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null)
   const [crawlaRunResult, setCrawlaRunResult] = useState<CrawlaScenarioRunResult | null>(null)
   const [showCrawlaLogs, setShowCrawlaLogs] = useState(false)
@@ -159,19 +194,25 @@ function App() {
     }
   }, [])
 
+  const refreshSuppliers = useCallback(async () => {
+    const suppliers = await listSuppliers()
+    setSupplierCount(suppliers.length)
+    setSupplierList(suppliers)
+  }, [])
+
   useEffect(() => {
     Promise.all([getHealth(), listSuppliers()])
       .then(([h, suppliers]) => {
         setHealthDetails(h)
         setHealthOk(h.status === 'ok' || h.status === 'degraded')
         setSupplierCount(suppliers.length)
-        setSupplierCodes(suppliers.map((s) => s.code))
+        setSupplierList(suppliers)
         setBackendError(null)
       })
       .catch(() => {
         setHealthOk(false)
         setHealthDetails(null)
-        setBackendError('Cannot reach backend — run: python3 -m uvicorn app.main:app --reload --port 8000')
+        setBackendError('Cannot reach backend — run: python3 -m uvicorn app.main:app --reload --port 8001')
       })
     loadList()
   }, [loadList])
@@ -204,11 +245,11 @@ function App() {
       setHealthDetails(h)
       setHealthOk(h.status === 'ok' || h.status === 'degraded')
       setSupplierCount(suppliers.length)
-      setSupplierCodes(suppliers.map((s) => s.code))
+      setSupplierList(suppliers)
     } catch {
       setHealthOk(false)
       setHealthDetails(null)
-      setBackendError('Cannot reach backend — run: python3 -m uvicorn app.main:app --reload --port 8000')
+      setBackendError('Cannot reach backend — run: python3 -m uvicorn app.main:app --reload --port 8001')
     }
     await loadList()
   }
@@ -240,9 +281,17 @@ function App() {
     if (tab === 'templates') loadCustomTemplates()
   }, [tab, loadCustomTemplates])
 
+
   const addImportSupplierBlock = () => {
-    const nextSupplier = nextUnusedSupplier(importSuppliers.map((b) => b.supplier))
-    setImportSuppliers((prev) => [...prev, { supplier: nextSupplier, supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey' }])
+    // Only a convenience default — the same supplier may be added more than once.
+    const nextSupplier = nextUnusedSupplier(
+      importSuppliers.map((b) => b.supplier),
+      supplierList.map((s) => s.code),
+    )
+    setImportSuppliers((prev) => [
+      ...prev,
+      { supplier: nextSupplier, supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey', prebooking_status: 'available' as PreBookingStatus, prebooking_changed_price: '' },
+    ])
   }
 
   const removeImportSupplierBlock = (index: number) => {
@@ -257,11 +306,46 @@ function App() {
     setImportLabel('')
     setImportDescription('')
     setImportHotelId('')
-    setImportSuppliers([{ supplier: 'HBS', supplier_currency: 'EUR', contract_currency: 'USD', json: '', assignment_target: 'apikey' }])
+    setImportSuppliers([
+      {
+        supplier: supplierList[0]?.code ?? '',
+        supplier_currency: 'EUR',
+        contract_currency: 'USD',
+        json: '',
+        assignment_target: 'apikey',
+        prebooking_status: 'available',
+        prebooking_changed_price: '',
+      },
+    ])
     setImportSbEnabled(false)
     setEditingTemplateId(null)
     setImportError(null)
     setShowImportForm(false)
+  }
+
+  /** Fill the whole import form from a pasted scenario request or detail response. */
+  const applyScenarioJson = (raw: string) => {
+    setImportError(null)
+    try {
+      const parsed = parseScenarioJson(raw)
+      setImportHotelId(parsed.atg_hotel_id)
+      setImportSbEnabled(parsed.sb_enabled)
+      setImportSuppliers(
+        parsed.suppliers.map((entry) => ({
+          supplier: entry.supplier as SupplierCode,
+          supplier_currency: entry.supplier_currency,
+          contract_currency: entry.contract_currency,
+          json: JSON.stringify(entry.rows, null, 2),
+          assignment_target: entry.assignment_target,
+          prebooking_status: entry.prebooking_status,
+          prebooking_changed_price:
+            entry.prebooking_changed_price != null ? String(entry.prebooking_changed_price) : '',
+        })),
+      )
+      setScenarioPaste('')
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Could not read that scenario JSON')
+    }
   }
 
   const handleImportTemplate = async (e: React.FormEvent) => {
@@ -269,14 +353,26 @@ function App() {
     setImportError(null)
     setImportBusy(true)
     try {
+      const codes = importSuppliers.map((b) => b.supplier || supplierList[0]?.code || '')
+      if (codes.some((code) => !code)) {
+        throw new Error('Pick a supplier for every block')
+      }
       // A supplier may be added more than once: each block becomes its own
       // contract + mock set when the template runs ("EXP", then "EXP-2").
-      const suppliers = importSuppliers.map((block) => ({
-        supplier: block.supplier,
+      const suppliers = importSuppliers.map((block, index) => ({
+        supplier: codes[index],
         supplier_currency: block.supplier_currency.toUpperCase().slice(0, 3),
         contract_currency: block.contract_currency.toUpperCase().slice(0, 3),
         packages: parseTemplatePackagesJson(block.json),
         assignment_target: block.assignment_target,
+        ...(block.prebooking_status && block.prebooking_status !== 'available'
+          ? {
+              prebooking_status: block.prebooking_status,
+              ...(block.prebooking_status === 'price_changed' && block.prebooking_changed_price.trim()
+                ? { prebooking_changed_price: Number(block.prebooking_changed_price) }
+                : {}),
+            }
+          : {}),
       }))
       if (importSbEnabled && !suppliers.some((s) => s.assignment_target !== 'apikey')) {
         throw new Error('SmartBooking is on — set at least one supplier to SbGroup or Both')
@@ -287,6 +383,13 @@ function App() {
         atg_hotel_id: importHotelId.trim(),
         suppliers,
         sb_enabled: importSbEnabled,
+        // Categorise by what it actually does, so an imported PreBooking template
+        // lands on the tab where it will be looked for.
+        function: importSuppliers.some(
+          (b) => b.prebooking_status && b.prebooking_status !== 'available',
+        )
+          ? TEMPLATE_KIND_PREBOOKING
+          : TEMPLATE_KIND_BEDDING,
       }
       if (editingTemplateId) {
         await updateScenarioTemplate(editingTemplateId, payload)
@@ -304,24 +407,6 @@ function App() {
 
   const editFormRef = useRef<HTMLFormElement>(null)
 
-  const handleEditTemplate = (item: ApiScenarioTemplate) => {
-    setEditingTemplateId(item.id)
-    setImportLabel(item.label)
-    setImportDescription(item.description)
-    setImportHotelId(item.atg_hotel_id)
-    setImportSuppliers(
-      item.suppliers.map((entry) => ({
-        supplier: entry.supplier as SupplierCode,
-        supplier_currency: entry.supplier_currency,
-        contract_currency: entry.contract_currency,
-        json: JSON.stringify(entry.packages, null, 2),
-        assignment_target: entry.assignment_target ?? 'apikey',
-      })),
-    )
-    setImportSbEnabled(item.sb_enabled ?? false)
-    setImportError(null)
-    setShowImportForm(true)
-  }
 
   // The edit form renders above the template list, so opening it while scrolled
   // down (e.g. clicking Edit on a row near the bottom) would leave it off-screen
@@ -344,44 +429,95 @@ function App() {
     }
   }
 
-  const openCustomTemplate = (item: ApiScenarioTemplate) => {
-    // A code may appear more than once in the template, so collect a LIST of row
-    // sets per code — assigning would drop every entry but the last.
+  /**
+   * A saved template as wizard prefill. ONE builder for both callers — opening a
+   * template in Create Scenario and editing it in template mode previously had
+   * separate copies, and the edit one grew PreBooking/Book support while the other
+   * silently kept dropping them.
+   */
+  const templateToWizardDraft = (item: ApiScenarioTemplate): ScenarioWizardTemplate => {
+    // A code may appear more than once, so collect a LIST of row sets per code —
+    // assigning would drop every entry but the last.
     const packages: Partial<Record<SupplierCode, PackageRow[][]>> = {}
-    const enabledSuppliers: Partial<Record<SupplierCode, boolean>> = { HBS: false, EXP: false, RHK: false, CHC: false, EXT: false }
+    const enabledSuppliers: Partial<Record<SupplierCode, boolean>> = Object.fromEntries(
+      supplierList.map((sup) => [sup.code, false]),
+    )
     const supplierCurrencies: Partial<Record<SupplierCode, string>> = {}
     const contractCurrencies: Partial<Record<SupplierCode, string>> = {}
     const assignmentTargets: Partial<Record<SupplierCode, 'apikey' | 'sbgroup' | 'both'>> = {}
+    const prebookingStatuses: Partial<Record<SupplierCode, PreBookingStatus>> = {}
+    const prebookingChangedPrices: Partial<Record<SupplierCode, string>> = {}
+    const bookingRows: Partial<Record<SupplierCode, (number | null)[]>> = {}
+    const canPrebook: Partial<Record<SupplierCode, boolean | undefined>> = {}
+    const prebookUrl: Partial<Record<SupplierCode, boolean | undefined>> = {}
+    const supplierPrebooking: Partial<Record<SupplierCode, boolean | undefined>> = {}
+
     for (const entry of item.suppliers) {
       const code = entry.supplier as SupplierCode
-      const rows = entry.packages.map((p) => ({
-        roomName: p.room_name,
-        roomBasis: p.room_basis,
-        price: String(p.price),
-        refundable: p.refundable,
+      const rows = entry.packages.map((pkg) => ({
+        roomName: pkg.room_name,
+        roomBasis: pkg.room_basis,
+        price: String(pkg.price),
+        refundable: pkg.refundable,
+        // Blank, not "undefined"/"0", when the template predates explicit pricing or
+        // simply does not use it — the wizard treats blank as "not asked for".
+        originalPriceWithVat:
+          pkg.original_price_with_vat == null ? '' : String(pkg.original_price_with_vat),
+        markup: pkg.markup == null ? '' : String(pkg.markup),
       }))
-      packages[code] = [...(packages[code] ?? []), rows]
       enabledSuppliers[code] = true
+      packages[code] = [...(packages[code] ?? []), rows]
       // Currencies and assignment target are per supplier CODE in the wizard, not
-      // per instance — with repeated entries the last one wins.
+      // per instance, so the last entry for a code wins.
       supplierCurrencies[code] = entry.supplier_currency
       contractCurrencies[code] = entry.contract_currency
       assignmentTargets[code] = entry.assignment_target ?? 'apikey'
+      prebookingStatuses[code] = (entry.prebooking_status ?? 'available') as PreBookingStatus
+      prebookingChangedPrices[code] =
+        entry.prebooking_changed_price == null ? '' : String(entry.prebooking_changed_price)
+      bookingRows[code] = [...(bookingRows[code] ?? []), entry.booking_package_index ?? null]
+      canPrebook[code] = entry.can_prebook ?? undefined
+      prebookUrl[code] = entry.prebook_url ?? undefined
+      supplierPrebooking[code] = entry.supplier_prebooking ?? undefined
     }
+
+    return {
+      atgHotelId: item.atg_hotel_id || undefined,
+      enabledSuppliers,
+      packages,
+      supplierCurrencies,
+      contractCurrencies,
+      assignmentTargets,
+      prebookingStatuses,
+      prebookingChangedPrices,
+      bookingRows,
+      canPrebook,
+      prebookUrl,
+      supplierPrebooking,
+      sbEnabled: item.sb_enabled ?? false,
+      templateLabel: item.label,
+      templateDescription: item.description,
+      templateKind: templateKind(item.function),
+    }
+  }
+
+  const editTemplateInWizard = (item: ApiScenarioTemplate) => {
+    setTemplateDraft(templateToWizardDraft(item))
+    setEditingTemplateId(item.id)
+    setTemplateFormOpen(true)
+    setShowImportForm(false)
+  }
+
+  const openCustomTemplate = (item: ApiScenarioTemplate) => {
+    // Same draft the template editor uses, so what you see when you open a template
+    // is what the template actually holds — PreBooking status and Book selection
+    // included. These were two separate builders and drifted.
     openCreate({
       id: `custom-${item.id}`,
       label: item.label,
       description: item.description,
       templateId: item.id,
-      template: {
-        atgHotelId: item.atg_hotel_id || undefined,
-        enabledSuppliers,
-        packages,
-        supplierCurrencies,
-        contractCurrencies,
-        sbEnabled: item.sb_enabled ?? false,
-        assignmentTargets,
-      },
+      template: templateToWizardDraft(item),
     })
   }
 
@@ -424,7 +560,7 @@ function App() {
     }
   }
 
-  const handleRunCrawlaScenario = async () => {
+  const handleRunCrawlaScenario = async (mode: RunMode = 'e2e') => {
     if (!activeScenarioId) return
     setCrawlaRunning(true)
     setBackendError(null)
@@ -433,7 +569,7 @@ function App() {
       // regular scenarios use the generic scenarios run route (no export required).
       const result = bundle?.crawla_export
         ? await runCrawlaScenario(activeScenarioId)
-        : await runScenario(activeScenarioId)
+        : await runScenario(activeScenarioId, mode)
       setCrawlaRunResult(result)
       setShowCrawlaLogs(false)
       await refreshBundle()
@@ -442,6 +578,61 @@ function App() {
       setBackendError(err instanceof Error ? err.message : 'Scenario run failed')
     } finally {
       setCrawlaRunning(false)
+    }
+  }
+
+  const handleTemplateWizardSubmit = async (
+    request: ScenarioRequest,
+    meta?: { label: string; description: string; kind: TemplateKind },
+  ) => {
+    if (!meta) return
+    setTemplateSaving(true)
+    setBackendError(null)
+    try {
+      const payload = {
+        label: meta.label,
+        description: meta.description,
+        function: meta.kind,
+        request: request as unknown as Record<string, unknown>,
+      }
+      if (editingTemplateId) {
+        // Editing rewrites the document, so it goes through the same inversion —
+        // delete-then-create would change the id and break automation's id map.
+        await updateScenarioTemplateFromRequest(editingTemplateId, payload)
+      } else {
+        await saveRequestAsTemplate(payload)
+      }
+      setTemplateFormOpen(false)
+      setTemplateDraft(undefined)
+      setEditingTemplateId(null)
+      setTemplateKindTab(meta.kind)
+      await loadCustomTemplates()
+    } catch (err) {
+      setBackendError(err instanceof Error ? err.message : 'Could not save the template')
+    } finally {
+      setTemplateSaving(false)
+    }
+  }
+
+  const handleSaveAsTemplate = async () => {
+    if (!activeScenarioId || !saveTemplateLabel.trim()) return
+    setSaveTemplateBusy(true)
+    setBackendError(null)
+    try {
+      await saveScenarioAsTemplate(activeScenarioId, {
+        label: saveTemplateLabel.trim(),
+        function: saveTemplateKind,
+      })
+      setSaveTemplateOpen(false)
+      setSaveTemplateLabel('')
+      // Land on the tab it was saved under, so it is visible straight away.
+      setTemplateKindTab(saveTemplateKind)
+      await loadCustomTemplates()
+      setTab('templates')
+    } catch (err) {
+      setBackendError(err instanceof Error ? err.message : 'Could not save the template')
+    } finally {
+      setSaveTemplateBusy(false)
     }
   }
 
@@ -666,7 +857,7 @@ function App() {
               <div className="mini-stat">
                 <div className="label">Suppliers</div>
                 <div className="value">{supplierCount}</div>
-                <div className="hint">{supplierCodes.join(' · ') || '—'}</div>
+                <div className="hint">{supplierList.map((s) => s.code).join(' · ') || '—'}</div>
               </div>
               <div className="mini-stat">
                 <div className="label">Scenarios</div>
@@ -776,6 +967,7 @@ function App() {
                   onSubmit={handleCreate}
                   busy={creating}
                   initialTemplate={activeTemplate?.template}
+                  availableSuppliers={supplierList}
                 />
 
                 {activeScenarioId && bundle && (
@@ -801,6 +993,7 @@ function App() {
                       crawlaRunResult={crawlaRunResult}
                       showLogs={showCrawlaLogs}
                       onRefreshBookingIds={bundle.status === 'READY' ? handleRefreshBookingIds : undefined}
+                      onSaveAsTemplate={bundle.status === 'READY' ? () => setSaveTemplateOpen(true) : undefined}
                       onTeardown={bundle.status === 'READY' ? handleTeardown : undefined}
                       actionBusy={actionBusy}
                       runBusy={crawlaRunning}
@@ -853,6 +1046,7 @@ function App() {
                       crawlaRunResult={crawlaRunResult}
                       showLogs={showCrawlaLogs}
                       onRefreshBookingIds={bundle.status === 'READY' ? handleRefreshBookingIds : undefined}
+                      onSaveAsTemplate={bundle.status === 'READY' ? () => setSaveTemplateOpen(true) : undefined}
                       onTeardown={bundle.status === 'READY' ? handleTeardown : undefined}
                       actionBusy={actionBusy}
                       runBusy={crawlaRunning}
@@ -912,13 +1106,31 @@ function App() {
           <>
             <header className="page-header">
               <span className="page-eyebrow">Presets</span>
-              <h1>Template Bedding Mock</h1>
+              <h1>Templates</h1>
               <p>
-                Pick a preset to open Create Mock Scenario prefilled with known package data — edit anything
-                before provisioning, same as a normal scenario.
+                Pick a template to open Create Mock Scenario prefilled — edit anything before
+                provisioning, same as a normal scenario.
               </p>
             </header>
 
+            <div className="template-kind-tabs">
+              {([
+                [TEMPLATE_KIND_BEDDING, 'Template Bedding Mock'],
+                [TEMPLATE_KIND_PREBOOKING, 'PreBooking Mock'],
+              ] as [TemplateKind, string][]).map(([kind, label]) => (
+                <button
+                  key={kind}
+                  type="button"
+                  className={`template-kind-tab ${templateKindTab === kind ? 'active' : ''}`}
+                  onClick={() => setTemplateKindTab(kind)}
+                >
+                  {label}
+                  <span className="template-kind-count">{templateKindCounts[kind]}</span>
+                </button>
+              ))}
+            </div>
+
+            {templateKindTab === TEMPLATE_KIND_BEDDING && (
             <div className="banner error" style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}>
               <span>⚠</span>
               <span>
@@ -929,18 +1141,60 @@ function App() {
                 template.
               </span>
             </div>
+            )}
 
             <section className="recent-panel" style={{ marginTop: '1.5rem' }}>
               <div className="recent-header">
                 <h2>Custom templates</h2>
-                <button
-                  type="button"
-                  className="btn secondary"
-                  onClick={() => (showImportForm ? resetImportForm() : setShowImportForm(true))}
-                >
-                  {showImportForm ? 'Cancel' : '+ Import template'}
-                </button>
+                <span style={{ display: 'flex', gap: '0.4rem' }}>
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    onClick={() => {
+                      setEditingTemplateId(null)
+                      setTemplateDraft({ templateKind: templateKindTab })
+                      setTemplateFormOpen((open) => !open)
+                      setShowImportForm(false)
+                    }}
+                  >
+                    {templateFormOpen ? 'Cancel' : '+ New template'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    onClick={() => (showImportForm ? resetImportForm() : setShowImportForm(true))}
+                    title="Paste package rows or a scenario request as JSON"
+                  >
+                    {showImportForm ? 'Cancel import' : 'Import JSON'}
+                  </button>
+                </span>
               </div>
+
+              {templateFormOpen && (
+                <div className="wizard-section" style={{ marginBottom: '1rem' }}>
+                  <div className="wizard-section-title">
+                    {editingTemplateId ? 'Edit template' : 'New template'}
+                  </div>
+                  <p className="hint" style={{ marginTop: '-0.3rem' }}>
+                    The same form as Create Mock Scenario — so a template and the scenario it
+                    produces can never describe different things. Dates and namespace belong
+                    to a run, so they are not asked for here.
+                  </p>
+                  <ScenarioWizard
+                    key={editingTemplateId ?? 'new-template'}
+                    mode="template"
+                    busy={templateSaving}
+                    initialTemplate={templateDraft}
+                    availableSuppliers={supplierList}
+                    onSubmit={handleTemplateWizardSubmit}
+                    onCancel={() => {
+                      setTemplateFormOpen(false)
+                      setEditingTemplateId(null)
+                      setTemplateDraft(undefined)
+                    }}
+                  />
+                </div>
+              )}
 
               {showImportForm && (
                 <form
@@ -949,6 +1203,34 @@ function App() {
                   onSubmit={handleImportTemplate}
                   style={{ marginBottom: '1rem' }}
                 >
+                  {!editingTemplateId && (
+                    <div className="scenario-paste">
+                      <label className="field">
+                        Start from a scenario
+                        <textarea
+                          rows={3}
+                          value={scenarioPaste}
+                          onChange={(e) => setScenarioPaste(e.target.value)}
+                          placeholder='Paste a scenario&apos;s API request here (Scenario detail → Show API request → Copy JSON) and every field below fills in, PreBooking status included.'
+                          spellCheck={false}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="btn secondary"
+                        disabled={!scenarioPaste.trim()}
+                        onClick={() => applyScenarioJson(scenarioPaste)}
+                        title={
+                          scenarioPaste.trim() && !looksLikeScenarioJson(scenarioPaste)
+                            ? 'That does not look like a scenario request — it needs a "suppliers" array'
+                            : 'Fill the form from this scenario'
+                        }
+                      >
+                        Fill form from scenario
+                      </button>
+                    </div>
+                  )}
+
                   <div className="wizard-section-title">
                     {editingTemplateId ? 'Edit template' : 'New template'}
                   </div>
@@ -998,16 +1280,16 @@ function App() {
                           <label>
                             Supplier
                             <select
-                              value={block.supplier}
+                              value={block.supplier || supplierList[0]?.code || ''}
                               onChange={(e) =>
                                 updateImportSupplierBlock(index, { supplier: e.target.value as SupplierCode })
                               }
                             >
-                              <option value="HBS">HBS</option>
-                              <option value="EXP">EXP</option>
-                              <option value="RHK">RHK</option>
-                              <option value="CHC">CHC</option>
-                              <option value="EXT">EXT</option>
+                              {supplierList.map((supplier) => (
+                                <option key={supplier.code} value={supplier.code}>
+                                  {supplier.code}
+                                </option>
+                              ))}
                             </select>
                           </label>
                         </div>
@@ -1022,6 +1304,42 @@ function App() {
                         </button>
                       </div>
                       <div className="field-grid" style={{ marginBottom: '0.5rem' }}>
+                        <div className="field" style={{ maxWidth: '200px' }}>
+                          <label>
+                            PreBooking
+                            <select
+                              value={block.prebooking_status}
+                              onChange={(e) =>
+                                updateImportSupplierBlock(index, {
+                                  prebooking_status: e.target.value as PreBookingStatus,
+                                })
+                              }
+                            >
+                              {PREBOOKING_STATUSES.map((status) => (
+                                <option key={status.value} value={status.value}>
+                                  {status.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                        {block.prebooking_status === 'price_changed' && (
+                          <div className="field" style={{ maxWidth: '140px' }}>
+                            <label>
+                              Changed price
+                              <input
+                                value={block.prebooking_changed_price}
+                                onChange={(e) =>
+                                  updateImportSupplierBlock(index, {
+                                    prebooking_changed_price: e.target.value,
+                                  })
+                                }
+                                placeholder="140"
+                                spellCheck={false}
+                              />
+                            </label>
+                          </div>
+                        )}
                         <div className="field" style={{ maxWidth: '140px' }}>
                           <label>
                             Supplier Currency
@@ -1162,7 +1480,7 @@ function App() {
                         ))}
                       </span>
                       <span style={{ display: 'flex', gap: '0.4rem' }}>
-                        <button type="button" className="btn ghost tiny" onClick={() => handleEditTemplate(item)}>
+                        <button type="button" className="btn ghost tiny" onClick={() => editTemplateInWizard(item)}>
                           Edit
                         </button>
                         <button type="button" className="btn danger tiny" onClick={() => handleDeleteTemplate(item)}>
@@ -1178,6 +1496,18 @@ function App() {
               )}
             </section>
           </>
+        )}
+
+        {tab === 'suppliers' && (
+          <SupplierRegistry
+            // Remount on an env switch: supplier config is per env, so the open
+            // editor and its draft don't carry over.
+            key={env}
+            env={env}
+            onSuppliersChanged={() => {
+              void refreshSuppliers()
+            }}
+          />
         )}
 
         {tab === 'browse' && (
@@ -1239,6 +1569,7 @@ function App() {
                       crawlaRunResult={crawlaRunResult}
                       showLogs={showCrawlaLogs}
                       onRefreshBookingIds={bundle.status === 'READY' ? handleRefreshBookingIds : undefined}
+                      onSaveAsTemplate={bundle.status === 'READY' ? () => setSaveTemplateOpen(true) : undefined}
                       onTeardown={bundle.status === 'READY' ? handleTeardown : undefined}
                       actionBusy={actionBusy}
                       runBusy={crawlaRunning}
@@ -1256,12 +1587,15 @@ function App() {
         <div className="sidebar-section">
           <label className="sidebar-label">🌐 Environment</label>
           <select
-            className={`sidebar-select ${env === 'stg' ? 'env-stg' : 'env-dev'}`}
+            className={`sidebar-select env-${env}`}
             value={env}
             onChange={(e) => handleEnvChange(e.target.value as SmfEnv)}
           >
-            <option value="dev">Dev</option>
-            <option value="stg">Staging</option>
+            {SMF_ENVS.map((code) => (
+              <option key={code} value={code}>
+                {SMF_ENV_LABELS[code]}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -1314,6 +1648,59 @@ function App() {
           )}
         </div>
       </aside>
+
+      {saveTemplateOpen && (
+        <div
+          className="modal-backdrop"
+          onClick={() => !saveTemplateBusy && setSaveTemplateOpen(false)}
+        >
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2>Save as template</h2>
+            <p className="hint">
+              Saves this scenario's suppliers, packages, currencies and PreBooking settings.
+              Running the template later reproduces them.
+            </p>
+            <label className="field">
+              Label
+              <input
+                autoFocus
+                value={saveTemplateLabel}
+                onChange={(e) => setSaveTemplateLabel(e.target.value)}
+                placeholder="PreBooking SoldOut"
+                maxLength={120}
+              />
+            </label>
+            <label className="field">
+              Save under
+              <select
+                value={saveTemplateKind}
+                onChange={(e) => setSaveTemplateKind(e.target.value as TemplateKind)}
+              >
+                <option value={TEMPLATE_KIND_PREBOOKING}>PreBooking Mock</option>
+                <option value={TEMPLATE_KIND_BEDDING}>Template Bedding Mock</option>
+              </select>
+            </label>
+            <div className="actions" style={{ marginTop: '1rem' }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={saveTemplateBusy || !saveTemplateLabel.trim()}
+                onClick={handleSaveAsTemplate}
+              >
+                {saveTemplateBusy ? 'Saving…' : 'Save template'}
+              </button>
+              <button
+                type="button"
+                className="btn secondary"
+                disabled={saveTemplateBusy}
+                onClick={() => setSaveTemplateOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

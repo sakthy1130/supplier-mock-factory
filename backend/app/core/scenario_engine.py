@@ -13,26 +13,95 @@ from app.core.crawla_mutations import apply_supplier_mutation
 from app.core.linkage_validator import LinkageValidator
 from app.core.namespace import apply_namespace
 from app.ingest.expectation_builder import OPTIONAL_TEMPLATE_LOG_TYPES
-from app.models.scenario import ScenarioRequest
-from app.plugins import PLUGINS
+from app.models.scenario import PreBookingStatus, ScenarioRequest
+from app.plugins import resolve_plugin
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATES_DIR = REPO_ROOT / "templates"
 
-PACKAGE_MUTABLE_LOG_TYPES = {
-    "HBS": {"Search", "Packages"},
-    "EXP": {"Search", "Packages"},
-    "RHK": {"Search", "Packages"},
-    "CHC": {"Search", "Packages", "PreBooking", "GetOrder"},
-    "EXT": {"Search", "Packages"},
-}
 
-# All SMF searches run 2 adults (see CoreAppClient search payload). Supplier
-# templates were ingested at differing occupancies (HBS/RHK=1, EXT/CHC=2), and
-# adapters drop packages whose occupancy != the request — so a 2-adult search
-# silently returns nothing for a 1-adult mock (this is why EXT dropped out of the
-# SB search). Normalize every supplier's Search/Packages mock to the same adult
-# count. TODO: make this configurable from the UI (per-scenario occupancy).
+def _template_filename(
+    log_type: str,
+    prebooking_status: PreBookingStatus,
+    prebooking_template_variants: bool = True,
+) -> str:
+    """The template file for this log type — a status variant only for PreBooking.
+
+    `available` maps to the historical v1.json, so every existing scenario keeps
+    loading exactly the file it always did.
+
+    A supplier with ``prebooking_template_variants`` false has one capture for every
+    status because its body has no status field to differ on (EXT). Its plugin applies
+    the status to the v1.json body instead — this is not the silent fallback that
+    _load_supplier_templates refuses, which is a REQUESTED status served as an
+    unmodified `available` body.
+    """
+    if (
+        log_type == "PreBooking"
+        and prebooking_template_variants
+        and prebooking_status is not PreBookingStatus.available
+    ):
+        return f"{prebooking_status.value}.json"
+    return "v1.json"
+
+
+def _prebooking_template_variants(supplier_code: str) -> bool:
+    """Whether this supplier keeps one PreBooking template per status.
+
+    An unknown supplier keeps the historical answer (True): resolve_plugin reports an
+    unknown code far more usefully than a missing-template error would.
+    """
+    from app.services.supplier_service import UnknownSupplierError, get_supplier_config
+
+    try:
+        return get_supplier_config(supplier_code).mock_config.prebooking_template_variants
+    except UnknownSupplierError:
+        return True
+
+
+def _reject_explicit_pricing_for_net_supplier(supplier_code: str) -> None:
+    """Raise if this env prices `supplier_code` net — the gross split cannot apply.
+
+    An unknown supplier is left alone: resolve_plugin/_package_log_types already report
+    that far more usefully than a pricing complaint would.
+    """
+    from app.env_context import get_current_env
+    from app.services.supplier_service import UnknownSupplierError, get_supplier_config
+
+    try:
+        config = get_supplier_config(supplier_code)
+    except UnknownSupplierError:
+        return
+    if config.supplier_type == "net":
+        env = get_current_env()
+        raise ValueError(
+            f"{supplier_code} is a net supplier on '{env}', so originalPriceWithVAT and "
+            "markup do not apply — that split only exists for a gross supplier, where "
+            "the markup sits inside the total. Send the package price alone."
+        )
+
+
+def _package_log_types(supplier_code: str) -> set[str]:
+    """Log types whose response body gets package mutation for this supplier.
+
+    Defaults to Packages only — a supplier that also serves rates on Search (or, for
+    CHC, on PreBooking/GetOrder) declares that on its config.
+    """
+    from app.services.supplier_service import UnknownSupplierError, get_supplier_config
+
+    try:
+        return set(get_supplier_config(supplier_code).package_log_types) or {"Packages"}
+    except UnknownSupplierError:
+        return {"Packages"}
+
+# Supplier templates were ingested at differing occupancies (HBS/RHK=1, EXT/CHC=2),
+# and adapters drop packages whose occupancy != the request — so a 2-adult search
+# silently returns nothing for a 1-adult mock (this is why EXT dropped out of the SB
+# search). Every Search/Packages mock is normalized to the scenario's adult count.
+#
+# The count now comes from PackageSpec.adults, which defaults to 2 — the occupancy
+# every SMF search runs (see CoreAppClient search payload). This is the per-scenario
+# occupancy the constant here used to stand in for.
 SEARCH_ADULTS = 2
 _ADULT_OCCUPANCY_KEYS = frozenset(
     {"adults", "adultCount", "adultsCount", "numberAdults", "numberOfAdults", "requestedNumberAdults"}
@@ -84,16 +153,34 @@ class ScenarioEngine:
     def build_expectations(self, request: ScenarioRequest) -> list[BuiltExpectation]:
         built: list[BuiltExpectation] = []
         for supplier_scenario in request.suppliers:
-            supplier_code = supplier_scenario.code.value
+            supplier_code = str(supplier_scenario.code)
             instance_key = supplier_scenario.instance_key
-            plugin = PLUGINS[supplier_code]
+            # From the suppliers table, not a hardcoded registry: a supplier added from
+            # the Suppliers screen gets the generic mutator built from its own config.
+            plugin = resolve_plugin(supplier_code)
+            # The originalPriceWithVAT/markup split only means something for a GROSS
+            # supplier: the markup sits inside totals.inclusive and these fields say how
+            # to divide it. A net supplier carries no such markup node, so accepting the
+            # values would write a split the contract cannot express. supplier_type is
+            # per-env (EXP is gross on dev/stg, net on ODIS), so this is resolved from
+            # the suppliers table rather than the code.
+            if supplier_scenario.packages.has_explicit_pricing:
+                _reject_explicit_pricing_for_net_supplier(supplier_code)
             # When no package is selected for the booking flow, only build
             # search/package (+ prebooking/cancellation-policy) mocks — skip
             # Booking/GetOrder/CancelOrder entirely for this supplier.
             log_types = plugin.log_types
-            if supplier_scenario.packages.booking_package_index is None:
+            spec = supplier_scenario.packages
+            # sold_out stops the chain at PreBooking: that body carries no links.book,
+            # so the core cannot proceed to booking even if the mocks existed. Same set
+            # already dropped when no package is selected for booking.
+            sold_out = spec.prebooking_status is PreBookingStatus.sold_out
+            if spec.booking_package_index is None or sold_out:
                 log_types = [lt for lt in log_types if lt not in BOOKING_FLOW_LOG_TYPES]
-            templates = self._load_supplier_templates(supplier_code, log_types)
+
+            templates = self._load_supplier_templates(
+                supplier_code, log_types, spec.prebooking_status
+            )
             mutated = self._mutate_supplier_templates(
                 plugin=plugin,
                 templates=templates,
@@ -135,23 +222,30 @@ class ScenarioEngine:
                 )
         return built
 
-    def _load_supplier_templates(self, supplier_code: str, log_types: list[str]) -> dict[str, dict]:
+    def _load_supplier_templates(
+        self,
+        supplier_code: str,
+        log_types: list[str],
+        prebooking_status: PreBookingStatus = PreBookingStatus.available,
+    ) -> dict[str, dict]:
         templates: dict[str, dict] = {}
         supplier_dir = self.templates_dir / supplier_code
         if not supplier_dir.exists():
             raise FileNotFoundError(f"Templates not found for supplier {supplier_code}")
 
+        variants = _prebooking_template_variants(supplier_code)
         for log_type in log_types:
-            if log_type in OPTIONAL_TEMPLATE_LOG_TYPES:
-                path = supplier_dir / log_type / "v1.json"
-                if not path.exists():
+            filename = _template_filename(log_type, prebooking_status, variants)
+            path = supplier_dir / log_type / filename
+            if not path.exists():
+                if log_type in OPTIONAL_TEMPLATE_LOG_TYPES:
                     continue
-            else:
-                path = supplier_dir / log_type / "v1.json"
-                if not path.exists():
-                    raise FileNotFoundError(
-                        f"Missing required template: {supplier_code}/{log_type}/v1.json"
-                    )
+                # Never silently fall back to v1.json for a requested status — the
+                # scenario would provision an 'available' mock while reporting the
+                # status the caller asked for, which is worse than failing.
+                raise FileNotFoundError(
+                    f"Missing required template: {supplier_code}/{log_type}/{filename}"
+                )
             templates[log_type] = json.loads(path.read_text(encoding="utf-8"))
         return templates
 
@@ -173,7 +267,9 @@ class ScenarioEngine:
             else request.supplier_mutations.get(plugin.code)
         )
         instance_key = supplier_scenario.instance_key if supplier_scenario is not None else plugin.code
-        package_log_types = PACKAGE_MUTABLE_LOG_TYPES.get(plugin.code, {"Packages"})
+        # PACKAGE_MUTABLE_LOG_TYPES was a hardcoded per-code map; the suppliers table
+        # owns this now, so a UI-added supplier declares its own mutable log types.
+        package_log_types = _package_log_types(plugin.code)
 
         for log_type, template in templates.items():
             expectation = copy.deepcopy(template)
@@ -206,5 +302,5 @@ class ScenarioEngine:
             )
             if log_type in _OCCUPANCY_NORMALIZED_LOG_TYPES:
                 body = mutated[log_type].get("httpResponse", {}).get("body")
-                _force_adult_occupancy(body, SEARCH_ADULTS)
+                _force_adult_occupancy(body, package_spec.adults)
         return mutated

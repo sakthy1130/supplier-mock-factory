@@ -157,10 +157,10 @@ QUICKWIT_LOGS_API_URL=...
 ```bash
 # API
 cd backend && source ../.venv/bin/activate
-PYTHONPATH=. python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+PYTHONPATH=. python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
 
 # UI
-cd frontend && npm run dev   # :5173 → proxy :8000
+cd frontend && npm run dev   # :5144 → proxy :8001
 ```
 
 ---

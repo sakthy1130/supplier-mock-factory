@@ -35,7 +35,7 @@ Commit only if user asks.
 ## Verify workspace
 
 - Root should be `supplier-mock-factory/` OR monorepo with that folder open
-- Backend: `cd backend && PYTHONPATH=. uvicorn app.main:app --reload --port 8000`
+- Backend: `cd backend && PYTHONPATH=. uvicorn app.main:app --reload --port 8001`
 - Frontend: `cd frontend && npm run dev`
 
 ## After SMF is done (separate Enigma window)

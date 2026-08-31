@@ -77,6 +77,104 @@ class BackofficeClient:
         self._token = token
         return token
 
+    async def get_supplier_endpoints_supported(self) -> dict[str, dict[str, Any]]:
+        """{supplier code: endpointsSupported} from Backoffice's supplier records.
+
+        Read-only, and deliberately so: the supplier document is ONE row per supplier
+        per env, shared by every contract and every scenario. SMF only ever mutates
+        per-scenario objects, so this is surfaced for display rather than editing.
+
+        Codes can repeat (stg carries test EXP rows); the first non-test entry wins.
+        """
+        client = self._get_client()
+        response = await client.get(
+            f"{self.base_url}/api/suppliers",
+            headers=await self.auth_headers(),
+        )
+        if response.status_code != 200:
+            raise BackofficeError(
+                f"List suppliers failed status={response.status_code} body={response.text[:200]}"
+            )
+        payload = response.json()
+        rows = payload.get("data", payload) if isinstance(payload, dict) else payload
+        out: dict[str, dict[str, Any]] = {}
+        for row in rows or []:
+            code = str(row.get("code") or "").upper()
+            if not code or code in out:
+                continue
+            if "test" in str(row.get("name") or "").lower():
+                continue
+            supported = row.get("endpointsSupported")
+            if isinstance(supported, dict):
+                out[code] = supported
+        return out
+
+    async def get_supplier(self, supplier_id: str) -> dict[str, Any]:
+        client = self._get_client()
+        response = await client.get(
+            f"{self.base_url}/api/supplier/{supplier_id}",
+            headers=await self.auth_headers(),
+        )
+        if response.status_code != 200:
+            raise BackofficeError(
+                f"Get supplier failed status={response.status_code} id={supplier_id!r} "
+                f"body={response.text[:200]}"
+            )
+        return response.json()
+
+    async def set_supplier_prebooking(
+        self,
+        supplier_id: str,
+        enabled: bool,
+    ) -> Any:
+        """Flip endpointsSupported.prebooking on a supplier, returning its PREVIOUS value.
+
+        READ-MODIFY-WRITE of the whole document: Backoffice's PUT replaces the record,
+        so sending a partial body would drop every other field. Only this one key is
+        touched.
+
+        This record is SHARED — one per supplier per env, read by every contract and
+        every concurrent scenario. The previous value comes back so the caller can put
+        it right on teardown; losing it would leave the env permanently altered.
+        ``None`` means the key was absent, which is distinct from an explicit false and
+        must be restored as absence.
+        """
+        supplier = await self.get_supplier(supplier_id)
+        endpoints = supplier.get("endpointsSupported")
+        if not isinstance(endpoints, dict):
+            endpoints = {}
+            supplier["endpointsSupported"] = endpoints
+        previous = endpoints.get("prebooking")
+        # Backoffice stores these as the strings "true"/"false".
+        endpoints["prebooking"] = "true" if enabled else "false"
+        await self._put_supplier(supplier_id, supplier)
+        return previous
+
+    async def restore_supplier_prebooking(self, supplier_id: str, previous: Any) -> None:
+        """Put endpointsSupported.prebooking back, removing the key if it was absent."""
+        supplier = await self.get_supplier(supplier_id)
+        endpoints = supplier.get("endpointsSupported")
+        if not isinstance(endpoints, dict):
+            return
+        if previous is None:
+            endpoints.pop("prebooking", None)
+        else:
+            endpoints["prebooking"] = previous
+        await self._put_supplier(supplier_id, supplier)
+
+    async def _put_supplier(self, supplier_id: str, body: dict[str, Any]) -> None:
+        client = self._get_client()
+        response = await client.put(
+            f"{self.base_url}/api/supplier/{supplier_id}",
+            json=body,
+            headers=await self.auth_headers(),
+        )
+        if response.status_code not in (200, 201):
+            raise BackofficeError(
+                f"Update supplier failed status={response.status_code} id={supplier_id!r} "
+                f"body={response.text[:200]}"
+            )
+
     async def get_contract(self, contract_id: str) -> dict[str, Any]:
         client = self._get_client()
         response = await client.get(
@@ -84,7 +182,13 @@ class BackofficeClient:
             headers=await self.auth_headers(),
         )
         if response.status_code != 200:
-            raise BackofficeError(f"Get contract failed status={response.status_code}")
+            # Carry the id and the body: Backoffice explains itself there (a non-ObjectId
+            # id answers with "hexString has 24 characters"), and dropping it left the
+            # caller with a bare 500 and nothing to act on.
+            raise BackofficeError(
+                f"Get contract failed status={response.status_code} "
+                f"contract_id={contract_id!r} body={response.text}"
+            )
         return response.json()
 
     async def create_contract(self, body: dict[str, Any]) -> str:

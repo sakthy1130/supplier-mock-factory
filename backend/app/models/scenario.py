@@ -5,14 +5,45 @@ from enum import Enum
 from typing import Any, Optional
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic_core import core_schema
 
 
-class SupplierCode(str, Enum):
+class SupplierCode(str):
+    """A supplier code.
+
+    Was a closed Enum; supplier codes now live in the ``suppliers`` table so QA can
+    add one from the Suppliers screen without a code change. This stays a real type
+    (rather than a bare ``str``) so the built-in codes keep working as attributes —
+    ``SupplierCode.HBS``, ``SupplierCode("HBS")`` and ``.value`` all behave as before.
+    Whether a code is *configured* is checked where the config is actually needed
+    (see app/services/supplier_service.py), not by this type.
+    """
+
     HBS = "HBS"
     EXP = "EXP"
     RHK = "RHK"
     CHC = "CHC"
     EXT = "EXT"
+
+    @property
+    def value(self) -> str:
+        return str(self)
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, _source: Any, _handler: Any) -> core_schema.CoreSchema:
+        """Validate as a non-blank upper-case string, then wrap in SupplierCode."""
+        return core_schema.no_info_after_validator_function(
+            cls._validate,
+            core_schema.str_schema(min_length=1, max_length=8, strip_whitespace=True),
+            serialization=core_schema.plain_serializer_function_ser_schema(str),
+        )
+
+    @classmethod
+    def _validate(cls, value: str) -> "SupplierCode":
+        code = value.strip().upper()
+        if not code:
+            raise ValueError("supplier code must not be blank")
+        return cls(code)
 
 
 class AssignmentTarget(str, Enum):
@@ -33,6 +64,24 @@ class ProvisioningDepth(str, Enum):
     contract_only = "contract_only"  # mocks + contract
     contract_br = "contract_br"      # mocks + contract, contract assigned to the BR rules
     full = "full"                    # mocks + contract + a NEW apiKey (+ apiKey -> BR)
+
+
+class PreBookingStatus(str, Enum):
+    """Which PreBooking (price-check) response the supplier mock returns.
+
+    The values are Expedia's own wire strings, so the scenario field and the mock body
+    say the same thing and there is no translation layer. Each maps to a template file
+    beside the supplier's PreBooking template — ``available`` is the historical
+    ``v1.json``, so an unset scenario builds byte-identical mocks to before.
+
+    ``partial_sold_out`` is deliberately absent: on EXP that is a different API
+    (``POST /v3/properties/{id}/rooms``, per-room status) which the core only calls for
+    a 2+ room search, and SMF has no multi-room concept yet.
+    """
+
+    available = "available"
+    price_changed = "price_changed"
+    sold_out = "sold_out"
 
 
 class SBGroupConfiguration(BaseModel):
@@ -120,6 +169,94 @@ class PackageSpec(BaseModel):
             "Search/Packages (and PreBooking/CancellationPolicy where present)."
         ),
     )
+    prebooking_status: PreBookingStatus = Field(
+        default=PreBookingStatus.available,
+        description=(
+            "Which price-check response this supplier's PreBooking mock returns. "
+            "'available' (default) is today's behaviour. 'sold_out' also skips the "
+            "Booking/GetOrder/CancelOrder mocks — the supplier body carries no book "
+            "link, so the chain genuinely stops there."
+        ),
+    )
+    can_prebook: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Override the contract's canPrebook permission. Unset (default) leaves "
+            "whatever the reference contract carries. Affects the PERMISSION only — "
+            "use prebook_url to control the URL."
+        ),
+    )
+    supplier_prebooking: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Override endpointsSupported.prebooking on the SUPPLIER record. Unset "
+            "leaves it alone. WARNING: that record is shared by every contract and "
+            "every concurrent scenario in the env — while this is off, prebooking is "
+            "off for all of them. SMF restores the previous value on teardown."
+        ),
+    )
+    prebook_url: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Whether the contract gets overridePrebookUrl. Unset (default) writes it, "
+            "as before. False omits it, leaving the contract with no prebook override "
+            "while the PreBooking mock is still registered. Independent of "
+            "can_prebook, so permission-on/url-off and permission-off/url-on are both "
+            "expressible."
+        ),
+    )
+    prebooking_changed_price: Optional[float] = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Only with prebooking_status='price_changed': the price the price-check "
+            "comes back with, in supplier currency. Search/Packages keep the package "
+            "price; PreBooking, Booking and GetOrder use this one."
+        ),
+    )
+    # EXP explicit pricing. `prices` IS the gross total (totals.inclusive) — there is no
+    # separate total field, because two inputs for one number only invited disagreement.
+    # What `prices` alone cannot express is the split: EXP runs with no business rules, so
+    # the markup a package carries comes from the payload itself
+    # (occupancy_pricing.totals.marketing_fee) and was whatever ratio the captured template
+    # happened to have. Both amounts are in supplier currency, both or neither per package,
+    # and price must equal original_price_with_vat + markup.
+    original_price_with_vat: list[float] = Field(
+        default_factory=list,
+        description="EXP only: pre-markup price per package, i.e. the package price minus markup.",
+    )
+    markup: list[float] = Field(
+        default_factory=list,
+        description="EXP only: markup AMOUNT per package in supplier currency (totals.marketing_fee).",
+    )
+    # Occupancy the mocked rates advertise. Derby BTS drops every rate whose occupancy
+    # does not match the search request (adultCount + childCount + childAges), returning
+    # zero results and no error, so this has to line up with how the search is run.
+    # Defaults to 2 adults because that is the default search.
+    adults: int = Field(default=2, ge=1, le=10, description="Adults per room the rates are for")
+    child_ages: list[int] = Field(
+        default_factory=list,
+        description="Age per child; length is the child count. Empty means adults only.",
+    )
+    room_count: int = Field(default=1, ge=1, le=8, description="Rooms the rates are for")
+    supplier_room_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Derby room ids valid for this hotel, resolved from the adapter's room "
+            "catalogue before the mock is built. Not user input: the orchestrator fills "
+            "it for Derby suppliers (HIL, CHC), and it is empty for everyone else."
+        ),
+    )
+
+    @property
+    def room_criteria(self) -> dict[str, Any]:
+        """Derby BTS ``roomCriteria`` for this spec's occupancy."""
+        return {
+            "roomCount": self.room_count,
+            "adultCount": self.adults,
+            "childCount": len(self.child_ages),
+            "childAges": list(self.child_ages),
+        }
 
     @model_validator(mode="before")
     @classmethod
@@ -152,6 +289,103 @@ class PackageSpec(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def _validate_prebooking_status(self) -> "PackageSpec":
+        """The changed price and the status travel together, and sold_out cannot book.
+
+        Each of these is rejected rather than quietly ignored: a QA who typed a changed
+        price and saw it do nothing would have no way to tell it was dropped.
+        """
+        is_price_changed = self.prebooking_status is PreBookingStatus.price_changed
+        if is_price_changed and self.prebooking_changed_price is None:
+            raise ValueError(
+                "prebooking_status='price_changed' needs prebooking_changed_price — "
+                "the price the check comes back with, in supplier currency"
+            )
+        if not is_price_changed and self.prebooking_changed_price is not None:
+            raise ValueError(
+                f"prebooking_changed_price only applies to prebooking_status="
+                f"'price_changed', not '{self.prebooking_status.value}'"
+            )
+        if self.can_prebook is False and self.prebooking_status is not PreBookingStatus.available:
+            raise ValueError(
+                f"can_prebook=false means the supplier never price-checks, so "
+                f"prebooking_status='{self.prebooking_status.value}' can never be "
+                "observed — pick one or the other"
+            )
+        if self.prebook_url is False and self.prebooking_status is not PreBookingStatus.available:
+            raise ValueError(
+                f"prebook_url=false leaves the contract with no prebook override, so "
+                f"prebooking_status='{self.prebooking_status.value}' is not reachable "
+                "through it — pick one or the other"
+            )
+        # sold_out USED to reject booking_package_index, on the grounds that a scenario
+        # which stops at PreBooking has nothing to book. It is allowed now because the
+        # index answers a second question the sold-out case needs: WHICH package went
+        # away. EXT expresses sold_out structurally, by dropping that one accommodation
+        # from the price check, and without an index it could not know which. Read the
+        # field as "the package under test" rather than "the package that gets booked".
+        # No booking mock is built either way — scenario_engine drops the whole booking
+        # flow whenever the status is sold_out, index or not.
+        return self
+
+    @model_validator(mode="after")
+    def _validate_explicit_pricing(self) -> "PackageSpec":
+        """original_price_with_vat and markup arrive together and must add up to the price.
+
+        The package price is the gross total, so the split has to reconcile with it.
+        Rejected rather than back-solved: a set that does not add up means one of the
+        numbers was mistyped, and silently recomputing it would mock a price the tester did
+        not ask for. The 0.01 tolerance is for float arithmetic on 2-decimal money.
+        """
+        if not (self.original_price_with_vat or self.markup):
+            return self
+
+        lengths = {
+            "original_price_with_vat": len(self.original_price_with_vat),
+            "markup": len(self.markup),
+        }
+        missing = [name for name, length in lengths.items() if length == 0]
+        if missing:
+            raise ValueError(
+                "original_price_with_vat and markup must be given together; "
+                f"missing: {', '.join(sorted(missing))}"
+            )
+        if len(set(lengths.values())) != 1:
+            raise ValueError(
+                f"original_price_with_vat and markup must be the same length, got {lengths}"
+            )
+        if lengths["markup"] > len(self.prices):
+            raise ValueError(
+                f"original_price_with_vat and markup cover {lengths['markup']} package(s) "
+                f"but only {len(self.prices)} price(s) were given"
+            )
+
+        for index, (original, markup) in enumerate(
+            zip(self.original_price_with_vat, self.markup)
+        ):
+            price = self.prices[index]
+            if min(original, markup) < 0:
+                raise ValueError(f"package {index + 1}: prices and markup must not be negative")
+            if abs(price - (original + markup)) >= 0.01:
+                raise ValueError(
+                    f"package {index + 1}: price {price} must equal "
+                    f"original_price_with_vat {original} + markup {markup} "
+                    f"(= {round(original + markup, 2)})"
+                )
+        return self
+
+    @property
+    def has_explicit_pricing(self) -> bool:
+        """Whether this spec splits its price into originalPriceWithVAT + markup.
+        The validator guarantees both are present, aligned and reconciled when either is."""
+        return bool(self.markup)
+
+
+def _trim_number(value: float) -> str:
+    """10.0 -> "10", 12.5 -> "12.5" — BR shows these verbatim, so no stray decimals."""
+    return str(int(value)) if value == int(value) else str(value)
+
 
 def instance_key_for(supplier_code: str, instance: int) -> str:
     """Key that identifies one supplier ENTRY in a scenario.
@@ -168,7 +402,7 @@ def instance_key_for(supplier_code: str, instance: int) -> str:
 
 
 class SupplierScenario(BaseModel):
-    code: SupplierCode
+    code: SupplierCode = Field(description="Supplier code as configured in the suppliers table")
     # Assigned server-side by ScenarioRequest._assign_supplier_instances: 1 for the
     # first entry of a code, 2 for the second, and so on. Callers do not set it.
     instance: int = Field(default=1, ge=1, description="Occurrence of this supplier code (1-based)")
@@ -196,6 +430,7 @@ class SupplierScenario(BaseModel):
     @property
     def instance_key(self) -> str:
         return instance_key_for(self.code.value, self.instance)
+
 
 
 class SupplierMutation(BaseModel):
@@ -266,6 +501,23 @@ class ScenarioRequest(BaseModel):
             "regardless of this flag; it only gates the plain scenario-wizard flow."
         ),
     )
+    # BR markup output values for this scenario. Every scenario used to get 10% static and
+    # 15%-25% dynamic, so testing another markup meant editing source. Unset keeps those
+    # defaults (see business_rules.DEFAULT_STATIC_MARKUP / DEFAULT_DYNAMIC_MARKUP).
+    static_markup: Optional[str] = Field(
+        default=None,
+        description=(
+            "Static Markup (rule 3) output value, e.g. '10' or '10%'. Normalized to '10%'. "
+            "Omit for the default 10%."
+        ),
+    )
+    dynamic_markup: Optional[str] = Field(
+        default=None,
+        description=(
+            "Dynamic Markup (rule 4) output value, e.g. '10%-15%' or '10-15'. Normalized to "
+            "'10%-15%'. Omit for the default 15%-25%."
+        ),
+    )
     template_id: Optional[str] = Field(
         default=None,
         description=(
@@ -274,6 +526,43 @@ class ScenarioRequest(BaseModel):
             "Used to look up per-template child BR conditions in field-maps/br_child_conditions.json."
         ),
     )
+
+    @field_validator("static_markup", "dynamic_markup", mode="before")
+    @classmethod
+    def _normalize_markup(cls, value: Any) -> Any:
+        """Accept a bare number or a range, with or without the % signs, and canonicalize.
+
+        BR stores these as '10%' and '15%-25%'. QAs type them either way, so `10`, `10%`,
+        `10-15` and `10%-15%` all land on the shape BR wants rather than being rejected for
+        punctuation. Blank means "not asked for" — the default applies.
+        """
+        if value is None:
+            return None
+        text = str(value).strip().replace(" ", "")
+        if not text:
+            return None
+        parts = text.split("-")
+        if len(parts) > 2:
+            raise ValueError(
+                f"markup {value!r} is not a percentage or percentage range "
+                "(expected e.g. '10' or '10%-15%')"
+            )
+        numbers: list[float] = []
+        for part in parts:
+            number = part[:-1] if part.endswith("%") else part
+            try:
+                parsed = float(number)
+            except ValueError:
+                raise ValueError(
+                    f"markup {value!r} is not a percentage or percentage range "
+                    "(expected e.g. '10' or '10%-15%')"
+                ) from None
+            if parsed < 0:
+                raise ValueError(f"markup {value!r} must not be negative")
+            numbers.append(parsed)
+        if len(numbers) == 2 and numbers[0] > numbers[1]:
+            raise ValueError(f"markup range {value!r} is reversed — low bound must come first")
+        return "-".join(f"{_trim_number(n)}%" for n in numbers)
 
     @model_validator(mode="after")
     def _assign_supplier_instances(self) -> "ScenarioRequest":
@@ -310,6 +599,13 @@ class ScenarioRequest(BaseModel):
             raise ValueError(
                 "existing_api_key only applies to provisioning_depth "
                 "'contract_only' or 'contract_br' — 'full' creates its own apiKey."
+            )
+        if self.provisioning_depth is ProvisioningDepth.contract_only and (
+            self.static_markup or self.dynamic_markup
+        ):
+            raise ValueError(
+                "static_markup / dynamic_markup need BR provisioning — use "
+                "provisioning_depth 'full' or 'contract_br'."
             )
         return self
 
@@ -388,6 +684,10 @@ class ScenarioBundle(BaseModel):
     supplier_hotel_ids: dict[str, str] = Field(default_factory=dict)
     crawla_export: Optional[dict[str, Any]] = None
     br_setup: Optional[dict[str, Any]] = None
+    # {supplier code: previous endpointsSupported.prebooking} for scenarios that
+    # changed the shared supplier record. None means the key was absent and must be
+    # restored as absence. Teardown reads this; losing it leaves the env altered.
+    supplier_prebooking_restore: Optional[dict[str, Any]] = None
     mock_server_base_url: Optional[str] = None
     expectation_count: int = 0
     error_message: Optional[str] = None

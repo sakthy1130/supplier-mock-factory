@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { CrawlaScenarioRunResult } from '../types/crawla'
 import type { ScenarioBundle } from '../types/scenario'
+import type { RunMode } from '../api/scenarios'
 
 interface Props {
   bundle: ScenarioBundle
   onRefreshBookingIds?: () => void
   onTeardown?: () => void
-  onRunCrawlaScenario?: () => Promise<void>
+  onRunCrawlaScenario?: (mode: RunMode) => Promise<void>
+  onSaveAsTemplate?: () => void
   onToggleLogs?: () => void
   crawlaRunResult?: CrawlaScenarioRunResult | null
   showLogs?: boolean
@@ -42,6 +44,26 @@ function CopyRow({
   )
 }
 
+function CopyText({ label, value, button = 'Copy' }: { label: string; value: string; button?: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    await navigator.clipboard.writeText(value)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <div className="json-panel">
+      <div className="json-panel-head">
+        <span className="copy-label">{label}</span>
+        <button type="button" className="btn tiny ghost" onClick={copy}>
+          {copied ? '✓' : button}
+        </button>
+      </div>
+      <pre>{value}</pre>
+    </div>
+  )
+}
+
 function CopyJson({ label, value }: { label: string; value: Record<string, unknown> }) {
   const [copied, setCopied] = useState(false)
 
@@ -69,6 +91,7 @@ export function ScenarioResult({
   onRefreshBookingIds,
   onTeardown,
   onRunCrawlaScenario,
+  onSaveAsTemplate,
   onToggleLogs,
   crawlaRunResult,
   showLogs,
@@ -78,11 +101,18 @@ export function ScenarioResult({
   const [showCredentials, setShowCredentials] = useState(false)
   const [showScenarioInfo, setShowScenarioInfo] = useState(false)
   const [showRunDetails, setShowRunDetails] = useState(false)
+  const [showApiRequest, setShowApiRequest] = useState(false)
+
+  // Booking ids only exist when the Booking/GetOrder/CancelOrder mocks were built —
+  // i.e. a package was picked for booking and PreBooking is not sold_out. Without
+  // them E2E has nothing to drive, so the button says why instead of failing later.
+  const canRunE2e = Object.keys(bundle.booking_ids ?? {}).length > 0
 
   useEffect(() => {
     setShowCredentials(false)
     setShowScenarioInfo(false)
     setShowRunDetails(false)
+    setShowApiRequest(false)
   }, [bundle.namespace, bundle.status])
 
   useEffect(() => {
@@ -370,18 +400,93 @@ export function ScenarioResult({
         </>
       )}
 
-      {bundle.status === 'READY' && (onRunCrawlaScenario || onRefreshBookingIds || onTeardown) && (
+      {bundle.request && (
+        <>
+          <div className="result-disclosure" style={{ marginTop: '1rem' }}>
+            <button
+              type="button"
+              className="btn ghost result-disclosure-toggle"
+              onClick={() => setShowApiRequest((current) => !current)}
+              aria-expanded={showApiRequest}
+            >
+              <span className={`result-disclosure-arrow ${showApiRequest ? 'open' : ''}`}>▾</span>
+              {showApiRequest ? 'Hide API request' : 'Show API request'}
+            </button>
+          </div>
+
+          {showApiRequest && (
+            <>
+              <div className="data-section-title">API request</div>
+              <p className="hint" style={{ marginTop: '-0.4rem' }}>
+                What this scenario was provisioned from. Re-post it as-is to rebuild the
+                same scenario — change <code>namespace</code> first, it has to be unique.
+                Or use it as the starting point for a variant.
+              </p>
+              <CopyJson
+                label="POST /api/scenarios"
+                value={bundle.request as Record<string, unknown>}
+              />
+              <CopyText
+                label="curl"
+                button="Copy curl"
+                value={
+                  `curl -X POST http://localhost:8001/api/scenarios \\\n` +
+                  `  -H 'Content-Type: application/json' \\\n` +
+                  `  -H 'X-SMF-Env: ${bundle.env ?? 'dev'}' \\\n` +
+                  `  -d '${JSON.stringify(bundle.request)}'`
+                }
+              />
+            </>
+          )}
+        </>
+      )}
+
+      {bundle.status === 'READY' &&
+        (onRunCrawlaScenario || onRefreshBookingIds || onTeardown || onSaveAsTemplate) && (
         <div className="actions">
           {onRunCrawlaScenario && (
-            <button type="button" className="btn" disabled={actionBusy || runBusy} onClick={onRunCrawlaScenario}>
-              {runBusy ? 'Running…' : 'Run scenario'}
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn secondary"
+                disabled={actionBusy || runBusy}
+                onClick={() => onRunCrawlaScenario('packages')}
+                title="Drive the core through search → packages and stop there"
+              >
+                {runBusy ? 'Running…' : '▸ Run till packages'}
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={actionBusy || runBusy || !canRunE2e}
+                onClick={() => onRunCrawlaScenario('e2e')}
+                title={
+                  canRunE2e
+                    ? 'Drive the core all the way through book → poll → getOrder'
+                    : 'No package was selected for booking when this scenario was created, ' +
+                      'so no Booking/GetOrder mocks exist. Re-create it and pick a Book package.'
+                }
+              >
+                {runBusy ? 'Running…' : '⏵ Run E2E (till getOrder)'}
+              </button>
+            </>
           )}
           {crawlaRunResult && (crawlaRunResult.logs.length > 0 || crawlaRunResult.error_message) ? (
             <button type="button" className="btn secondary" onClick={onToggleLogs}>
               {showLogs ? 'Hide logs' : 'View logs'}
             </button>
           ) : null}
+          {onSaveAsTemplate && (
+            <button
+              type="button"
+              className="btn secondary"
+              disabled={actionBusy || runBusy}
+              onClick={onSaveAsTemplate}
+              title="Save this scenario's suppliers, packages and PreBooking settings as a reusable template"
+            >
+              💾 Save as template
+            </button>
+          )}
           {onRefreshBookingIds && (
             <button type="button" className="btn secondary" disabled={actionBusy} onClick={onRefreshBookingIds}>
               ↻ Refresh booking IDs

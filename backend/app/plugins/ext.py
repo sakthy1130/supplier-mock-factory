@@ -5,14 +5,16 @@ from __future__ import annotations
 import uuid
 
 from app.core.cancel_policy import FREE_CANCEL_DAYS_BEFORE_CHECKIN
-from app.models.scenario import PackageSpec
+from app.models.scenario import PackageSpec, PreBookingStatus
 from app.plugins.base import SupplierMockPlugin
+from app.plugins.prebooking import prebooking_effective_price
 from app.plugins.room_names import normalized_room_basis
 from app.plugins.json_utils import deep_copy, update_fields_recursive
 
 LOG_TYPES = [
     "Search",
     "Packages",
+    "PreBooking",
     "Booking",
     "GetOrder",
     "CancelOrder",
@@ -78,6 +80,8 @@ class ExtMockPlugin(SupplierMockPlugin):
         accommodation id is never echoed, so only the response values need
         aligning (no id reuse required).
         """
+        self._apply_prebooking(expectations_by_type, spec)
+
         idx = spec.booking_package_index
         if idx is None:
             return
@@ -129,6 +133,69 @@ class ExtMockPlugin(SupplierMockPlugin):
             inner = expectation.get("httpResponse", {}).get("body", {}).get("body")
             if isinstance(inner, dict):
                 _ext_apply_values(inner, values)
+
+    def _apply_prebooking(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
+        """Build the price-check body from the finished Packages body.
+
+        Extranet has no separate price-check API — the price check re-reads distribution
+        details — so the prebook body is the Packages body narrowed to the ONE rate being
+        booked. A price check asks "is this rate still available at this price", not "what
+        else have you got", and answering with the whole availability list would let the
+        core settle on a package that was never the one under test.
+
+        It is copied from the built Packages body rather than rebuilt: _mutate_accommodations
+        mints a fresh uuid4 per accommodation per call, and the id is the only thing tying
+        the quote back to the offered rate.
+
+        Each status is then structural, because the Extranet body has no status field:
+          available     -> the selected rate, at the price Packages offered
+          price_changed -> the selected rate, repriced
+          sold_out      -> no rate at all; the one asked about is gone
+        """
+        prebook = expectations_by_type.get("PreBooking")
+        packages = expectations_by_type.get("Packages")
+        if not isinstance(prebook, dict) or not isinstance(packages, dict):
+            return
+        packages_body = packages.get("httpResponse", {}).get("body")
+        if not isinstance(packages_body, dict):
+            return
+
+        body = deep_copy(packages_body)
+        prebook.setdefault("httpResponse", {})["body"] = body
+
+        hotel = body.get("body")
+        hotel = hotel[0] if isinstance(hotel, list) and hotel else None
+        if not isinstance(hotel, dict):
+            return
+        accommodations = hotel.get("accommodations")
+        if not isinstance(accommodations, list):
+            return
+
+        # One accommodation per package, built in order by _mutate_accommodations, so the
+        # booking index selects directly. Default to the first when none was chosen.
+        idx = spec.booking_package_index if spec.booking_package_index is not None else 0
+        if idx >= len(accommodations):
+            return
+
+        status = spec.prebooking_status
+        if status is PreBookingStatus.sold_out:
+            hotel["accommodations"] = []
+            return
+
+        selected = accommodations[idx]
+        hotel["accommodations"] = [selected]
+
+        if status is not PreBookingStatus.price_changed:
+            return
+        changed = prebooking_effective_price(spec, _normalized_prices(spec))
+        if changed is None or not isinstance(selected, dict):
+            return
+        _apply_stay_price(
+            selected,
+            changed,
+            str(selected.get("checkInDate") or ""),
+            int(selected.get("nights") or 0),
+        )
 
     def _update_currency(self, hotel: dict, currency: str) -> None:
         """Update currency in all accommodations and distributions."""
@@ -185,13 +252,6 @@ class ExtMockPlugin(SupplierMockPlugin):
             accommodation["checkOutDate"] = check_out
             accommodation["nights"] = nights
 
-            # Update price fields (UI passes TOTAL stay price, not per-night)
-            stay_total_price = prices[index]
-
-            # Accommodation level: use total stay price as-is
-            accommodation["initialPrice"] = stay_total_price
-            accommodation["totalPrice"] = stay_total_price
-            accommodation["netPrice"] = stay_total_price
             accommodation["noRefundable"] = not refundable[index]
 
             # Update distributions (rooms in EXT terminology)
@@ -200,28 +260,6 @@ class ExtMockPlugin(SupplierMockPlugin):
                 template_dist = deep_copy(distributions[0])
                 template_dist["board"] = meals[index]
                 template_dist["roomName"] = room_names[index]
-
-                # Update price details in distribution (use total stay price)
-                price_details = template_dist.get("priceDetails", {})
-                if isinstance(price_details, dict):
-                    price_details["initialPrice"] = stay_total_price
-                    price_details["netPrice"] = stay_total_price
-                    price_details["totalPrice"] = stay_total_price
-
-                # Calculate per-night price by dividing total by nights
-                per_night_price = stay_total_price / nights if nights > 0 else stay_total_price
-
-                # Update per-night prices (one entry per night)
-                from datetime import timedelta
-                per_night_prices = {}
-                total_per_night_prices = {}
-                for i in range(nights):
-                    night_date = (check_in_dt + timedelta(days=i)).strftime("%Y-%m-%d")
-                    per_night_prices[night_date] = per_night_price
-                    total_per_night_prices[night_date] = per_night_price
-
-                template_dist["netPricePerNight"] = per_night_prices
-                template_dist["totalPricePerNight"] = total_per_night_prices
 
                 # Refundability follows the real EXT convention:
                 #   refundable     -> noRefundable:false + a conditions[] cancellation
@@ -237,6 +275,9 @@ class ExtMockPlugin(SupplierMockPlugin):
 
                 accommodation["distributions"] = [template_dist]
 
+            # UI passes the TOTAL stay price, not per-night.
+            _apply_stay_price(accommodation, prices[index], check_in, nights)
+
             new_accommodations.append(accommodation)
 
         hotel["accommodations"] = new_accommodations
@@ -244,6 +285,46 @@ class ExtMockPlugin(SupplierMockPlugin):
     @property
     def log_types(self) -> list[str]:
         return LOG_TYPES
+
+
+def _apply_stay_price(
+    accommodation: dict,
+    stay_total: float,
+    check_in: str,
+    nights: int,
+) -> None:
+    """Price one accommodation from a TOTAL stay price.
+
+    Extranet carries the same money in three shapes — the accommodation total, the
+    distribution's priceDetails, and a per-night map keyed by date — and all three have
+    to agree or the adapter reads a different number depending on where it looks. One
+    function so the price check reprices exactly the way the package was priced.
+    """
+    from datetime import datetime, timedelta
+
+    accommodation["initialPrice"] = stay_total
+    accommodation["totalPrice"] = stay_total
+    accommodation["netPrice"] = stay_total
+
+    distributions = accommodation.get("distributions")
+    if not isinstance(distributions, list):
+        return
+    per_night = stay_total / nights if nights > 0 else stay_total
+    check_in_dt = datetime.strptime(check_in, "%Y-%m-%d")
+    nightly = {
+        (check_in_dt + timedelta(days=i)).strftime("%Y-%m-%d"): per_night
+        for i in range(nights)
+    }
+    for distribution in distributions:
+        if not isinstance(distribution, dict):
+            continue
+        price_details = distribution.get("priceDetails")
+        if isinstance(price_details, dict):
+            price_details["initialPrice"] = stay_total
+            price_details["netPrice"] = stay_total
+            price_details["totalPrice"] = stay_total
+        distribution["netPricePerNight"] = dict(nightly)
+        distribution["totalPricePerNight"] = dict(nightly)
 
 
 def _ext_refundable_conditions(check_in: str, check_out: str) -> list[dict]:

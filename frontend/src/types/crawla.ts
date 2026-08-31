@@ -78,6 +78,13 @@ export interface CrawlaScenarioRequest {
   bucket: CrawlaBucket
   search: CrawlaPricePanel
   packages: CrawlaPackagesPanel
+  /**
+   * BR markup output values (rules 3 and 4). Crawla scenarios always provision BR, so
+   * without these they are stuck on the defaults 10% / 15%-25%. Sent as typed; the backend
+   * normalizes `10` → `10%` and `10-15` → `10%-15%`. Omit for the defaults.
+   */
+  static_markup?: string
+  dynamic_markup?: string
 }
 
 export interface CrawlaScenarioRunResult {

@@ -54,7 +54,9 @@ def init_db() -> None:
     """Create indexes. Mongo makes collections on first write, so there is nothing
     else to create — and no column migrations, unlike the previous SQLite schema."""
     database = get_database()
-    scenarios_name, templates_name = collection_names(get_settings().mongo_collection_prefix)
+    scenarios_name, templates_name, suppliers_name = collection_names(
+        get_settings().mongo_collection_prefix
+    )
     try:
         # namespace uniqueness used to be a SQLite UNIQUE constraint. create_pending
         # pre-checks and raises 409, but the index is what actually closes the race.
@@ -64,10 +66,21 @@ def init_db() -> None:
         database[scenarios_name].create_index([("env", ASCENDING)], name="ix_env")
         database[scenarios_name].create_index([("created_at", DESCENDING)], name="ix_created_at")
         database[templates_name].create_index([("created_at", DESCENDING)], name="ix_created_at")
+        # (code, env) was a SQLite UNIQUE constraint; dev and stg hold a row each for
+        # the same code, so the index is on the pair rather than the code alone.
+        database[suppliers_name].create_index(
+            [("code", ASCENDING), ("env", ASCENDING)], unique=True, name="uq_supplier_code_env"
+        )
     except PyMongoError:
         # A missing index degrades performance and the namespace race guard, but must
         # not stop the app from booting — surface it loudly instead.
         logger.exception("Failed to create MongoDB indexes on db=%s", database.name)
+
+    # Built-in suppliers are seeded from constants on first boot; existing rows are left
+    # alone so edits made on the Suppliers screen survive a restart.
+    from app.db.seed_suppliers import seed_suppliers
+
+    seed_suppliers()
 
 
 def ping() -> None:

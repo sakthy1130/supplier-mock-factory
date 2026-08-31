@@ -1,5 +1,6 @@
 """Scenario REST API — P5 SQLite + background jobs."""
 
+from enum import Enum
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -80,9 +81,28 @@ def get_scenario(scenario_id: str, db: MongoStore = Depends(get_db)) -> Scenario
     return scenario_service.record_to_bundle(scenario_service.get_record(db, scenario_id))
 
 
+class RunMode(str, Enum):
+    """How far a run drives the core.
+
+    Chosen per RUN, not per scenario: the same READY scenario can be exercised to
+    packages now and end-to-end afterwards without re-provisioning.
+    """
+
+    packages = "packages"  # search -> packages, stop there
+    e2e = "e2e"            # ...then book -> poll -> getOrder
+
+
 @router.post("/{scenario_id}/run", response_model=CrawlaRunScenarioResponse)
 async def run_scenario(
     scenario_id: str,
+    mode: RunMode = Query(
+        RunMode.e2e,
+        description=(
+            "How far to drive the core. 'e2e' (default) books the package the "
+            "scenario selected and continues to getOrder; 'packages' stops after "
+            "packages even when a package was selected."
+        ),
+    ),
     db: MongoStore = Depends(get_db),
 ) -> CrawlaRunScenarioResponse:
     """Fire a real search + packages against the core app with this scenario's apiKey.
@@ -100,6 +120,9 @@ async def run_scenario(
     # When the scenario picked a package for the booking flow, drive core all the
     # way through book → getOrder and verify the retrieved order matches it.
     booking_selection = _booking_selection(bundle.request)
+    stopped_early = mode is RunMode.packages and booking_selection is not None
+    if mode is RunMode.packages:
+        booking_selection = None
 
     # Pin to the scenario's own env — its apiKey/contracts only exist there,
     # regardless of what env is currently selected in the UI.
@@ -114,7 +137,13 @@ async def run_scenario(
             )
 
     result.scenario_id = scenario_id
-    if booking_selection is None:
+    if stopped_early:
+        # The mocks are there; this run just chose not to use them.
+        result.booking_message = (
+            "Ran to packages only, as asked. This scenario does have a package "
+            "selected for booking — run it end-to-end to exercise book → getOrder."
+        )
+    elif booking_selection is None:
         result.booking_message = (
             "No package was selected for the booking flow when this scenario was "
             "created, so only search + packages ran (no Booking/GetOrder mocks exist). "

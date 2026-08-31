@@ -45,12 +45,14 @@ def _ready_bundle(namespace: str) -> ScenarioBundle:
 
 def test_env_context_normalize_and_defaults():
     assert DEFAULT_ENV == "dev"
-    assert set(SUPPORTED_ENVS) == {"dev", "stg"}
+    assert set(SUPPORTED_ENVS) == {"dev", "stg", "odis"}
     assert normalize_env(None) == "dev"
     assert normalize_env("") == "dev"
     assert normalize_env("bogus") == "dev"
     assert normalize_env("STG") == "stg"
     assert normalize_env(" dev ") == "dev"
+    assert normalize_env("ODIS") == "odis"
+    assert normalize_env(" odis ") == "odis"
 
 
 def test_settings_layering_is_distinct_per_env(tmp_path, monkeypatch):
@@ -59,6 +61,7 @@ def test_settings_layering_is_distinct_per_env(tmp_path, monkeypatch):
     (tmp_path / ".env.shared").write_text("CRAWLA_API_KEY=shared-key\n")
     (tmp_path / ".env.dev").write_text("MOCK_SERVER_URL=http://mock-dev.example\n")
     (tmp_path / ".env.stg").write_text("MOCK_SERVER_URL=http://mock-stg.example\n")
+    (tmp_path / ".env.odis").write_text("MOCK_SERVER_URL=http://mock-odis.example\n")
     monkeypatch.setattr(config_module, "BACKEND_DIR", tmp_path)
     monkeypatch.setattr(config_module, "BACKEND_ENV_FILE", tmp_path / ".env")
     monkeypatch.delenv("MOCK_SERVER_URL", raising=False)
@@ -67,12 +70,15 @@ def test_settings_layering_is_distinct_per_env(tmp_path, monkeypatch):
     try:
         dev = get_settings("dev")
         stg = get_settings("stg")
+        odis = get_settings("odis")
         assert dev.env == "dev"
         assert stg.env == "stg"
+        assert odis.env == "odis"
         assert dev.mock_server_url == "http://mock-dev.example"
         assert stg.mock_server_url == "http://mock-stg.example"
-        # shared values (from .env.shared) are inherited by both
-        assert dev.crawla_api_key == stg.crawla_api_key == "shared-key"
+        assert odis.mock_server_url == "http://mock-odis.example"
+        # shared values (from .env.shared) are inherited by every env
+        assert dev.crawla_api_key == stg.crawla_api_key == odis.crawla_api_key == "shared-key"
     finally:
         clear_settings_cache()  # don't leak throwaway-path settings into other tests
 
@@ -80,6 +86,7 @@ def test_settings_layering_is_distinct_per_env(tmp_path, monkeypatch):
 def test_health_reports_resolved_env(api_client):
     assert api_client.get("/health").json()["env"] == "dev"
     assert api_client.get("/health", headers={"X-SMF-Env": "stg"}).json()["env"] == "stg"
+    assert api_client.get("/health", headers={"X-SMF-Env": "odis"}).json()["env"] == "odis"
     # unknown header value falls back to default, never 500s
     assert api_client.get("/health", headers={"X-SMF-Env": "prod"}).json()["env"] == "dev"
 
@@ -87,9 +94,14 @@ def test_health_reports_resolved_env(api_client):
 def test_api_env_endpoint(api_client):
     data = api_client.get("/api/env").json()
     assert data["default"] == "dev"
-    assert set(data["available"]) == {"dev", "stg"}
+    assert set(data["available"]) == {"dev", "stg", "odis"}
     assert data["current"] == "dev"
     assert api_client.get("/api/env", headers={"X-SMF-Env": "stg"}).json()["current"] == "stg"
+    assert api_client.get("/api/env", headers={"X-SMF-Env": "odis"}).json()["current"] == "odis"
+    # options carry a display label per env so the UI does not hardcode the list
+    labels = {o["code"]: o["label"] for o in data["options"]}
+    assert labels["odis"] == "ODIS Staging"
+    assert set(labels) == set(data["available"])
 
 
 @pytest.mark.usefixtures("api_client")
@@ -186,3 +198,188 @@ class TestScenarioEnvTagging:
 
         remaining_stg = api_client.get("/api/scenarios", headers={"X-SMF-Env": "stg"}).json()
         assert any(item["namespace"] == "env-teardown-stg" for item in remaining_stg)
+
+
+def test_odis_supplier_ids_are_its_own_never_borrowed_from_another_env():
+    """ODIS is a separate tenant, so no other env's supplier _id may leak into it.
+
+    Seeding a supplier with another env's Backoffice _id is what NPE'd
+    hotel-connectivity-core for dev (see seed_suppliers._BACKOFFICE_IDS). Every ODIS
+    _id was read off the ODIS Backoffice and every one of them differs from stg's —
+    this pins that they stay distinct.
+    """
+    from app.db.seed_suppliers import SEED_ENVS, _BACKOFFICE_IDS
+
+    assert "odis" in SEED_ENVS
+    odis = _BACKOFFICE_IDS["odis"]
+    assert set(odis) == {"HBS", "EXP", "EXT", "HIL"}
+
+    # RHK has an ODIS supplier record but no ODIS contract, and CHC has neither.
+    # Seeding either would provision against a missing reference contract.
+    assert "RHK" not in odis and "CHC" not in odis
+
+    for env in ("stg", "dev"):
+        for code, ids in odis.items():
+            other = _BACKOFFICE_IDS[env].get(code)
+            if other is not None:
+                assert ids[0] != other[0], f"{code} reuses {env}'s supplier _id on odis"
+
+    # Every ODIS supplier pins its reference contract in git rather than relying on a
+    # gitignored env var, so a fresh machine cannot provision a wrong contract.
+    for code, ids in odis.items():
+        assert len(ids) == 3 and ids[2], f"{code} on odis has no pinned reference contract"
+
+
+def test_odis_runs_static_markup_only():
+    """ODIS has no DynamicMarkup rule, so rule 4 must never be built for it."""
+    from app.integrations.business_rules import (
+        DYNAMIC_MARKUP_RULE_ID,
+        STATIC_MARKUP_RULE_ID,
+        dynamic_markup_enabled,
+        markup_rules,
+    )
+
+    assert dynamic_markup_enabled("dev") and dynamic_markup_enabled("stg")
+    assert not dynamic_markup_enabled("odis")
+
+    odis = markup_rules(env="odis")
+    assert [r.rule_id for r in odis] == [STATIC_MARKUP_RULE_ID]
+
+    # ...and the other envs are untouched: still the static+dynamic pair, in order.
+    for env in ("dev", "stg", None):
+        pair = markup_rules(env=env)
+        assert [r.rule_id for r in pair] == [STATIC_MARKUP_RULE_ID, DYNAMIC_MARKUP_RULE_ID]
+
+    # A dynamic value passed for odis is dropped, never smuggled onto rule 3. The
+    # static value passes through verbatim — normalising "20" to "20%" is
+    # ScenarioRequest._normalize_markup's job, upstream of here.
+    only = markup_rules("20", "30%-40%", "odis")
+    assert len(only) == 1
+    assert only[0].rule_id == STATIC_MARKUP_RULE_ID
+    assert only[0].output_value == "20"
+
+
+def test_odis_runs_exp_as_net_not_gross():
+    """EXP is gross everywhere else; ODIS prices it net, so its contract must say so."""
+    from app.db.seed_suppliers import SEED_SUPPLIERS, _BACKOFFICE_IDS, _spec_for_env
+
+    exp = next(s for s in SEED_SUPPLIERS if s["code"] == "EXP")
+    assert exp["supplier_type"] == "gross"
+    assert _spec_for_env(exp, "stg")["supplier_type"] == "gross"
+    assert _spec_for_env(exp, "odis")["supplier_type"] == "net"
+
+    # the pinned ODIS reference contract is the NET one
+    assert _BACKOFFICE_IDS["odis"]["EXP"][2] == "695e4ddb121a5d00683e7ae8"
+
+    # EXP's override must not leak. HIL is the only other supplier ODIS overrides (it
+    # forces isBTS back on — see test_derby_bts.py); everything else is passed through
+    # untouched, identity included, so no caller can mutate a per-env copy by accident.
+    for spec in SEED_SUPPLIERS:
+        if spec["code"] not in ("EXP", "HIL"):
+            assert _spec_for_env(spec, "odis") is spec
+
+    hil = next(s for s in SEED_SUPPLIERS if s["code"] == "HIL")
+    assert _spec_for_env(hil, "odis")["supplier_type"] == hil["supplier_type"]
+    assert _spec_for_env(hil, "odis")["mock_config"]["forced_opt"]["isBTS"] is True
+
+
+def test_explicit_pricing_is_rejected_where_exp_is_net():
+    """originalPriceWithVAT/markup only mean something for a GROSS supplier.
+
+    EXP is gross on stg and net on ODIS, so the very same scenario must build on stg
+    and be refused on ODIS — the split has no home in a net contract.
+    """
+    import pytest as _pytest
+    from app.core.scenario_engine import ScenarioEngine, TEMPLATES_DIR
+    from app.env_context import use_env
+    from app.models.scenario import PackageSpec, ScenarioRequest, SupplierCode, SupplierScenario
+
+    if not (TEMPLATES_DIR / "EXP" / "Search" / "v1.json").exists():
+        _pytest.skip("EXP templates not available")
+
+    def request_with_split():
+        return ScenarioRequest(
+            namespace="qa-net-split",
+            check_in="2026-09-01",
+            check_out="2026-09-03",
+            atg_hotel_id="1010102",
+            supplier_hotel_ids={"EXP": "1010102"},
+            suppliers=[
+                SupplierScenario(
+                    code=SupplierCode("EXP"),
+                    packages=PackageSpec(
+                        count=1, room_basis="RO", room_names=["A"], prices=[120.0],
+                        original_price_with_vat=[100.0], markup=[20.0],
+                    ),
+                )
+            ],
+        )
+
+    engine = ScenarioEngine()
+    with use_env("odis"):
+        with _pytest.raises(ValueError, match="net supplier"):
+            engine.build_expectations(request_with_split())
+
+    # stg prices EXP gross, so the identical request is still accepted there.
+    with use_env("stg"):
+        assert engine.build_expectations(request_with_split())
+
+
+def test_odis_has_no_smart_booking():
+    """ODIS runs no SmartBooking, so no SB group can be created there."""
+    from app.core.sb_group_provisioner import SB_UNSUPPORTED_ENVS, smart_booking_supported
+
+    assert smart_booking_supported("dev") and smart_booking_supported("stg")
+    assert not smart_booking_supported("odis")
+    assert SB_UNSUPPORTED_ENVS == frozenset({"odis"})
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_refuses_smart_booking_on_odis(monkeypatch):
+    """A template saved with SB on must be refused, not half-provisioned.
+
+    Drives the real create_scenario with its network collaborators stubbed, so the
+    guard is genuinely reached: mocks build, contracts "create", and then the SB step
+    must raise rather than create a group on a tenant that has no SmartBooking.
+    """
+    from app.core import orchestrator as orch_module
+    from app.core.orchestrator import SupplierMockScenarioOrchestrator
+    from app.env_context import use_env
+    from app.models.scenario import (
+        PackageSpec, SBScenarioConfig, ScenarioRequest, SupplierCode, SupplierScenario,
+    )
+
+    async def _no_register(built):
+        return {}
+
+    monkeypatch.setattr(orch_module, "register_built_expectations", _no_register)
+    monkeypatch.setattr(orch_module, "extract_paths_from_built", lambda built: {})
+
+    orch = SupplierMockScenarioOrchestrator()
+    monkeypatch.setattr(orch.engine, "build_expectations", lambda request: [])
+
+    async def _no_contracts(request, mock_paths, mock_base):
+        return {}
+
+    monkeypatch.setattr(orch.contract_provisioner, "create_contracts", _no_contracts)
+
+    request = ScenarioRequest(
+        namespace="qa-odis-sb-guard",
+        check_in="2026-09-01",
+        check_out="2026-09-03",
+        atg_hotel_id="1010102",
+        suppliers=[
+            SupplierScenario(
+                code=SupplierCode("HBS"),
+                assignment_target="sbgroup",
+                packages=PackageSpec(count=1, room_basis="RO", room_names=["A"], prices=[100.0]),
+            )
+        ],
+        sb_enabled=True,
+        sb_config=SBScenarioConfig(),
+    )
+
+    with use_env("odis"):
+        orch.settings = __import__("app.config", fromlist=["get_settings"]).get_settings("odis")
+        with pytest.raises(ValueError, match="SmartBooking is not available on 'odis'"):
+            await orch.create_scenario(request)

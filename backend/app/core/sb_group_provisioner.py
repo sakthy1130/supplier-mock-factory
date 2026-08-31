@@ -15,6 +15,14 @@ logger = logging.getLogger(__name__)
 SB_CONFIG_API_PATH = "/api/dynamic-forms/smart_booking"
 SB_GROUP_API_PATH = "/api/dynamic-forms/smart_booking_group"
 
+# Envs with no SmartBooking. ODIS does not run it, so there is no group to create and
+# no sbgroup contract routing to honour. Mirrored by NO_SMART_BOOKING_ENVS in the wizard.
+SB_UNSUPPORTED_ENVS = frozenset({"odis"})
+
+
+def smart_booking_supported(env: str | None) -> bool:
+    return (env or "") not in SB_UNSUPPORTED_ENVS
+
 
 def _bstr(value: bool) -> str:
     """Portal stores SB survey flags as the strings 'true'/'false', not booleans."""

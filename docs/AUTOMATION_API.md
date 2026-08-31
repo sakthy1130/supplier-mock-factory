@@ -51,7 +51,7 @@ against **dev**).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `environment` | string | `"dev"` | Target env: `"dev"` or `"stg"`. **Always set `"stg"` for staging** — the default is dev. |
+| `environment` | string | `"dev"` | Target env: `"dev"`, `"stg"` or `"odis"` (ODIS Staging). **Always set it explicitly** — the default is dev. |
 | `check_in` | string \| null | today | `YYYY-MM-DD`. |
 | `check_out` | string \| null | tomorrow | `YYYY-MM-DD`. |
 | `hotel_id` | string \| null | template's | Override the ATG hotel id. |
@@ -228,7 +228,7 @@ curl -X POST "$BASE/api/v1/run-template/$TEMPLATE_ID" \
 
 ## Notes & gotchas
 
-- **`environment` defaults to `dev`.** Always pass `"stg"` for staging runs, or you'll
+- **`environment` defaults to `dev`.** Always pass `"stg"` (or `"odis"`) explicitly, or you'll
   provision against dev.
 - **Booking is opt-in.** No `booking_package_index` → the Booking/GetOrder mocks are
   not created and the run stops at packages (same as the UI with no package picked).

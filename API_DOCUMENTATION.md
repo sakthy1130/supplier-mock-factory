@@ -13,7 +13,7 @@ The `/api/v1/run-template` API allows automated creation and execution of mock s
 ### Simple Request (Minimum)
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/run-template/abc123 \
+curl -X POST http://localhost:8001/api/v1/run-template/abc123 \
   -H "Content-Type: application/json" \
   -d '{
     "environment": "dev"
@@ -23,7 +23,7 @@ curl -X POST http://localhost:8000/api/v1/run-template/abc123 \
 ### Full Request (All Options)
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/run-template/abc123 \
+curl -X POST http://localhost:8001/api/v1/run-template/abc123 \
   -H "Content-Type: application/json" \
   -d '{
     "environment": "dev",
@@ -257,7 +257,7 @@ import org.springframework.http.ResponseEntity;
 public class MockScenarioCreator {
     
     private RestTemplate restTemplate = new RestTemplate();
-    private String apiUrl = "http://localhost:8000";
+    private String apiUrl = "http://localhost:8001";
     
     public void createAndRunTestData() {
         String templateId = "my-template-123";
@@ -301,7 +301,7 @@ public class MockScenarioCreator {
 
 ```bash
 # Create scenario and extract API key
-API_KEY=$(curl -s -X POST http://localhost:8000/api/v1/run-template/abc123 \
+API_KEY=$(curl -s -X POST http://localhost:8001/api/v1/run-template/abc123 \
   -H "Content-Type: application/json" \
   -d '{"environment":"dev"}' | jq -r '.api_key')
 
@@ -319,7 +319,7 @@ import requests
 import json
 
 def create_test_scenario():
-    url = "http://localhost:8000/api/v1/run-template/abc123"
+    url = "http://localhost:8001/api/v1/run-template/abc123"
     
     payload = {
         "environment": "dev",
@@ -357,7 +357,7 @@ The `request_id` appears in all backend logs. Use it to trace a single request t
 
 ```bash
 # Get response
-RESPONSE=$(curl -s -X POST http://localhost:8000/api/v1/run-template/abc123)
+RESPONSE=$(curl -s -X POST http://localhost:8001/api/v1/run-template/abc123)
 REQUEST_ID=$(echo $RESPONSE | jq -r '.request_id')
 
 echo "Request ID: $REQUEST_ID"

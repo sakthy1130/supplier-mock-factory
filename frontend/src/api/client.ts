@@ -1,4 +1,4 @@
-import { API_BASE, envHeaders } from './base'
+import { API_BASE, envHeaders, formatApiError } from './base'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers)
@@ -12,15 +12,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers,
   })
   if (!response.ok) {
-    const body = await response.text()
-    let detail = body
-    try {
-      const json = JSON.parse(body) as { detail?: string }
-      detail = json.detail ?? body
-    } catch {
-      /* use raw body */
-    }
-    throw new Error(detail || `HTTP ${response.status}`)
+    throw new Error(formatApiError(await response.text(), response.status))
   }
   return response.json() as Promise<T>
 }
@@ -29,10 +21,23 @@ export function getHealth() {
   return request<{ status: string; service: string; phase: string; env: string }>('/health')
 }
 
+/** Configured suppliers for the active env — drives every supplier list in the UI. */
+export interface SupplierListItem {
+  code: string
+  name: string
+  log_types: string[]
+  status: string
+  env: string
+  supplier_type: 'net' | 'gross'
+  ui_color: string
+  default_supplier_currency: string
+  default_contract_currency: string
+  ready: boolean
+  missing_count: number
+}
+
 export function listSuppliers() {
-  return request<{ code: string; name: string; log_types: string[]; status: string }[]>(
-    '/api/suppliers',
-  )
+  return request<SupplierListItem[]>('/api/suppliers')
 }
 
 export {

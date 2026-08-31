@@ -95,7 +95,7 @@
           "confirmation_id": {
             "expedia": "864190928244763"
           },
-          "status": "canceled",
+          "status": "booked",
           "checkin": "2026-08-13",
           "checkout": "2026-08-18",
           "number_of_adults": 1,
@@ -230,6 +230,12 @@
                   }
                 }
               }
+            }
+          },
+          "links": {
+            "cancel": {
+              "method": "DELETE",
+              "href": "/v3/itineraries/7556800480832/rooms/8d2abd9a-2497-4e94-b042-be536369cefb"
             }
           }
         }

@@ -94,6 +94,28 @@ def resolve_http_status_code(list_row: dict, full_log: dict) -> int:
     return 200
 
 
+# A supplier call that failed upstream carries no payload worth mocking: the log's
+# response node is Enigma's error envelope (exception text, the upstream status, an
+# empty body) instead of the supplier's own JSON. extract_response_body_payload falls
+# back to that whole node when there is no body, so without this check the envelope is
+# written as the template — the mock then answers 200 with a stack trace, the adapter
+# cannot deserialize it, booking-service rejects the GetOrder as invalid, and core polls
+# for the order until the caller times out. Checked at ingest, where the next candidate
+# row can still be tried.
+def is_error_envelope_payload(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    if payload.get("exception"):
+        return True
+    status = payload.get("httpStatusCode")
+    if isinstance(status, int) and status >= 400:
+        return True
+    # An envelope whose inner body is empty has nothing to replay either. EXP's Search
+    # and Packages logs legitimately keep the payload wrapped (inner 200 + a populated
+    # body list), so only the empty case is rejected.
+    return "httpStatusCode" in payload and not payload.get("body")
+
+
 def extract_response_body_payload(full_log: dict) -> dict:
     if not full_log:
         return {}
@@ -200,6 +222,80 @@ def extract_request_payload_for_mock(log_detail: dict) -> Any | None:
     return None
 
 
+def _supplier_id_from_body(body: dict) -> str | None:
+    """``supplierId`` wherever this payload keeps it.
+
+    Derby BTS puts it in ``header`` on every call except the multi-hotel Search, whose
+    header carries only distributor/version/token and whose ``supplierId`` sits on each
+    ``availHotels`` entry instead. Both locations are checked, or Search rows would look
+    unattributable and get dropped.
+    """
+    header = body.get("header")
+    if isinstance(header, dict):
+        value = header.get("supplierId")
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    hotels = body.get("availHotels")
+    if isinstance(hotels, list):
+        for hotel in hotels:
+            if isinstance(hotel, dict):
+                value = hotel.get("supplierId")
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+    return None
+
+
+def _hotel_id_from_body(body: dict) -> str | None:
+    """``hotelId`` wherever this payload keeps it: per availHotels entry on the
+    multi-hotel Search, at body level on availability and prebook."""
+    hotels = body.get("availHotels")
+    if isinstance(hotels, list):
+        for hotel in hotels:
+            if isinstance(hotel, dict):
+                value = hotel.get("hotelId")
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+    value = body.get("hotelId")
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def payload_hotel_id(full_log: dict) -> str | None:
+    """The hotel a fetched log detail is about, response first then request."""
+    return _walk_log_bodies(full_log, _hotel_id_from_body)
+
+
+def payload_supplier_id(full_log: dict) -> str | None:
+    """The supplier id a fetched log detail belongs to, response first then request.
+
+    Suppliers sharing one adapter (CHC and HIL on Derby BTS) log an identical ``source``,
+    so this is the only thing in the payload that says which of them a row belongs to.
+    Returns None when the log carries none — the caller decides what that means.
+    """
+    return _walk_log_bodies(full_log, _supplier_id_from_body)
+
+
+def _walk_log_bodies(full_log: dict, extract) -> str | None:
+    """Run ``extract`` over each JSON body in a log detail, response before request."""
+    if not isinstance(full_log, dict):
+        return None
+    for section in ("response", "request"):
+        node = full_log.get(section)
+        if not isinstance(node, dict):
+            continue
+        for candidate in (node.get("body"), node):
+            try:
+                body = parse_log_json_body(candidate)
+            except (ValueError, TypeError):
+                continue
+            if not isinstance(body, dict):
+                continue
+            found = extract(body)
+            if found:
+                return found
+    return None
+
+
 def strip_request_body_header(payload: Any) -> Any:
     if not isinstance(payload, dict):
         return payload
@@ -288,6 +384,12 @@ def _normalize_path(path: str) -> str:
     text = path.strip()
     if not text.startswith("/"):
         text = f"/{text}"
+    # Collapse repeated slashes. A logged path is sometimes a join artefact
+    # ("//bts/api/reservation/detail"), and MockServer matches paths literally — an
+    # expectation registered on the doubled path never matches the single-slash request
+    # the adapter actually sends, so the mock is silently dead.
+    while "//" in text:
+        text = text.replace("//", "/")
     return text
 
 
@@ -481,7 +583,13 @@ def apply_aligned_derby_res_ids_for_booking_and_get_order(pending: list[PendingE
             _replace_field_values_deep(item.expectation, "derbyResId", old_to_new)
 
 
-def build_diagnostic_json(sid: str, list_row: dict, log_url: str, full_log: dict) -> dict:
+def build_diagnostic_json(
+    sid: str,
+    list_row: dict,
+    log_url: str,
+    full_log: dict,
+    note: str = "Could not resolve HTTP path for MockServer httpRequest.",
+) -> dict:
     meta_keys = list((list_row.get("meta") or {}).keys())
     detail_keys = list(full_log.keys()) if isinstance(full_log, dict) else []
     return {
@@ -492,5 +600,5 @@ def build_diagnostic_json(sid: str, list_row: dict, log_url: str, full_log: dict
         "logUrl": log_url,
         "metaKeys": meta_keys,
         "detailTopLevelKeys": detail_keys,
-        "note": "Could not resolve HTTP path for MockServer httpRequest.",
+        "note": note,
     }

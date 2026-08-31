@@ -2,13 +2,27 @@
 
 from __future__ import annotations
 
-from app.models.scenario import PackageSpec
+from app.models.scenario import PackageSpec, PreBookingStatus
 from app.plugins.json_utils import collect_field_values
 from app.plugins.room_names import normalized_room_basis
 
 
 class LinkageError(ValueError):
     pass
+
+
+def _derby_bts_codes() -> frozenset[str]:
+    """Codes behind hotels-derby-bts-adapter — same payload, so same validation.
+
+    Read off the plugin registry rather than restated here, so registering another Derby
+    supplier can't leave this list behind. Imported lazily to keep app.plugins off the
+    import path of a module it does not otherwise need.
+    """
+    from app.plugins import PLUGINS, DerbyBtsMockPlugin
+
+    return frozenset(
+        code for code, plugin in PLUGINS.items() if isinstance(plugin, DerbyBtsMockPlugin)
+    )
 
 
 class LinkageValidator:
@@ -24,12 +38,64 @@ class LinkageValidator:
             self._validate_exp(expectations_by_type, spec)
         elif supplier_code == "RHK":
             self._validate_rhk(expectations_by_type, spec)
-        elif supplier_code == "CHC":
-            self._validate_chc(expectations_by_type, spec)
+        elif supplier_code in _derby_bts_codes():
+            self._validate_derby_bts(expectations_by_type, supplier_code, spec)
         elif supplier_code == "EXT":
             self._validate_ext(expectations_by_type, spec)
         else:
-            raise LinkageError(f"Unsupported supplier for linkage validation: {supplier_code}")
+            # A supplier added from the Suppliers screen has no hand-written rule —
+            # validate what its mutation config describes rather than refusing to
+            # build the scenario at all.
+            self._validate_generic(expectations_by_type, supplier_code, spec)
+
+    def _validate_generic(
+        self,
+        expectations_by_type: dict[str, dict],
+        supplier_code: str,
+        spec: PackageSpec,
+    ) -> None:
+        """Rate count, and board when the supplier declares a board key."""
+        from app.core.path_utils import resolve_path
+        from app.services.supplier_service import UnknownSupplierError, get_supplier_config
+
+        packages = expectations_by_type.get("Packages")
+        if packages is None:
+            raise LinkageError(f"{supplier_code} Packages template missing")
+
+        try:
+            config = get_supplier_config(supplier_code)
+        except UnknownSupplierError as exc:
+            raise LinkageError(str(exc)) from exc
+
+        mutation = config.mutation_config
+        if not mutation.packages_path:
+            raise LinkageError(
+                f"{supplier_code} has no packages path configured — cannot verify that "
+                f"{spec.count} packages were produced. Set one on the Suppliers screen."
+            )
+
+        rates = resolve_path(packages, mutation.packages_path)
+        if not isinstance(rates, list):
+            raise LinkageError(
+                f"{supplier_code} packages path {mutation.packages_path!r} does not "
+                "point at an array in the Packages template"
+            )
+        if len(rates) < spec.count:
+            raise LinkageError(
+                f"{supplier_code} package rate count {len(rates)} < requested {spec.count}"
+            )
+
+        if not mutation.board_key:
+            return
+        expected_boards = normalized_room_basis(spec)
+        for index, rate in enumerate(rates[: spec.count]):
+            if not isinstance(rate, dict):
+                continue
+            board = rate.get(mutation.board_key)
+            if board and str(board) != expected_boards[index]:
+                raise LinkageError(
+                    f"{supplier_code} package {mutation.board_key} does not match requested room_basis"
+                )
 
     def _validate_hbs(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
         packages = expectations_by_type.get("Packages")
@@ -131,22 +197,30 @@ class LinkageValidator:
                 raise LinkageError("RHK PreBooking match_hash does not match Packages primary match_hash")
 
 
-    def _validate_chc(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
+    def _validate_derby_bts(
+        self,
+        expectations_by_type: dict[str, dict],
+        supplier_code: str,
+        spec: PackageSpec,
+    ) -> None:
+        """Shared by every supplier behind hotels-derby-bts-adapter (CHC, HIL)."""
         packages = expectations_by_type.get("Packages")
         if packages is None:
-            raise LinkageError("CHC Packages template missing")
+            raise LinkageError(f"{supplier_code} Packages template missing")
 
-        rates = _chc_package_rates(packages)
+        rates = _derby_bts_package_rates(packages)
         if len(rates) < spec.count:
             raise LinkageError(
-                f"CHC package rate count {len(rates)} < requested {spec.count}"
+                f"{supplier_code} package rate count {len(rates)} < requested {spec.count}"
             )
 
         expected_meals = normalized_room_basis(spec)
         for index, rate in enumerate(rates[: spec.count]):
             meal = rate.get("mealPlan")
             if meal and meal != expected_meals[index]:
-                raise LinkageError("CHC package mealPlan does not match requested room_basis")
+                raise LinkageError(
+                    f"{supplier_code} package mealPlan does not match requested room_basis"
+                )
 
     def _validate_ext(self, expectations_by_type: dict[str, dict], spec: PackageSpec) -> None:
         packages = expectations_by_type.get("Packages")
@@ -168,8 +242,58 @@ class LinkageValidator:
                 if meal and meal != expected_meals[index]:
                     raise LinkageError("EXT accommodation board does not match requested room_basis")
 
+        self._validate_ext_prebooking(expectations_by_type, spec, accommodations)
 
-def _chc_package_rates(packages: dict) -> list[dict]:
+    def _validate_ext_prebooking(
+        self,
+        expectations_by_type: dict[str, dict],
+        spec: PackageSpec,
+        offered: list[dict],
+    ) -> None:
+        """The price check must quote exactly the rate that was offered for booking.
+
+        Extranet re-reads distribution details to price-check, and the accommodation id is
+        the only thing tying a quote back to an offered rate. Quoting a different rate — or
+        several — is silent at run time: the core simply fails to find the package it was
+        booking, with nothing to say why.
+        """
+        prebook = expectations_by_type.get("PreBooking")
+        if not isinstance(prebook, dict):
+            return
+        quoted = _ext_package_rates(prebook)
+        idx = spec.booking_package_index if spec.booking_package_index is not None else 0
+        if idx >= len(offered):
+            return
+
+        if spec.prebooking_status is PreBookingStatus.sold_out:
+            if quoted:
+                raise LinkageError(
+                    "EXT sold_out price check must offer no rate at all — the one asked "
+                    "about is the one that is gone"
+                )
+            return
+
+        if len(quoted) != 1:
+            raise LinkageError(
+                f"EXT PreBooking must quote exactly the rate being booked, got {len(quoted)}"
+            )
+        if quoted[0].get("id") != offered[idx].get("id"):
+            raise LinkageError("EXT PreBooking quotes a rate Packages never offered")
+
+        expected = (
+            spec.prebooking_changed_price
+            if spec.prebooking_status is PreBookingStatus.price_changed
+            else offered[idx].get("totalPrice")
+        )
+        if quoted[0].get("totalPrice") != expected:
+            raise LinkageError(
+                "EXT PreBooking price does not match the package being booked"
+                if spec.prebooking_status is not PreBookingStatus.price_changed
+                else "EXT PreBooking did not apply the changed price"
+            )
+
+
+def _derby_bts_package_rates(packages: dict) -> list[dict]:
     body = packages.get("httpResponse", {}).get("body", {})
     rates = body.get("roomRates") if isinstance(body, dict) else None
     return [rate for rate in rates if isinstance(rate, dict)] if isinstance(rates, list) else []

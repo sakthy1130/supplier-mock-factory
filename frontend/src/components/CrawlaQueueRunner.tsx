@@ -153,6 +153,8 @@ function buildRequest(
   checkOut: string,
   searchAnchors: CrawlaAnchorSearchResponse,
   packagesAnchors: CrawlaAnchorPackagesResponse,
+  // One markup pair for the whole batch — every bucket in a run gets the same BR values.
+  markup: { static: string; dynamic: string } = { static: '', dynamic: '' },
 ): CrawlaScenarioRequest {
   const searchItem = searchAnchors.data.find((i) => i.atg_id === atgHotelId) ?? searchAnchors.data[0]
   const hotelItem  = packagesAnchors.hotels.find((h) => h.atg_id === atgHotelId) ?? packagesAnchors.hotels[0]
@@ -184,6 +186,9 @@ function buildRequest(
     check_out:    checkOut,
     atg_hotel_id: atgHotelId,
     bucket,
+    // Omitted when blank so the backend applies the BR defaults.
+    ...(markup.static.trim()  ? { static_markup:  markup.static.trim()  } : {}),
+    ...(markup.dynamic.trim() ? { dynamic_markup: markup.dynamic.trim() } : {}),
     search: {
       crawla_total: searchBase,
       exp_mode:     expMode,
@@ -423,6 +428,9 @@ export function CrawlaQueueRunner() {
   const [atgHotelId, setAtgHotelId] = useState('1043546')
   const [checkIn,    setCheckIn]    = useState(initialCheckIn)
   const [checkOut,   setCheckOut]   = useState(() => addDays(initialCheckIn, 2))
+  // BR markup for every scenario in the batch. Blank = the backend defaults.
+  const [staticMarkup,  setStaticMarkup]  = useState('')
+  const [dynamicMarkup, setDynamicMarkup] = useState('')
 
   const [items, setItems] = useState<BucketItem[]>(
     BUCKET_ORDER.map(({ bucket, label }) => ({ bucket, label, status: 'pending' })),
@@ -503,7 +511,10 @@ export function CrawlaQueueRunner() {
         const effectiveCheckIn  = bucket === 'ONLY_EXPEDIA' ? addDays(today, 14) : checkIn
         const effectiveCheckOut = bucket === 'ONLY_EXPEDIA' ? addDays(effectiveCheckIn, 2) : checkOut
 
-        const request = buildRequest(bucket, atgHotelId, effectiveCheckIn, effectiveCheckOut, searchAnchors, packagesAnchors)
+        const request = buildRequest(
+          bucket, atgHotelId, effectiveCheckIn, effectiveCheckOut, searchAnchors, packagesAnchors,
+          { static: staticMarkup, dynamic: dynamicMarkup },
+        )
         const created = await createCrawlaScenario(request)
         if (!created.id) throw new Error('Create response missing scenario id')
         scenarioId = created.id
@@ -626,10 +637,35 @@ export function CrawlaQueueRunner() {
               />
             </label>
           </div>
+          <div className="field">
+            <label>
+              Static markup
+              <input
+                value={staticMarkup}
+                disabled={running}
+                onChange={(e) => setStaticMarkup(e.target.value)}
+                placeholder="10"
+                spellCheck={false}
+              />
+            </label>
+          </div>
+          <div className="field">
+            <label>
+              Dynamic markup
+              <input
+                value={dynamicMarkup}
+                disabled={running}
+                onChange={(e) => setDynamicMarkup(e.target.value)}
+                placeholder="10%-15%"
+                spellCheck={false}
+              />
+            </label>
+          </div>
         </div>
         <p className="hint" style={{ marginTop: '0.5rem' }}>
           Prices are auto-derived from live Crawla anchors using bucket formulas.
           Currency fixed to SAR · 1 room · 2 adults · 0 kids.
+          Markup applies to every bucket in the run; blank = BR defaults (10% and 15%-25%).
         </p>
       </div>
 

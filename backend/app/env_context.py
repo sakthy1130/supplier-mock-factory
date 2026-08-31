@@ -1,4 +1,4 @@
-"""Current-environment selection (dev | stg) via a contextvar.
+"""Current-environment selection (dev | stg | odis) via a contextvar.
 
 The active env is resolved per request from the ``X-SMF-Env`` header (middleware in
 main.py) and per background job from the scenario's stored ``env``. ``get_settings()``
@@ -11,8 +11,15 @@ from __future__ import annotations
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 
-SUPPORTED_ENVS: tuple[str, ...] = ("dev", "stg")
+SUPPORTED_ENVS: tuple[str, ...] = ("dev", "stg", "odis")
 DEFAULT_ENV: str = "dev"
+
+# Human labels for the UI; the codes above are what travels on X-SMF-Env.
+ENV_LABELS: dict[str, str] = {
+    "dev": "Dev",
+    "stg": "Staging",
+    "odis": "ODIS Staging",
+}
 
 _current_env: ContextVar[str] = ContextVar("smf_current_env", default=DEFAULT_ENV)
 

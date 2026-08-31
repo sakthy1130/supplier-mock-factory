@@ -170,7 +170,10 @@ async def test_create_normal_scenario_provisions_br_by_default():
         bundle = await orchestrator.create_scenario(_request())
 
     assert bundle.status == ScenarioStatus.READY
-    br_provisioner.provision.assert_awaited_once_with("smf-qa-orch-001", template_id=None)
+    # No markup on the request → the provisioner is told nothing and applies its defaults.
+    br_provisioner.provision.assert_awaited_once_with(
+        "smf-qa-orch-001", template_id=None, static_markup=None, dynamic_markup=None
+    )
 
 
 @pytest.mark.asyncio
@@ -230,7 +233,10 @@ async def test_create_crawla_scenario_provisions_br_warning_non_blocking():
     assert bundle.status == ScenarioStatus.READY
     assert bundle.error_message == "BR setup failed"
     assert bundle.br_setup and bundle.br_setup["status"] == "FAILED"
-    br_provisioner.provision.assert_awaited_once_with("smf-qa-orch-001", template_id=None)
+    # No markup on the request → the provisioner is told nothing and applies its defaults.
+    br_provisioner.provision.assert_awaited_once_with(
+        "smf-qa-orch-001", template_id=None, static_markup=None, dynamic_markup=None
+    )
 
 
 @pytest.mark.asyncio

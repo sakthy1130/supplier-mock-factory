@@ -17,6 +17,20 @@ class CoreAppError(RuntimeError):
     pass
 
 
+# Core's normal budget. /booking/get-order is the outlier: it calls back out to the
+# supplier's retrieve endpoint, then validates cost-vs-selling, merges TMS fields and
+# persists the order — on staging it regularly outlives a 60s read budget, and when
+# the supplier's order mock is unreachable core waits on its own upstream timeout
+# (longer than ours) before answering at all.
+_DEFAULT_TIMEOUT = httpx.Timeout(60.0)
+_SLOW_READ_TIMEOUT = httpx.Timeout(60.0, read=180.0)
+_SLOW_READ_PATHS = ("/booking/get-order",)
+
+
+def _timeout_for(path: str) -> httpx.Timeout:
+    return _SLOW_READ_TIMEOUT if path in _SLOW_READ_PATHS else _DEFAULT_TIMEOUT
+
+
 class CoreAppClient:
     def __init__(self, client: Optional[httpx.AsyncClient] = None) -> None:
         self.settings = get_settings()
@@ -25,7 +39,7 @@ class CoreAppClient:
 
     async def __aenter__(self) -> "CoreAppClient":
         if self._client is None:
-            self._client = httpx.AsyncClient(timeout=60.0)
+            self._client = httpx.AsyncClient(timeout=_DEFAULT_TIMEOUT)
             self._owns_client = True
         return self
 
@@ -57,7 +71,7 @@ class CoreAppClient:
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
-            self._client = httpx.AsyncClient(timeout=60.0)
+            self._client = httpx.AsyncClient(timeout=_DEFAULT_TIMEOUT)
             self._owns_client = True
         return self._client
 
@@ -430,10 +444,24 @@ class CoreAppClient:
         client = self._get_client()
         kwargs: dict[str, Any] = {
             "headers": self._headers(api_key),
+            "timeout": _timeout_for(path),
         }
         if payload is not None:
             kwargs["json"] = payload
-        response = await client.request(method, f"{self._base_url()}{path}", **kwargs)
+        try:
+            response = await client.request(method, f"{self._base_url()}{path}", **kwargs)
+        except httpx.ConnectError as exc:
+            raise CoreAppError(
+                f"Cannot reach core app at {self._base_url()} — check CORE_APP_URL in "
+                f"backend/.env and ensure you are on the staging VPN. Detail: {exc}"
+            ) from exc
+        except httpx.TimeoutException as exc:
+            raise CoreAppError(
+                f"Core app timed out after {_timeout_for(path).read}s "
+                f"({method} {path}): {exc}"
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise CoreAppError(f"Core app HTTP error ({method} {path}): {exc}") from exc
         if response.status_code != 200:
             raise CoreAppError(
                 f"Core API failed status={response.status_code} path={path} body={response.text}"

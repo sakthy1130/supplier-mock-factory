@@ -136,7 +136,7 @@ React SPA (`frontend/src/`): `App.tsx` hosts Create + Browse tabs and a
 Clear-all action. Wizards (`ScenarioWizard`, `CrawlaMocksWizard`,
 `CrawlaQueueRunner`), status views (`ScenarioProgress`, `ScenarioResult`,
 `ScenarioList`), and `TestRunDashboard`. `useScenarioPoll` polls status until
-READY. API layer under `src/api/` proxies to the backend on `:8000`.
+READY. API layer under `src/api/` proxies to the backend on `:8001`.
 
 ## Runtime logs (Quickwit)
 
@@ -149,10 +149,10 @@ staging console logs by scenario apiKey. Index auto-resolves to
 ```bash
 # backend
 cd backend && source ../.venv/bin/activate
-PYTHONPATH=. python -m uvicorn app.main:app --reload --port 8000
+PYTHONPATH=. python -m uvicorn app.main:app --reload --port 8001
 
 # frontend
-cd frontend && npm run dev   # :5173 → proxy :8000
+cd frontend && npm run dev   # :5144 → proxy :8001
 ```
 
 ## Current state

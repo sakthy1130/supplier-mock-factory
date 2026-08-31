@@ -3,9 +3,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
     ports:
-      - "8000:8000"
+      - "8001:8001"
     volumes:
       - ./backend/app:/app/app
       - ./backend/tests:/app/tests
@@ -19,7 +19,7 @@ services:
       - ./backend/.env.dev:/app/.env.dev:ro
       - ./backend/.env.stg:/app/.env.stg:ro
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health').read()"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,9 +30,9 @@ services:
       dockerfile: Dockerfile
     command: npm run dev -- --host 0.0.0.0
     ports:
-      - "5173:5173"
+      - "5144:5144"
     environment:
-      VITE_API_URL: http://localhost:8000
+      VITE_API_URL: http://localhost:8001
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public

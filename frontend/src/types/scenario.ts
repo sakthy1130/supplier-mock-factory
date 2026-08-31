@@ -1,4 +1,6 @@
-export type SupplierCode = 'HBS' | 'EXP' | 'RHK' | 'CHC' | 'EXT'
+/** A supplier code. Open by design — suppliers are configured on the Suppliers
+ *  screen, so the UI can never know the full set at build time. */
+export type SupplierCode = string
 
 export type ScenarioStatus =
   | 'PENDING'
@@ -10,6 +12,15 @@ export type ScenarioStatus =
   | 'FAILED'
   | 'TORN_DOWN'
 
+export type PreBookingStatus = 'available' | 'price_changed' | 'sold_out'
+
+/** Expedia's own wire values, so the field and the mock body say the same thing. */
+export const PREBOOKING_STATUSES: { value: PreBookingStatus; label: string }[] = [
+  { value: 'available', label: 'Available (default)' },
+  { value: 'price_changed', label: 'Price changed' },
+  { value: 'sold_out', label: 'Sold out (stops before booking)' },
+]
+
 export interface PackageSpec {
   count: number
   room_basis: string[]
@@ -20,6 +31,40 @@ export interface PackageSpec {
   // 0-based index of the package the Booking/GetOrder flow is built for.
   // null/undefined means no booking flow (only search + package mocks).
   booking_package_index?: number | null
+  /**
+   * Which price-check response this supplier's PreBooking mock returns. Omit for
+   * 'available' (today's behaviour). 'sold_out' also skips Booking/GetOrder/CancelOrder
+   * — that body carries no book link, so the chain genuinely stops at PreBooking.
+   */
+  prebooking_status?: PreBookingStatus
+  /** Only with 'price_changed': the re-quoted price, in supplier currency. */
+  prebooking_changed_price?: number | null
+  /**
+   * Override the contract's canPrebook permission. Omit to leave the reference
+   * contract's value. false also drops overridePrebookUrl and the PreBooking mock.
+   */
+  can_prebook?: boolean | null
+  /** false omits overridePrebookUrl from the contract. Independent of can_prebook. */
+  prebook_url?: boolean | null
+  /** Env-wide: endpointsSupported.prebooking on the shared supplier record. */
+  supplier_prebooking?: boolean | null
+  /**
+   * EXP explicit pricing, per package, both or neither: the split of `prices` into
+   * pre-markup + markup, in supplier currency, where price = original_price_with_vat +
+   * markup. The price becomes the mock's totals.inclusive and `markup` its
+   * totals.marketing_fee, which is what the EXP adapter reports as markup.dynamic. Omit to
+   * keep the price-only flow.
+   */
+  original_price_with_vat?: number[]
+  markup?: number[]
+  /**
+   * Occupancy the mocked rates advertise. Derby BTS (CHC, HIL) drops every rate whose
+   * occupancy differs from the searched one — silently, with zero results. Omit to take
+   * the backend default of 2 adults, which is what the default search uses.
+   */
+  adults?: number
+  child_ages?: number[]
+  room_count?: number
 }
 
 export const DEFAULT_ROOM_NAME = '1 Double Bed, Nonsmoking'
@@ -82,9 +127,23 @@ export interface ScenarioRequest {
   // Attach the contracts to this existing apiKey instead of creating one.
   // Only meaningful for the contract_only / contract_br depths.
   existing_api_key?: string | null
+  /**
+   * BR markup output values for the Static (rule 3) and Dynamic (rule 4) Markup rules.
+   * Sent as typed — the backend normalizes `10` → `10%` and `10-15` → `10%-15%`. Omit for
+   * the defaults (10% and 15%-25%). Only the depths that provision BR accept them.
+   */
+  static_markup?: string
+  dynamic_markup?: string
 }
 
 export interface ScenarioBundle {
+  /**
+   * The create request this scenario was provisioned from, as the backend stored it
+   * (namespace, dates, hotel, per-supplier package specs). Surfaced in the detail
+   * panel so a scenario can be replayed or turned into a template without
+   * reconstructing the payload by hand.
+   */
+  request?: Record<string, unknown> | null
   id?: string
   namespace: string
   env: string

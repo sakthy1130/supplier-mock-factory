@@ -50,7 +50,7 @@ cp .env.example .env
 # Edit .env with staging URLs and credentials
 pip install -e ".[dev]"
 source .venv/bin/activate
-PYTHONPATH=. python3 -m uvicorn app.main:app --reload --port 8000
+PYTHONPATH=. python3 -m uvicorn app.main:app --reload --port 8001
 ```
 
 ## Prerequisites before P1 ingest

@@ -92,6 +92,11 @@ class CrawlaScenarioRequest(BaseModel):
     bucket: CrawlaBucket
     search: CrawlaPricePanel
     packages: CrawlaPackagesPanel
+    # Crawla scenarios always provision BR (the orchestrator triggers on crawla_export),
+    # so without these they are stuck on the default 10% / 15%-25%. Normalized by
+    # ScenarioRequest; omit for the defaults.
+    static_markup: Optional[str] = None
+    dynamic_markup: Optional[str] = None
 
 
 class CrawlaScenarioExport(BaseModel):

@@ -1,0 +1,136 @@
+{
+  "httpRequest": {
+    "path": "/bts/api/reservation/detail",
+    "method": "POST"
+  },
+  "httpResponse": {
+    "headers": {
+      "Content-Type": [
+        "application/json;charset=UTF-8"
+      ],
+      "Server": [
+        "DGateway/2.0"
+      ]
+    },
+    "statusCode": 200,
+    "body": {
+      "reservations": [
+        {
+          "roomRates": [
+            {
+              "roomId": "K1D",
+              "rateId": "OD25DN",
+              "currency": "AED",
+              "amountBeforeTax": [
+                217.5,
+                217.5
+              ],
+              "amountAfterTax": [
+                266.44,
+                266.44
+              ],
+              "mealPlan": "HB",
+              "fees": [
+                {
+                  "dateRange": {
+                    "startDate": "2025-09-01",
+                    "endDate": "2025-09-02"
+                  },
+                  "fee": {
+                    "name": "Tax1",
+                    "type": "Exclusive",
+                    "amount": 7,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2025-09-01",
+                    "endDate": "2025-09-02"
+                  },
+                  "fee": {
+                    "name": "Tax2",
+                    "type": "Exclusive",
+                    "amount": 5.5,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerNight"
+                  }
+                },
+                {
+                  "dateRange": {
+                    "startDate": "2025-09-01",
+                    "endDate": "2025-09-02"
+                  },
+                  "fee": {
+                    "name": "Tax3",
+                    "type": "Exclusive",
+                    "amount": 10,
+                    "amountType": "Percent",
+                    "chargeType": "PerRoomPerStay"
+                  }
+                }
+              ],
+              "cancelPolicy": {
+                "code": "1D1N_1N",
+                "description": "CXL 1 DAY PRIOR TO ARRIVAL",
+                "cancelPenalties": [
+                  {
+                    "noShow": false,
+                    "cancellable": true,
+                    "cancelDeadline": {
+                      "offsetTimeDropType": "BeforeArrival",
+                      "offsetTimeUnit": "D",
+                      "offsetTimeValue": 1
+                    },
+                    "penaltyCharge": {
+                      "chargeBase": "NightBase",
+                      "nights": 1
+                    }
+                  },
+                  {
+                    "noShow": true,
+                    "penaltyCharge": {
+                      "chargeBase": "NightBase",
+                      "nights": 1
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "status": "Confirmed",
+          "result": "Successful",
+          "reservationIds": {
+            "distributorResId": "pFP_YrLnhTtjeJF-0-wcs8Ps",
+            "derbyResId": "GP721114932T8E491E91J",
+            "supplierResId": "3298434969"
+          },
+          "iata": "71200614",
+          "hotelId": "DXBAS",
+          "stayRange": {
+            "checkin": "2025-09-01",
+            "checkout": "2025-09-03"
+          },
+          "roomCriteria": {
+            "roomCount": 1,
+            "adultCount": 1,
+            "childCount": 0,
+            "childAges": []
+          },
+          "total": {
+            "amountBeforeTax": 435.0,
+            "amountAfterTax": 532.88
+          }
+        }
+      ],
+      "header": {
+        "supplierId": "HILTON",
+        "distributorId": "ALTAYYAR",
+        "version": "v1.2",
+        "token": "83a9e376-974f-4f0a-9acd-80ee5e3a3232"
+      }
+    }
+  },
+  "priority": 1000
+}

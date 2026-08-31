@@ -573,3 +573,114 @@ async def test_a_parent_returning_no_id_skips_its_children():
     assert any("cannot attach its child" in e["message"] for e in setup["errors"])
     body = client.create_condition_raw.await_args.args[0]
     assert "inputValue" not in body, "inject_input_value=False must be honoured"
+
+
+@pytest.mark.asyncio
+async def test_both_paths_carry_a_scenarios_markup_values():
+    """The same invariant as above, for a scenario that asked for its own markup: both
+    depths must read the values from one place, or contract_br silently provisions the
+    default while full provisions what was asked for."""
+    api_prov, api_client = _br_provisioner("stg")
+    await api_prov.provision("smf-qa-x", static_markup="20%", dynamic_markup="30%-40%")
+    api_calls = [c.kwargs for c in api_client.create_condition.await_args_list]
+
+    contract_prov, contract_client = _br_provisioner("stg")
+    await contract_prov.provision_for_contracts(
+        _CONTRACT_REFS, static_markup="20%", dynamic_markup="30%-40%"
+    )
+    contract_calls = [c.kwargs for c in contract_client.create_condition.await_args_list]
+
+    expected = [(3, "20%"), (4, "30%-40%")]
+    assert [(c["rule_id"], c["output_value"]) for c in api_calls] == expected
+    assert [(c["rule_id"], c["output_value"]) for c in contract_calls] == expected
+
+
+@pytest.mark.asyncio
+async def test_contract_setup_records_the_markup_it_provisioned():
+    """br_setup is what the UI shows the QA. The apiKey path always recorded output_value;
+    the contract path did not, so a contract_br scenario could not say what it created."""
+    provisioner, _ = _br_provisioner("stg")
+    setup = await provisioner.provision_for_contracts(
+        _CONTRACT_REFS, static_markup="20%", dynamic_markup="30%-40%"
+    )
+
+    assert setup["rules"]["3"]["output_value"] == "20%"
+    assert setup["rules"]["4"]["output_value"] == "30%-40%"
+
+
+@pytest.mark.asyncio
+async def test_field_map_overrides_keep_their_own_markup(monkeypatch):
+    """br_contract_conditions.json owns the whole condition body where an env configures
+    one, so a scenario's markup deliberately does not reach it."""
+    from app.integrations import business_rules
+
+    monkeypatch.setattr(
+        business_rules,
+        "_load_contract_conditions",
+        lambda: {
+            "stg": {
+                "conditions": [
+                    {
+                        "ruleId": 4,
+                        "parentRuleValueMappingId": 176,
+                        "inputDetailId": 30,
+                        "outputDetailId": 8,
+                        "outputValue": "5%-6%",
+                    }
+                ]
+            }
+        },
+    )
+    provisioner, client = _br_provisioner("stg")
+    await provisioner.provision_for_contracts(
+        _CONTRACT_REFS, static_markup="20%", dynamic_markup="30%-40%"
+    )
+
+    # The override path posts raw bodies; create_condition is never used.
+    client.create_condition.assert_not_awaited()
+    raw_bodies = [c.args[0] for c in client.create_condition_raw.await_args_list]
+    assert [b["outputValue"] for b in raw_bodies] == ["5%-6%"]
+
+
+# --- markup input normalization ------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        # Static is typed bare, dynamic as a range — both spellings accepted for both, so
+        # neither field punishes the other's habit.
+        ("10", "10%"),
+        ("10%", "10%"),
+        ("10-15", "10%-15%"),
+        ("10%-15%", "10%-15%"),
+        (" 10 % - 15 % ", "10%-15%"),
+        ("12.5", "12.5%"),
+        # 10.0 must not reach BR as "10.0%".
+        ("10.0", "10%"),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_markup_is_normalized_to_what_br_stores(raw, expected):
+    request = _request(static_markup=raw, dynamic_markup=raw)
+    assert request.static_markup == expected
+    assert request.dynamic_markup == expected
+
+
+@pytest.mark.parametrize("bad", ["abc", "10-5", "1-2-3", "-5", "10%%"])
+def test_unparseable_markup_is_rejected(bad):
+    with pytest.raises(ValidationError, match="markup"):
+        _request(static_markup=bad)
+
+
+def test_markup_needs_a_depth_that_provisions_br():
+    """contract_only creates no BR at all, so accepting a markup would silently drop it."""
+    with pytest.raises(ValidationError, match="need BR provisioning"):
+        _request(provisioning_depth="contract_only", static_markup="20")
+
+
+def test_markup_is_accepted_on_both_br_depths():
+    for depth in ("full", "contract_br"):
+        request = _request(provisioning_depth=depth, static_markup="20", dynamic_markup="30-40")
+        assert (request.static_markup, request.dynamic_markup) == ("20%", "30%-40%")

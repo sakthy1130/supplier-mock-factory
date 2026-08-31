@@ -37,11 +37,21 @@ class Settings(BaseSettings):
     quickwit_logs_api_url: str = ""
     mapping_service_url: str = ""
     mapping_api_key: str = ""
+    # hotels-connectivity-adapter-misc: the room catalogue hotels-derby-bts-adapter uses
+    # to name rooms. It drops any rate whose roomId is not in that hotel's catalogue, so
+    # a mock inventing room ids yields zero packages. Blank disables the lookup and the
+    # templates' captured room ids are kept as-is.
+    adapter_misc_url: str = ""
     crawla_api_url: str = ""
     crawla_api_key: str = ""
     core_app_url: str = ""
     business_rules_url: str = ""
     backoffice_url: str = ""
+    # Read NOWHERE. ConfigManagerClient clears the apiKey cache against backoffice_url,
+    # not this host ("Java ClearApiKeyCacheActivator uses backoffice base URL"), so no env
+    # needs to set it. Kept only so an existing .env carrying it does not fail to parse —
+    # if the cache clear ever moves to the real config-manager host, this becomes required
+    # and every env file needs a value.
     config_manager_url: str = ""
 
     backoffice_token: str = ""
@@ -65,7 +75,8 @@ class Settings(BaseSettings):
     # prefix so a run is isolated WITHOUT needing a second database — the app user
     # is typically granted rights on one database only.
     mongo_collection_prefix: str = ""
-    cors_origins: str = "http://localhost:5173"
+    # This branch's vite dev server listens on 5144 (frontend/vite.config.ts).
+    cors_origins: str = "http://localhost:5144"
     log_level: str = "INFO"
 
     env: str = ""  # populated by get_settings so callers can read settings.env

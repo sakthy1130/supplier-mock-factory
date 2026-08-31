@@ -44,7 +44,10 @@ def record_to_bundle(record: ScenarioRecord) -> ScenarioBundle:
     # br_setup is appended onto request_json after create (see apply_bundle) and is
     # already surfaced separately as bundle.br_setup — exclude it here so `request`
     # reflects only what was actually submitted, not the provisioning result.
-    original_request = {k: v for k, v in request_data.items() if k != "br_setup"} or None
+    original_request = {
+        k: v for k, v in request_data.items()
+        if k not in ("br_setup", "supplier_prebooking_restore")
+    } or None
     return ScenarioBundle(
         id=record.id,
         namespace=record.namespace,
@@ -146,6 +149,11 @@ def apply_bundle(db: MongoStore, record: ScenarioRecord, bundle: ScenarioBundle)
     request_json = dict(record.request_json or {})
     if bundle.br_setup is not None:
         request_json["br_setup"] = bundle.br_setup
+        record.request_json = request_json
+    if bundle.supplier_prebooking_restore:
+        # Stored alongside br_setup so teardown can put the shared supplier record
+        # back. Without it a torn-down scenario would leave the env altered.
+        request_json["supplier_prebooking_restore"] = bundle.supplier_prebooking_restore
         record.request_json = request_json
     record.mock_server_base_url = bundle.mock_server_base_url
     record.expectation_count = bundle.expectation_count
@@ -256,6 +264,9 @@ async def _teardown_record(session: MongoStore, record: ScenarioRecord) -> None:
             sb_config_id=record.sb_config_id,
             sb_group_id=record.sb_group_id,
             api_key_is_external=bool(record.api_key_is_external),
+            supplier_prebooking_restore=(record.request_json or {}).get(
+                "supplier_prebooking_restore"
+            ),
         )
     bundle.id = record.id
     bundle.namespace = record.namespace

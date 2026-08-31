@@ -10,7 +10,7 @@ from app.core.apikey_provisioner import ApiKeyProvisioner
 from app.core.contract_provisioner import ContractProvisioner
 from app.core.mock_registration import refresh_booking_flow_expectations, register_built_expectations
 from app.core.mock_urls import extract_paths_from_built
-from app.core.sb_group_provisioner import SBGroupProvisioner
+from app.core.sb_group_provisioner import SBGroupProvisioner, smart_booking_supported
 from app.core.scenario_engine import ScenarioEngine
 from app.integrations.business_rules import CrawlaBusinessRulesProvisioner
 from app.integrations.backoffice import BackofficeClient, BackofficeError
@@ -71,6 +71,50 @@ class SupplierMockScenarioOrchestrator:
         self.sb_group_provisioner = sb_group_provisioner or SBGroupProvisioner()
         self.settings = get_settings()
 
+    async def _resolve_derby_room_ids(
+        self, request: ScenarioRequest, plog: list[str]
+    ) -> None:
+        """Stamp each Derby supplier's spec with room ids its adapter will accept.
+
+        hotels-derby-bts-adapter names rooms from a per-hotel catalogue and drops any
+        rate whose roomId is missing from it — with no error and an empty package list,
+        which reads as "no availability". A template's captured room ids belong to the
+        hotel it was captured from, so they are wrong for every other hotel: search still
+        passes (it needs only a hotel-level price) and packages come back empty.
+
+        Best-effort by design. An unreachable catalogue logs and leaves the template's
+        ids alone rather than failing scenario creation.
+        """
+        from app.integrations.derby_rooms import DerbyRoomsClient
+        from app.plugins import PLUGINS
+
+        targets = []
+        for supplier in request.suppliers:
+            code = str(supplier.code)
+            plugin = PLUGINS.get(code)
+            supplier_id = getattr(plugin, "payload_supplier_id", "") if plugin else ""
+            if not supplier_id:
+                continue  # not a Derby supplier
+            hotel_code = plugin.supplier_hotel_id(request.hotel_id_for_supplier(code))
+            targets.append((supplier, code, hotel_code, supplier_id))
+
+        if not targets:
+            return
+
+        async with DerbyRoomsClient() as rooms:
+            for supplier, code, hotel_code, supplier_id in targets:
+                room_ids = await rooms.room_ids(hotel_code, supplier_id)
+                if not room_ids:
+                    plog.append(
+                        f"[mocks] {code}: no Derby room catalogue for {hotel_code}; "
+                        "keeping the template's room ids (packages may come back empty)"
+                    )
+                    continue
+                supplier.packages.supplier_room_ids = room_ids
+                plog.append(
+                    f"[mocks] {code}: {len(room_ids)} catalogue room ids for {hotel_code}"
+                )
+
     async def create_scenario(self, request: ScenarioRequest) -> ScenarioBundle:
         bundle = ScenarioBundle(
             namespace=request.namespace,
@@ -84,6 +128,8 @@ class SupplierMockScenarioOrchestrator:
 
         plog = bundle.provisioning_log  # shorthand — same list object
 
+        await self._resolve_derby_room_ids(request, plog)
+
         built = self.engine.build_expectations(request)
         bundle.expectation_count = len(built)
         plog.append(f"[mocks] Built {len(built)} expectations")
@@ -94,6 +140,14 @@ class SupplierMockScenarioOrchestrator:
 
         mock_paths = extract_paths_from_built(built)
         mock_base = self.settings.mock_server_url
+
+        # Shared-state change, applied before the contracts so the whole scenario runs
+        # under it. The previous value is recorded on the bundle for teardown — the
+        # supplier record is one row per env, so failing to restore it would leave
+        # every other scenario altered.
+        restore = await self._apply_supplier_prebooking(request, plog)
+        if restore:
+            bundle.supplier_prebooking_restore = restore
 
         bundle.status = ScenarioStatus.CREATING_CONTRACTS
         bundle.contracts = await self.contract_provisioner.create_contracts(
@@ -120,6 +174,15 @@ class SupplierMockScenarioOrchestrator:
         # Step 3a: Create SB group BEFORE SB configuration and apiKey
         sb_config_data: dict | None = None
         sb_group_data: dict | None = None
+        if request.sb_config is not None and not smart_booking_supported(self.settings.env):
+            # Refuse rather than provision half a scenario: the group would be created
+            # against a tenant with no SmartBooking, and the per-supplier sbgroup routing
+            # would silently send those contracts nowhere.
+            raise ValueError(
+                f"SmartBooking is not available on '{self.settings.env}' — no SB group can "
+                "be created there. Run with sb_enabled false, and route every supplier's "
+                "contract to the apiKey."
+            )
         if request.sb_config is not None:
             node_id = self.settings.tenant_id
             logger.info("Creating SB group for namespace=%s", request.namespace)
@@ -217,6 +280,8 @@ class SupplierMockScenarioOrchestrator:
             br_setup = await self.br_provisioner.provision_for_contracts(
                 _contract_refs(request, bundle.contracts, auto_ids),
                 api_key=api_key,
+                static_markup=request.static_markup,
+                dynamic_markup=request.dynamic_markup,
             )
             if api_key:
                 rule_configs = {
@@ -231,13 +296,27 @@ class SupplierMockScenarioOrchestrator:
             request.crawla_export or request.sb_config is not None or request.assign_to_br
         ):
             logger.info("Provisioning Business Rules for api_key=%s", api_key)
-            br_setup = await self.br_provisioner.provision(api_key, template_id=request.template_id)
+            br_setup = await self.br_provisioner.provision(
+                api_key,
+                template_id=request.template_id,
+                static_markup=request.static_markup,
+                dynamic_markup=request.dynamic_markup,
+            )
 
         if br_setup is not None:
             bundle.br_setup = br_setup
             br_status = br_setup.get("status", "?")
             br_errors = br_setup.get("errors", [])
-            plog.append(f"[br] Provisioning status={br_status} errors={br_errors}")
+            # The markup actually provisioned, defaults included — the log is where a QA
+            # checks what a scenario got without opening the BR UI.
+            markups = {
+                rule_id: data.get("output_value")
+                for rule_id, data in (br_setup.get("rules") or {}).items()
+                if data.get("output_value")
+            }
+            plog.append(
+                f"[br] Provisioning status={br_status} markups={markups} errors={br_errors}"
+            )
             if br_status != "SUCCESS":
                 bundle.error_message = br_setup.get("warning") or "BR setup failed"
                 logger.warning("BR provisioning had errors: %s", bundle.error_message)
@@ -266,6 +345,54 @@ class SupplierMockScenarioOrchestrator:
             created_at=datetime.now(timezone.utc),
         )
 
+    async def _apply_supplier_prebooking(
+        self,
+        request: ScenarioRequest,
+        plog: list[str],
+    ) -> dict[str, object]:
+        """Flip endpointsSupported.prebooking for any supplier the scenario pins.
+
+        Returns {code: previous value} so teardown can put it back. Only suppliers
+        that actually asked are touched.
+        """
+        from app.services.supplier_service import get_supplier_config
+
+        wanted = {
+            str(supplier.code): supplier.packages.supplier_prebooking
+            for supplier in request.suppliers
+            if getattr(supplier.packages, "supplier_prebooking", None) is not None
+        }
+        if not wanted:
+            return {}
+        restore: dict[str, object] = {}
+        async with BackofficeClient() as backoffice:
+            for code, enabled in wanted.items():
+                supplier_id = get_supplier_config(code).supplier_id
+                previous = await backoffice.set_supplier_prebooking(supplier_id, bool(enabled))
+                restore[code] = previous
+                plog.append(
+                    f"[supplier] {code} endpointsSupported.prebooking -> {str(bool(enabled)).lower()} "
+                    f"(was {previous!r}) — ENV-WIDE, restored on teardown"
+                )
+        return restore
+
+    async def _restore_supplier_prebooking(self, restore: dict | None) -> None:
+        """Put every supplier record this scenario changed back as it was."""
+        if not restore:
+            return
+        from app.services.supplier_service import get_supplier_config
+
+        async with BackofficeClient() as backoffice:
+            for code, previous in restore.items():
+                try:
+                    supplier_id = get_supplier_config(str(code)).supplier_id
+                    await backoffice.restore_supplier_prebooking(supplier_id, previous)
+                except Exception:  # noqa: BLE001 - teardown is best-effort per supplier
+                    logger.exception(
+                        "Could not restore endpointsSupported.prebooking for %s — the env "
+                        "is left altered, fix it in Backoffice", code
+                    )
+
     async def teardown_scenario(
         self,
         namespace: str,
@@ -278,7 +405,9 @@ class SupplierMockScenarioOrchestrator:
         sb_group_id: str | None = None,
         sb_config_id: str | None = None,
         api_key_is_external: bool = False,
+        supplier_prebooking_restore: dict | None = None,
     ) -> ScenarioBundle:
+        await self._restore_supplier_prebooking(supplier_prebooking_restore)
         if br_setup:
             # cleanup() handles both shapes: apiKey rule-configs/conditions, and the
             # contract conditions created by the contract_br depth.

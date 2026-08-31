@@ -6,6 +6,28 @@ from app.core.contract_provisioner import ContractProvisioner
 from app.env_context import use_env
 from app.models.scenario import PackageSpec, ScenarioRequest, SupplierCode, SupplierScenario
 
+from contextlib import contextmanager as _contextmanager
+from unittest.mock import patch as _patch
+
+from app.services.supplier_service import get_supplier_config as _real_supplier_config
+
+
+@_contextmanager
+def no_reference_contract():
+    """Force the minimal-contract path.
+
+    The supplier row owns reference_contract_id now, with the env setting only a
+    fallback, so clearing ``settings.<code>_reference_contract_id`` alone no longer
+    selects the synthesized body — the seeded row's id would be cloned instead.
+    """
+
+    def _stub(code, env=None):
+        return _real_supplier_config(code, env).model_copy(update={"reference_contract_id": ""})
+
+    with _patch("app.core.contract_provisioner.get_supplier_config", _stub):
+        yield
+
+
 
 def _request() -> ScenarioRequest:
     return ScenarioRequest(
@@ -212,7 +234,7 @@ async def test_create_contracts_exp_uses_override_urls():
     )
     # Asserted supplierId below is stg's EXP supplier record — pin the env
     # explicitly so this doesn't silently start reading dev's (different) value.
-    with use_env("stg"):
+    with use_env("stg"), no_reference_contract():
         contract_ids = await provisioner.create_contracts(
             request,
             {
@@ -405,3 +427,53 @@ async def test_create_contracts_chc_sets_one_slot_cancel_policy():
     assert body["opt"]["availabilityTimeoutSeconds"] == "30"
     assert body["opt"]["searchUrl"].endswith("/api/go/shoppingengine/v4/shopping/multihotels")
     assert body["opt"]["availabilityUrl"].endswith("/api/go/bookingusb/v4/availability")
+
+
+@pytest.mark.asyncio
+async def test_cloned_contract_never_inherits_the_references_priority():
+    """package-merge breaks price ties on contract priority, and the reference contracts
+    disagree — HBS's carries 1 where the others carry 0. Inheriting it would let HBS win
+    every tie in a multi-supplier scenario, which reads as a merge bug rather than a
+    contract difference."""
+    backoffice = AsyncMock()
+    backoffice.__aenter__ = AsyncMock(return_value=backoffice)
+    backoffice.__aexit__ = AsyncMock(return_value=None)
+    backoffice.get_contract = AsyncMock(
+        return_value={
+            "_id": "ref-1",
+            "autoId": "99",
+            "uid": "old-uid",
+            "priority": "1",
+            "opt": {"searchUrl": "http://old/search"},
+            "supplierId": "100004",
+        }
+    )
+    backoffice.create_contract = AsyncMock(return_value="mongo-hbs-clone")
+
+    provisioner = ContractProvisioner(backoffice=backoffice)
+    provisioner.settings.hbs_reference_contract_id = "ref-1"
+    provisioner.settings.mock_server_url = "http://mockserver-staging.tajawal.io"
+
+    await provisioner.create_contracts(_request(), {"HBS": {}}, "http://mockserver-staging.tajawal.io")
+
+    assert backoffice.create_contract.await_args.args[0]["priority"] == "0"
+
+
+@pytest.mark.asyncio
+async def test_minimal_contract_body_uses_the_same_priority():
+    """The synthesized fallback must not differ from a clone on a tie-breaking field."""
+    backoffice = AsyncMock()
+    backoffice.__aenter__ = AsyncMock(return_value=backoffice)
+    backoffice.__aexit__ = AsyncMock(return_value=None)
+    backoffice.create_contract = AsyncMock(return_value="mongo-hbs-minimal")
+
+    provisioner = ContractProvisioner(backoffice=backoffice)
+    provisioner.settings.hbs_reference_contract_id = ""
+    provisioner.settings.mock_server_url = "http://mockserver-staging.tajawal.io"
+
+    with no_reference_contract():
+        await provisioner.create_contracts(
+            _request(), {"HBS": {}}, "http://mockserver-staging.tajawal.io"
+        )
+
+    assert backoffice.create_contract.await_args.args[0]["priority"] == "0"
