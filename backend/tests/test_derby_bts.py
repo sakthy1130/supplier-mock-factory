@@ -893,3 +893,109 @@ def test_linkage_pairs_packages_with_search_rate_by_index():
     ]
     assert package_rooms == search_rooms
     assert len(set(package_rooms)) == 3, "each package needs its own room id"
+
+
+# ── prebooking statuses ─────────────────────────────────────────────────────────
+
+
+def _derby_built(code, hotel_id, **package_kwargs):
+    from app.core.scenario_engine import ScenarioEngine
+    from app.models.scenario import ScenarioRequest, SupplierScenario, SupplierCode
+
+    request = ScenarioRequest(
+        namespace="qa-derby-prebook",
+        check_in="2026-09-01",
+        check_out="2026-09-03",
+        atg_hotel_id="1637910",
+        supplier_hotel_ids={code: hotel_id},
+        suppliers=[
+            SupplierScenario(
+                code=SupplierCode(code),
+                packages=PackageSpec(
+                    count=3,
+                    room_basis=["RO", "BB", "HB"],
+                    room_names=["A", "B", "C"],
+                    prices=[100.0, 150.0, 200.0],
+                    refundable=[True, True, True],
+                    booking_package_index=1,
+                    **package_kwargs,
+                ),
+            )
+        ],
+    )
+    with use_env("stg"):
+        supplier_service.invalidate_cache()
+        return {b.log_type: b.expectation for b in ScenarioEngine().build_expectations(request)}
+
+
+def _prebook_body(built):
+    return built["PreBooking"]["httpResponse"]["body"]
+
+
+@pytest.mark.parametrize("code,hotel_id", [("HIL", "HX-DXBAL"), ("CHC", "GI-RUHSK")])
+def test_prebook_quotes_only_the_rate_being_booked(code, hotel_id):
+    """Derby's real prebook response carries ONE roomRates entry, not the whole list.
+
+    A price check answers about a single rate; replaying every rate invites the adapter
+    to settle on one that was never under test.
+    """
+    built = _derby_built(code, hotel_id)
+    packages = built["Packages"]["httpResponse"]["body"]["roomRates"]
+    quoted = _prebook_body(built)["roomRates"]
+
+    assert len(packages) == 3, "all three are still on offer at availability"
+    assert len(quoted) == 1
+    assert quoted[0]["amountBeforeTax"] == [150.0], "the booked package's price"
+
+
+@pytest.mark.parametrize("code,hotel_id", [("HIL", "HX-DXBAL"), ("CHC", "GI-RUHSK")])
+def test_prebook_candidate_names_the_booked_rate_not_the_primary(code, hotel_id):
+    """productCandidate used to be pinned to the primary, naming the wrong rate
+    whenever the booked package was not the first."""
+    built = _derby_built(code, hotel_id)
+    quoted = _prebook_body(built)["roomRates"][0]
+    candidate = _prebook_body(built)["productCandidate"]
+    assert candidate["roomId"] == quoted["roomId"]
+    assert candidate["rateId"] == quoted["rateId"]
+
+
+@pytest.mark.parametrize("code,hotel_id", [("HIL", "HX-DXBAL"), ("CHC", "GI-RUHSK")])
+def test_price_changed_reprices_the_quoted_rate_only(code, hotel_id):
+    built = _derby_built(
+        code, hotel_id, prebooking_status="price_changed", prebooking_changed_price=999.0
+    )
+    quoted = _prebook_body(built)["roomRates"]
+    assert len(quoted) == 1
+    # The adapter SUMS these arrays, so one element is the whole stay total.
+    assert quoted[0]["amountBeforeTax"] == [999.0]
+    assert quoted[0]["amountAfterTax"] == [999.0]
+    assert [r["amountBeforeTax"] for r in built["Packages"]["httpResponse"]["body"]["roomRates"]] == [
+        [100.0], [150.0], [200.0]
+    ], "availability keeps the original prices"
+
+
+@pytest.mark.parametrize("code,hotel_id", [("HIL", "HX-DXBAL"), ("CHC", "GI-RUHSK")])
+def test_sold_out_quotes_no_rate_but_still_names_what_was_asked_about(code, hotel_id):
+    built = _derby_built(code, hotel_id, prebooking_status="sold_out")
+    body = _prebook_body(built)
+    assert body["roomRates"] == []
+    # Echo the rate the request named; the template's captured one was never offered here.
+    offered = built["Packages"]["httpResponse"]["body"]["roomRates"][1]
+    assert body["productCandidate"]["rateId"] == offered["rateId"]
+    assert not {"Booking", "GetOrder", "CancelOrder"} & set(built), (
+        "sold_out stops the scenario before booking"
+    )
+
+
+def test_derby_needs_no_per_status_prebooking_template():
+    """The Derby body has no status field, so one capture covers every status.
+
+    Without this flag a price_changed scenario fails at build time looking for
+    HIL/PreBooking/price_changed.json, which does not and should not exist.
+    """
+    with use_env("stg"):
+        supplier_service.invalidate_cache()
+        from app.services.supplier_service import get_supplier_config
+
+        for code in ("HIL", "CHC"):
+            assert get_supplier_config(code).mock_config.prebooking_template_variants is False

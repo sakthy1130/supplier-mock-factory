@@ -362,6 +362,9 @@ SEED_SUPPLIERS: list[dict[str, Any]] = [
             "dynamic_market_type": "DynamicMarkupTarget",
             "path_namespaced": True,
             "mock_path_suffix": CHC_MOCK_PATH_SUFFIX,
+            # Derby carries no status field: the prebook body is the booked rate
+            # alone, so each status is structural and one capture covers them all.
+            "prebooking_template_variants": False,
         },
         "mutation_config": {
             "check_in_keys": ["checkin"],
@@ -480,6 +483,9 @@ SEED_SUPPLIERS: list[dict[str, Any]] = [
             # The reference contract is the safe "dont-book" one; a clone inherits
             # canBook false and the booking flow is refused before the mock is reached.
             "forced_permission": {"canBook": True},
+            # Derby carries no status field: the prebook body is the booked rate
+            # alone, so each status is structural and one capture covers them all.
+            "prebooking_template_variants": False,
         },
         "mutation_config": {
             "packages_path": "httpResponse.body.roomRates",

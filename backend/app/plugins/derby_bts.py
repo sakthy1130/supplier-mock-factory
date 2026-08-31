@@ -20,8 +20,9 @@ belongs to; ``claims_log_payload`` uses ``header.supplierId`` instead.
 
 from __future__ import annotations
 
-from app.models.scenario import PackageSpec
+from app.models.scenario import PackageSpec, PreBookingStatus
 from app.plugins.base import SupplierMockPlugin
+from app.plugins.prebooking import prebooking_effective_price
 from app.plugins.room_names import normalized_room_basis
 from app.ingest.expectation_builder import payload_hotel_id as log_hotel_id
 from app.ingest.expectation_builder import payload_supplier_id as log_supplier_id
@@ -207,14 +208,66 @@ class DerbyBtsMockPlugin(SupplierMockPlugin):
                     if isinstance(occupancy, dict):
                         rate["roomCriteria"] = deep_copy(occupancy)
 
-            # PreBooking's productCandidate is the ONE rate being pre-booked, so it stays
-            # on the primary rather than following the per-index pairing above.
-            candidate = body.get("productCandidate")
-            if isinstance(candidate, dict):
-                if primary.get("roomId") is not None:
-                    candidate["roomId"] = primary["roomId"]
-                if primary.get("rateId") is not None:
-                    candidate["rateId"] = primary["rateId"]
+        self._apply_prebooking(expectations_by_type, spec, search_rates)
+
+    def _apply_prebooking(
+        self,
+        expectations_by_type: dict[str, dict],
+        spec: PackageSpec,
+        search_rates: list[dict],
+    ) -> None:
+        """Narrow the prebook body to the ONE rate being booked, and apply the status.
+
+        Derby's real prebook response carries a single roomRates entry plus the
+        productCandidate naming it — a price check answers about one rate, not the whole
+        availability list. Replaying every rate invites the adapter to settle on one that
+        was never under test.
+
+        The Derby body has no status field, so like EXT each status is structural:
+          available     -> the booked rate, at the price Packages offered
+          price_changed -> the booked rate, repriced
+          sold_out      -> no rate at all; the one asked about is gone
+        """
+        prebook = expectations_by_type.get("PreBooking")
+        if not isinstance(prebook, dict):
+            return
+        body = prebook.get("httpResponse", {}).get("body")
+        if not isinstance(body, dict):
+            return
+        rates = body.get("roomRates")
+        if not isinstance(rates, list) or not rates:
+            return
+
+        idx = spec.booking_package_index if spec.booking_package_index is not None else 0
+        idx = min(idx, len(rates) - 1)
+        selected = rates[idx]
+
+        # The candidate is whichever rate is being pre-booked — it used to be pinned to
+        # the primary, which named the wrong rate whenever the booked package was not the
+        # first. It is set even for sold_out, where it echoes the rate that was ASKED
+        # about; leaving the template's captured rate there would name one this scenario
+        # never offered.
+        candidate = body.get("productCandidate")
+        if isinstance(candidate, dict) and isinstance(selected, dict):
+            if selected.get("roomId") is not None:
+                candidate["roomId"] = selected["roomId"]
+            if selected.get("rateId") is not None:
+                candidate["rateId"] = selected["rateId"]
+
+        if spec.prebooking_status is PreBookingStatus.sold_out:
+            body["roomRates"] = []
+            return
+
+        body["roomRates"] = [selected]
+
+        if spec.prebooking_status is not PreBookingStatus.price_changed:
+            return
+        changed = prebooking_effective_price(spec, _normalized_prices(spec))
+        if changed is None or not isinstance(selected, dict):
+            return
+        # The adapter SUMS these arrays, so one element is the whole stay total.
+        selected["amountBeforeTax"] = [changed]
+        selected["amountAfterTax"] = [changed]
 
     def _apply_rates(
         self,
