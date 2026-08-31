@@ -160,12 +160,22 @@ def test_changed_price_on_another_status_is_rejected():
                     prebooking_changed_price=140.0)
 
 
-def test_sold_out_with_a_booking_index_is_rejected():
-    """Asking to book a sold-out scenario is contradictory — say so, don't guess."""
-    with pytest.raises(ValueError, match="drop booking_package_index"):
-        PackageSpec(count=1, room_basis="RO", prices=[100.0],
-                    prebooking_status=PreBookingStatus.sold_out,
-                    booking_package_index=0)
+def test_sold_out_accepts_a_booking_index_but_still_builds_no_booking_flow():
+    """The index survives sold_out because it answers WHICH package went away.
+
+    It used to be rejected as contradictory. EXT expresses sold_out by dropping that one
+    accommodation from the price check, so without an index it cannot know which. Read it
+    as "the package under test"; nothing books either way.
+    """
+    spec = PackageSpec(count=2, room_basis="RO", prices=[100.0, 150.0],
+                       prebooking_status=PreBookingStatus.sold_out,
+                       booking_package_index=1)
+    assert spec.booking_package_index == 1
+
+    built = _build(PreBookingStatus.sold_out, book_idx=0)
+    assert set(built) == {"Search", "Packages", "PreBooking"}, (
+        "sold_out drops the booking flow whatever the index says"
+    )
 
 
 def test_a_missing_variant_file_fails_loudly(tmp_path):

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.models.scenario import PackageSpec
+from app.models.scenario import PackageSpec, PreBookingStatus
 from app.plugins.json_utils import collect_field_values
 from app.plugins.room_names import normalized_room_basis
 
@@ -241,6 +241,51 @@ class LinkageValidator:
                 meal = distributions[0].get("board")
                 if meal and meal != expected_meals[index]:
                     raise LinkageError("EXT accommodation board does not match requested room_basis")
+
+        self._validate_ext_prebooking(expectations_by_type, spec, accommodations)
+
+    def _validate_ext_prebooking(
+        self,
+        expectations_by_type: dict[str, dict],
+        spec: PackageSpec,
+        offered: list[dict],
+    ) -> None:
+        """The price check must describe the rates Packages offered.
+
+        Extranet re-reads distribution details to price-check, so the two bodies are the
+        same shape and the accommodation id is the only thing tying a quote back to the
+        rate that was offered. A mismatch means the core price-checks a rate it never
+        saw — which is silent: it just fails to find the package it was booking.
+        """
+        prebook = expectations_by_type.get("PreBooking")
+        if not isinstance(prebook, dict):
+            return
+        quoted = _ext_package_rates(prebook)
+        offered_ids = [a.get("id") for a in offered]
+        idx = spec.booking_package_index if spec.booking_package_index is not None else 0
+
+        if spec.prebooking_status is PreBookingStatus.sold_out:
+            expected_ids = [i for n, i in enumerate(offered_ids) if n != idx]
+            if [a.get("id") for a in quoted] != expected_ids:
+                raise LinkageError(
+                    "EXT sold_out price check must drop exactly the package under test"
+                )
+            return
+
+        if [a.get("id") for a in quoted] != offered_ids:
+            raise LinkageError("EXT PreBooking accommodations do not match Packages")
+
+        for position, (quote, offer) in enumerate(zip(quoted, offered)):
+            repriced = (
+                spec.prebooking_status is PreBookingStatus.price_changed and position == idx
+            )
+            expected = spec.prebooking_changed_price if repriced else offer.get("totalPrice")
+            if quote.get("totalPrice") != expected:
+                raise LinkageError(
+                    "EXT PreBooking repriced a package the scenario did not ask to change"
+                    if not repriced
+                    else "EXT PreBooking did not apply the changed price"
+                )
 
 
 def _derby_bts_package_rates(packages: dict) -> list[dict]:

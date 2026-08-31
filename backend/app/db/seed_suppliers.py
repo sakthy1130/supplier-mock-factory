@@ -388,8 +388,12 @@ SEED_SUPPLIERS: list[dict[str, Any]] = [
         "supplier_type": "net",
         "default_supplier_currency": "EUR",
         "default_contract_currency": "USD",
-        # No PreBooking — the Extranet flow books straight off the distribution.
-        "log_types": ["Search", "Packages", "Booking", "GetOrder", "CancelOrder"],
+        # PreBooking speaks the same distribution-details contract as Packages, on its
+        # own mock path. It is absent from package_log_types on purpose: the plugin
+        # copies the finished Packages body instead of building a second one, because
+        # _mutate_accommodations mints a fresh accommodation id per call and the two
+        # bodies have to agree.
+        "log_types": ["Search", "Packages", "PreBooking", "Booking", "GetOrder", "CancelOrder"],
         "package_log_types": ["Search", "Packages"],
         "ui_color": "#1b8080",
         "mock_config": {
@@ -405,6 +409,18 @@ SEED_SUPPLIERS: list[dict[str, Any]] = [
             ],
             "set_mock_server_url": True,
             "dynamic_market_type": "DynamicMarkupTarget",
+            # Honour canonical_base. Without it only the suffix survives, and Search and
+            # GetOrder — both suffixed "search", kept apart solely by /distribution vs
+            # /accommodation — collapse onto one /{namespace}/search expectation where
+            # whichever registers last shadows the other.
+            "path_rewrite": True,
+            # The Extranet body has no status field; PreBooking differs from Packages by
+            # a price or a missing accommodation, so one capture covers every status.
+            "prebooking_template_variants": False,
+            # The reference contract ("extranet-net-1") carries no canPrebook key at all,
+            # so a clone permits no price check. A scenario's can_prebook still overrides
+            # this — _apply_scenario_permission runs after _apply_forced_permission.
+            "forced_permission": {"canPrebook": True},
         },
         # EXT never had a SUPPLIER_MUTABLE_KEYS entry, so field-map generation
         # produced nothing for it — these keys are read off plugins/ext.py.

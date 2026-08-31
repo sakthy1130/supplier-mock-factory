@@ -845,8 +845,7 @@ export function ScenarioWizard({
                       </select>
                     </label>
 
-                    {/* Only for suppliers that actually have a PreBooking step — EXT
-                        books straight off the distribution and has none. */}
+                    {/* Only for suppliers that actually have a PreBooking step. */}
                     {meta.log_types?.includes('PreBooking') && (
                       <label className="supplier-tile-field" style={{ maxWidth: '210px' }}>
                         Contract canPrebook
@@ -953,15 +952,11 @@ export function ScenarioWizard({
                           onChange={(e) => {
                             const next = e.target.value as PreBookingStatus
                             setPrebookingStatus((prev) => ({ ...prev, [meta.code]: next }))
-                            // sold_out builds no Booking/GetOrder mocks, so a Book
-                            // selection would be rejected by the backend. Clear it here
-                            // rather than let the request 422.
-                            if (next === 'sold_out') {
-                              setBookingRow((prev) => ({
-                                ...prev,
-                                [meta.code]: (prev[meta.code] ?? []).map(() => null),
-                              }))
-                            }
+                            // The selection is KEPT for sold_out: it now names the
+                            // package that disappears from the price check. It used to
+                            // be cleared here because the backend rejected the pair;
+                            // it no longer does, and clearing it would throw away the
+                            // one thing a sold-out scenario needs to know.
                           }}
                         >
                           {PREBOOKING_STATUSES.map((s) => (
@@ -1058,15 +1053,17 @@ export function ScenarioWizard({
                                 type="radio"
                                 name={`booking-${meta.code}-${instance}`}
                                 checked={bookingRow[meta.code][instance] === index}
-                                disabled={prebookingStatus[meta.code] === 'sold_out'}
+                                // Enabled for sold_out too: the selection then says WHICH
+                                // package goes away in the price check, not which one is
+                                // booked (a sold-out scenario never reaches booking).
                                 // Toggle on click (clears when the selected row is re-clicked);
                                 // onChange is a no-op required for a controlled radio.
                                 onChange={() => {}}
                                 onClick={() => toggleBookingRow(meta.code, instance, index)}
                                 title={
                                   prebookingStatus[meta.code] === 'sold_out'
-                                    ? 'A sold-out price check stops the scenario before booking, ' +
-                                      'so there is no package to book.'
+                                    ? 'The package under test: it disappears from the price ' +
+                                      'check. A sold-out scenario stops before booking.'
                                     : 'Select this package for the Booking/GetOrder flow (click again to clear)'
                                 }
                               />

@@ -319,14 +319,14 @@ class PackageSpec(BaseModel):
                 f"prebooking_status='{self.prebooking_status.value}' is not reachable "
                 "through it — pick one or the other"
             )
-        if (
-            self.prebooking_status is PreBookingStatus.sold_out
-            and self.booking_package_index is not None
-        ):
-            raise ValueError(
-                "prebooking_status='sold_out' stops the scenario at PreBooking, so no "
-                "Booking/GetOrder mocks are built — drop booking_package_index"
-            )
+        # sold_out USED to reject booking_package_index, on the grounds that a scenario
+        # which stops at PreBooking has nothing to book. It is allowed now because the
+        # index answers a second question the sold-out case needs: WHICH package went
+        # away. EXT expresses sold_out structurally, by dropping that one accommodation
+        # from the price check, and without an index it could not know which. Read the
+        # field as "the package under test" rather than "the package that gets booked".
+        # No booking mock is built either way — scenario_engine drops the whole booking
+        # flow whenever the status is sold_out, index or not.
         return self
 
     @model_validator(mode="after")

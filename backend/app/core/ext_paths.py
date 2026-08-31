@@ -8,15 +8,22 @@ from typing import Any
 EXT_CANONICAL_BASE: dict[str, str] = {
     "Search": "/extranet/public/api/v1/distribution",
     "Packages": "/extranet/public/api/v1/distribution",
+    # The price check speaks the distribution-details contract; only the path differs,
+    # because one MockServer expectation cannot answer two log types with two bodies.
+    "PreBooking": "/extranet/public/api/v1/distribution",
     "Booking": "/extranet/public/api/v1/accommodation",
     "GetOrder": "/extranet/public/api/v1/accommodation",
     "CancelOrder": "/extranet/public/api/v1/accommodation",
 }
 
 # Disambiguate mocks on shared paths (MockServer matches path + method only).
+# Search and GetOrder share the suffix "search" and are kept apart only by their
+# differing canonical_base, so EXT must set path_rewrite — without it both register on
+# /{namespace}/search and one silently shadows the other.
 EXT_MOCK_PATH_SUFFIX: dict[str, str] = {
     "Search": "search",
     "Packages": "details",
+    "PreBooking": "details-prebook",
     "Booking": "confirm",
     "GetOrder": "search",
     "CancelOrder": "cancel",
@@ -25,6 +32,7 @@ EXT_MOCK_PATH_SUFFIX: dict[str, str] = {
 EXT_LOG_TYPE_TO_OPT_FIELD: dict[str, str] = {
     "Search": "searchUrl",
     "Packages": "availabilityUrl",
+    "PreBooking": "prebookingUrl",
     "Booking": "bookingUrl",
     "GetOrder": "orderUrl",
     "CancelOrder": "cancelBookingUrl",

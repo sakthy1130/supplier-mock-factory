@@ -20,15 +20,43 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATES_DIR = REPO_ROOT / "templates"
 
 
-def _template_filename(log_type: str, prebooking_status: PreBookingStatus) -> str:
+def _template_filename(
+    log_type: str,
+    prebooking_status: PreBookingStatus,
+    prebooking_template_variants: bool = True,
+) -> str:
     """The template file for this log type — a status variant only for PreBooking.
 
     `available` maps to the historical v1.json, so every existing scenario keeps
     loading exactly the file it always did.
+
+    A supplier with ``prebooking_template_variants`` false has one capture for every
+    status because its body has no status field to differ on (EXT). Its plugin applies
+    the status to the v1.json body instead — this is not the silent fallback that
+    _load_supplier_templates refuses, which is a REQUESTED status served as an
+    unmodified `available` body.
     """
-    if log_type == "PreBooking" and prebooking_status is not PreBookingStatus.available:
+    if (
+        log_type == "PreBooking"
+        and prebooking_template_variants
+        and prebooking_status is not PreBookingStatus.available
+    ):
         return f"{prebooking_status.value}.json"
     return "v1.json"
+
+
+def _prebooking_template_variants(supplier_code: str) -> bool:
+    """Whether this supplier keeps one PreBooking template per status.
+
+    An unknown supplier keeps the historical answer (True): resolve_plugin reports an
+    unknown code far more usefully than a missing-template error would.
+    """
+    from app.services.supplier_service import UnknownSupplierError, get_supplier_config
+
+    try:
+        return get_supplier_config(supplier_code).mock_config.prebooking_template_variants
+    except UnknownSupplierError:
+        return True
 
 
 def _reject_explicit_pricing_for_net_supplier(supplier_code: str) -> None:
@@ -205,8 +233,9 @@ class ScenarioEngine:
         if not supplier_dir.exists():
             raise FileNotFoundError(f"Templates not found for supplier {supplier_code}")
 
+        variants = _prebooking_template_variants(supplier_code)
         for log_type in log_types:
-            filename = _template_filename(log_type, prebooking_status)
+            filename = _template_filename(log_type, prebooking_status, variants)
             path = supplier_dir / log_type / filename
             if not path.exists():
                 if log_type in OPTIONAL_TEMPLATE_LOG_TYPES:

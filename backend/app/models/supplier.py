@@ -74,6 +74,15 @@ class MockConfig(BaseModel):
     # "hil-contract-dont-book-bts-v4" with canBook false — and a clone inherits that,
     # so the booking flow is refused before the mock is ever consulted.
     forced_permission: dict[str, Any] = Field(default_factory=dict)
+    # Whether PreBooking has one template file per status ({status}.json beside v1.json).
+    # True for a supplier whose price-check body carries a literal status field, so each
+    # status is a different capture (EXP: available / price_changed / sold_out). False
+    # for one that expresses the status structurally — EXT's Extranet body has no status
+    # field, only a price or a missing accommodation — where a single v1.json is the
+    # capture and the plugin applies the status. False does NOT mean the status is
+    # ignored: it still has to be applied in code, or the mock would answer `available`
+    # while the scenario reported otherwise.
+    prebooking_template_variants: bool = True
 
     def mock_path(self, log_type: str) -> str | None:
         base = self.canonical_base.get(log_type)

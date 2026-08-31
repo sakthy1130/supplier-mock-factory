@@ -256,26 +256,48 @@ def _contract_uid(namespace: str, instance_key: str) -> str:
     return f"smf-{namespace}-{instance_key}".lower().replace(" ", "-")
 
 
-def _apply_scenario_permission(body: dict[str, Any], overrides: dict[str, bool]) -> None:
-    """Per-scenario permission overrides, applied AFTER the supplier's forced ones.
-
-    The scenario is the more specific intent: a supplier may force canBook true for
-    every contract, but this run may still want canPrebook off. Values keep the shape
-    the contract already uses — Backoffice returns these as the strings "true"/"false"
-    on a clone but as real booleans on a minimal body.
-    """
-    if not overrides:
-        return
+def _permission_block(body: dict[str, Any]) -> dict[str, Any]:
     permission = body.get("permission")
     if not isinstance(permission, dict):
         permission = {}
         body["permission"] = permission
+    return permission
+
+
+def _write_permission(permission: dict[str, Any], key: str, value: Any) -> None:
+    """Set one permission flag in the shape the block already uses.
+
+    These flags come back from Backoffice as the strings "true"/"false" on a clone but as
+    real booleans on a minimal body, and mixing the two risks the whole block being
+    misread. Matching the key's own current type covers a key that is already there.
+
+    A key that is ABSENT has no type to match, so take the shape from its siblings —
+    EXT's reference contract has no canPrebook at all, and writing a bare boolean into a
+    block of "true"/"false" strings produced exactly the mixed block this guards against.
+    An empty block has nothing to infer from and keeps the native bool.
+    """
+    if not isinstance(value, bool):
+        permission[key] = value
+        return
+    current = permission.get(key)
+    if current is None:
+        stringly = any(isinstance(other, str) for other in permission.values())
+    else:
+        stringly = isinstance(current, str)
+    permission[key] = ("true" if value else "false") if stringly else value
+
+
+def _apply_scenario_permission(body: dict[str, Any], overrides: dict[str, bool]) -> None:
+    """Per-scenario permission overrides, applied AFTER the supplier's forced ones.
+
+    The scenario is the more specific intent: a supplier may force canPrebook true for
+    every contract, but this run may still want it off.
+    """
+    if not overrides:
+        return
+    permission = _permission_block(body)
     for key, value in overrides.items():
-        current = permission.get(key)
-        if isinstance(current, str) and isinstance(value, bool):
-            permission[key] = "true" if value else "false"
-        else:
-            permission[key] = value
+        _write_permission(permission, key, value)
 
 
 def _apply_forced_permission(body: dict[str, Any], config: SupplierConfig) -> None:
@@ -283,24 +305,15 @@ def _apply_forced_permission(body: dict[str, Any], config: SupplierConfig) -> No
 
     A cloned reference contract brings its own permissions, and a safe reference
     (Hilton's is named "…-dont-book-…") carries canBook false — which refuses the
-    booking flow upstream of the mock. Values keep the shape the contract already uses:
-    these flags come back from Backoffice as the strings "true"/"false" on a clone but
-    as real booleans on a minimal body, and writing the wrong one risks the whole
-    permission block being misread.
+    booking flow upstream of the mock. EXT's carries no canPrebook at all, so its clones
+    permit no price check.
     """
     forced = config.mock_config.forced_permission
     if not forced:
         return
-    permission = body.get("permission")
-    if not isinstance(permission, dict):
-        permission = {}
-        body["permission"] = permission
+    permission = _permission_block(body)
     for key, value in forced.items():
-        current = permission.get(key)
-        if isinstance(current, str) and isinstance(value, bool):
-            permission[key] = "true" if value else "false"
-        else:
-            permission[key] = value
+        _write_permission(permission, key, value)
 
 
 def _apply_dynamic_market_type(body: dict[str, Any], config: SupplierConfig) -> None:

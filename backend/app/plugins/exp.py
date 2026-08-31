@@ -11,8 +11,9 @@ from app.core.cancel_policy import (
     free_cancel_deadline,
 )
 from app.core.exp_paths import build_exp_price_check_href, extract_price_check_token
-from app.models.scenario import PackageSpec, PreBookingStatus
+from app.models.scenario import PackageSpec
 from app.plugins.base import SupplierMockPlugin
+from app.plugins.prebooking import prebooking_effective_price
 from app.plugins.room_names import (
     apply_exp_board_basis_to_rate,
     apply_exp_room_names,
@@ -290,13 +291,7 @@ def _prebooking_effective_price(spec: PackageSpec) -> float | None:
     captured total (526.75) whatever the scenario asked for. Returns None only when
     there is no package to price from.
     """
-    if spec.prebooking_status is PreBookingStatus.price_changed:
-        return spec.prebooking_changed_price
-    prices = _normalized_prices(spec)
-    if not prices:
-        return None
-    idx = spec.booking_package_index if spec.booking_package_index is not None else 0
-    return prices[idx] if idx < len(prices) else prices[0]
+    return prebooking_effective_price(spec, _normalized_prices(spec))
 
 
 def _exp_selected_package(packages: dict, idx: int) -> tuple[str | None, str | None, str | None] | None:
